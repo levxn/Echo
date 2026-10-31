@@ -20,23 +20,27 @@ import wave
 RATE = 16000
 random.seed(7)
 
+# Chosen from per-speaker word error rates (Tools/calibrate.py). The first set scored: Ralph 22.7%, Kathy 19.6%,
+# Fred 13.3%, Rishi 10%, Karen 6.2%, Samantha 4.1%, Daniel 2.8%. Jordan speaks ~58% of all words, so he gets
+# a proven voice. People who share a scene must not share a voice.
 VOICES = {
-    "Jordan": "Ralph",
+    "Jordan": "Daniel",
     "Maya": "Samantha",
-    "Ravi": "Rishi",
+    "Ravi": "Moira",
     "Priya": "Karen",
-    "Brennan": "Daniel",
-    "Mom": "Kathy",
-    "Dad": "Fred",
+    "Brennan": "Reed (English (US))",
+    "Mom": "Flo (English (US))",
+    "Dad": "Eddy (English (US))",
 }
+SAY_RATE = 165   # words per minute for `say`; a little slower than the default helps the recognizer
 
 # (label, wall-clock "HH:MM", [(speaker, line), ...])
 SCENES = [
     ("Morning standup", "09:05", [
         ("Maya", "Okay, let's start. Jordan, where are we on the billing service?"),
         ("Jordan", "The migration is done in staging. I think we can deploy to production on Thursday morning."),
-        ("Ravi", "Thursday works for me, but I still need the API spec for the invoices endpoint."),
-        ("Jordan", "Right. I will send you the API spec by Wednesday noon, that's a promise."),
+        ("Ravi", "Thursday works for me, but I still need the API specification for the invoices endpoint."),
+        ("Jordan", "Right. I will send you the API specification by Wednesday noon, that's a promise."),
         ("Maya", "Great. I will review the design document on Tuesday and leave comments before the end of the day."),
         ("Ravi", "One risk. The payment provider changes their webhook format on November eighth."),
         ("Jordan", "Good catch. I will add a compatibility layer so both formats work during the switch."),
@@ -46,10 +50,10 @@ SCENES = [
     ]),
     ("Lunch with Priya", "12:30", [
         ("Priya", "I finally booked the trip. Lisbon, the second week of March."),
-        ("Jordan", "That sounds amazing. Which hotel did you pick?"),
+        ("Jordan", "That sounds amazing, Priya. Which hotel did you pick?"),
         ("Priya", "A small place near the Alfama district. I will text you the link if you want to join."),
         ("Jordan", "Yes, please send it. I will think about taking leave from the fifteenth to the twentieth."),
-        ("Priya", "By the way, you mentioned your tooth was bothering you. See Doctor Okafor, she is excellent."),
+        ("Priya", "By the way, you mentioned your tooth was bothering you. See Doctor Patel, she is excellent."),
         ("Jordan", "Thanks. I will call her office tomorrow morning and book an appointment."),
         ("Priya", "Also, what are you getting your mom for her birthday?"),
         ("Jordan", "I was thinking of a book about pottery, she has been wanting to take a class."),
@@ -91,7 +95,7 @@ SCENES = [
 def say_to_pcm(voice: str, text: str, tmp: str) -> array.array:
     aiff = os.path.join(tmp, "line.aiff")
     wav = os.path.join(tmp, "line.wav")
-    subprocess.run(["say", "-v", voice, "-r", "175", "-o", aiff, text], check=True)
+    subprocess.run(["say", "-v", voice, "-r", str(SAY_RATE), "-o", aiff, text], check=True)
     subprocess.run(
         ["afconvert", "-f", "WAVE", "-d", f"LEI16@{RATE}", "-c", "1", aiff, wav], check=True
     )
@@ -129,8 +133,8 @@ def main() -> None:
     scenes_meta = []
 
     with tempfile.TemporaryDirectory() as tmp:
-        timeline.extend(ambient(20, bursts=2))  # lead-in dead air
-        for label, wall, lines in SCENES:
+        timeline.extend(ambient(8, bursts=1))  # short lead-in dead air
+        for scene_index, (label, wall, lines) in enumerate(SCENES):
             scene_start = len(timeline) / RATE
             lines_meta = []
             for speaker, text in lines:
@@ -147,7 +151,8 @@ def main() -> None:
                 {"label": label, "wallClock": wall, "fileStart": round(scene_start, 2),
                  "fileEnd": round(scene_end, 2), "lines": lines_meta}
             )
-            timeline.extend(ambient(random.uniform(30, 45), bursts=4))  # dead air between scenes
+            if scene_index < len(SCENES) - 1:   # dead air between scenes, none after the last
+                timeline.extend(ambient(random.uniform(30, 45), bursts=4))
 
     wav_path = os.path.join(out_dir, "demo_day.wav")
     with wave.open(wav_path, "wb") as w:

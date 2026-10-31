@@ -188,18 +188,20 @@ struct ClockTests {
         let clock = DemoClock(manifest: manifest)
         let lunch = try #require(manifest.scenes.first { $0.label == "Lunch with Priya" })
         #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart)) == "12:30")
-        #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart + 60)) == "12:31")
+        #expect(lunch.fileEnd - lunch.fileStart > 50, "the scene must be long enough for this check")
+        #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart + 50)) == "12:31")
         #expect(DemoClock.format(clock.wallSeconds(forOffset: 0)).hasPrefix("09:0"))
     }
     @Test func firstChunksOfLaterScenesLandInTheirOwnScene() throws {
         let manifest = try DemoManifest.load(from: resources.appending(path: "demo_day.json"))
         let clock = DemoClock(manifest: manifest)
-        // Offsets of the three chunks the Day 1 run stamped with the previous scene's time.
-        for (sceneIndex, offset) in [(1, 113.2), (2, 223.3), (3, 330.1)] {
+        // A scene's first chunk starts about 2 s early because of the pre-roll, in the dead air before the scene.
+        // That used to be stamped with the previous scene's time.
+        for sceneIndex in 1..<manifest.scenes.count {
             let scene = manifest.scenes[sceneIndex]
-            let wall = clock.wallSeconds(forOffset: offset)
+            let wall = clock.wallSeconds(forOffset: scene.fileStart - 1.9)
             #expect(wall >= scene.wallSeconds - 10 && wall <= scene.wallSeconds + 5,
-                    "offset \(offset) -> \(DemoClock.format(wall)), expected about \(scene.wallClock)")
+                    "\(scene.label): \(DemoClock.format(wall)), expected about \(scene.wallClock)")
         }
     }
 }

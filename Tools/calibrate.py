@@ -76,7 +76,7 @@ checks = {
     "lentil soup": r"lentil\s+soup",
     "lisbon": r"lisbon",
     "thursday": r"thursday",
-    "doctor okafor": r"(doctor|dr)\s+(okafor|o\s?kafor|oh\s?kafor)",
+    "doctor patel": r"(doctor|dr)\s+patel",
     "november fourteenth": r"november\s+(14|14th|fourteenth)",
     "grandma": r"grandma",
     "api spec": r"api\s+spec",
@@ -135,3 +135,45 @@ for scene in manifest["scenes"]:
     total_ref += len(ref)
     print(f"  {scene['label']:<24} WER {100 * err / max(1, len(ref)):5.1f}%  ({err} edits / {len(ref)} words)")
 print(f"  overall WER {100 * total_err / max(1, total_ref):.1f}%")
+
+
+# --- Per-speaker word error rate (which voices does the recognizer struggle with?) ---------------
+def align_errors(ref, hyp):
+    """Levenshtein alignment; returns, per reference word index, whether it was matched correctly."""
+    n, m = len(ref), len(hyp)
+    d = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n + 1): d[i][0] = i
+    for j in range(m + 1): d[0][j] = j
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (ref[i - 1] != hyp[j - 1]))
+    ok = [False] * n
+    i, j = n, m
+    while i > 0 and j > 0:
+        if ref[i - 1] == hyp[j - 1] and d[i][j] == d[i - 1][j - 1]:
+            ok[i - 1] = True; i -= 1; j -= 1
+        elif d[i][j] == d[i - 1][j - 1] + 1: i -= 1; j -= 1
+        elif d[i][j] == d[i - 1][j] + 1: i -= 1
+        else: j -= 1
+    return ok
+
+
+speaker_words = {}
+speaker_wrong = {}
+for scene in manifest["scenes"]:
+    ref, owners = [], []
+    for line in scene["lines"]:
+        words = norm_words(line["text"])
+        ref += words
+        owners += [line["speaker"]] * len(words)
+    hyp = norm_words(" ".join(
+        text for idx, off, dur, status, conf, confirmed, text in rows
+        if text and scene["fileStart"] - 3 <= off + dur / 2 <= scene["fileEnd"] + 3))
+    ok = align_errors(ref, hyp)
+    for owner, good in zip(owners, ok):
+        speaker_words[owner] = speaker_words.get(owner, 0) + 1
+        speaker_wrong[owner] = speaker_wrong.get(owner, 0) + (0 if good else 1)
+
+print("per-speaker word error rate (reference words not recognized correctly):")
+for who in sorted(speaker_words, key=lambda w: -speaker_wrong[w] / speaker_words[w]):
+    print(f"  {who:<10} {100 * speaker_wrong[who] / speaker_words[who]:5.1f}%  ({speaker_wrong[who]}/{speaker_words[who]} words)")
