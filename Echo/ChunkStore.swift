@@ -34,6 +34,14 @@ actor ChunkStore {
         if columns.contains("wav_file") { exec(db, "ALTER TABLE chunk RENAME COLUMN wav_file TO audio_file") }
         if !columns.contains("embedding") { exec(db, "ALTER TABLE chunk ADD COLUMN embedding BLOB") }
         exec(db, "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(id UNINDEXED, text, tokenize='porter unicode61')")
+        exec(db, """
+        CREATE TABLE IF NOT EXISTS ledger (
+          id TEXT PRIMARY KEY, ts REAL, kind TEXT, query TEXT, tier TEXT, reason TEXT, left_device INTEGER,
+          model TEXT, is_stub INTEGER, snippets_json TEXT, body_bytes INTEGER, response TEXT,
+          prompt_tokens INTEGER, completion_tokens INTEGER, latency_ms REAL, status TEXT, error TEXT
+        )
+        """)
+        exec(db, "CREATE TABLE IF NOT EXISTS day_digest (id INTEGER PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
     }
 
     private static func columnNames(_ db: OpaquePointer?, table: String) -> Set<String> {
@@ -200,11 +208,102 @@ actor ChunkStore {
     func reset() {
         Self.exec(db, "DELETE FROM chunk")
         Self.exec(db, "DELETE FROM chunk_fts")
+        Self.exec(db, "DELETE FROM day_digest")   // the digest summarizes the chunks; the ledger is an audit trail and stays
         let files = (try? FileManager.default.contentsOfDirectory(at: chunksDirectory, includingPropertiesForKeys: nil)) ?? []
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
 
     func write(audio: Data, named file: String) throws {
         try audio.write(to: chunksDirectory.appending(path: file), options: .atomic)
+    }
+
+    // MARK: Privacy ledger
+
+    func upsertLedger(_ e: LedgerEntry) {
+        var stmt: OpaquePointer?
+        let sql = """
+        INSERT OR REPLACE INTO ledger (id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json,
+          body_bytes, response, prompt_tokens, completion_tokens, latency_ms, status, error)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        let snippetsJSON = (try? String(data: JSONEncoder().encode(e.snippets), encoding: .utf8)) ?? "[]"
+        sqlite3_bind_text(stmt, 1, e.id, -1, t)
+        sqlite3_bind_double(stmt, 2, e.timestamp.timeIntervalSince1970)
+        sqlite3_bind_text(stmt, 3, e.kind.rawValue, -1, t)
+        sqlite3_bind_text(stmt, 4, e.query, -1, t)
+        sqlite3_bind_text(stmt, 5, e.tier.rawValue, -1, t)
+        sqlite3_bind_text(stmt, 6, e.reason, -1, t)
+        sqlite3_bind_int(stmt, 7, e.leftDevice ? 1 : 0)
+        sqlite3_bind_text(stmt, 8, e.model, -1, t)
+        sqlite3_bind_int(stmt, 9, e.isStub ? 1 : 0)
+        sqlite3_bind_text(stmt, 10, snippetsJSON, -1, t)
+        sqlite3_bind_int(stmt, 11, Int32(e.bodyBytes))
+        sqlite3_bind_text(stmt, 12, e.response, -1, t)
+        sqlite3_bind_int(stmt, 13, Int32(e.promptTokens))
+        sqlite3_bind_int(stmt, 14, Int32(e.completionTokens))
+        sqlite3_bind_double(stmt, 15, e.latencyMs)
+        sqlite3_bind_text(stmt, 16, e.status.rawValue, -1, t)
+        sqlite3_bind_text(stmt, 17, e.error, -1, t)
+        if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("ledger upsert failed") }
+    }
+
+    /// Newest first.
+    func ledgerEntries() -> [LedgerEntry] {
+        var stmt: OpaquePointer?
+        let sql = """
+        SELECT id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json, body_bytes, response,
+               prompt_tokens, completion_tokens, latency_ms, status, error FROM ledger ORDER BY ts DESC
+        """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        func text(_ i: Int32) -> String { sqlite3_column_text(stmt, i).map { String(cString: $0) } ?? "" }
+        var out: [LedgerEntry] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            var e = LedgerEntry(query: text(3), tier: Tier(rawValue: text(4)) ?? .local)
+            e.id = text(0)
+            e.timestamp = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 1))
+            e.kind = LedgerEntry.Kind(rawValue: text(2)) ?? .ask
+            e.reason = text(5)
+            e.leftDevice = sqlite3_column_int(stmt, 6) != 0
+            e.model = text(7)
+            e.isStub = sqlite3_column_int(stmt, 8) != 0
+            e.snippets = (try? JSONDecoder().decode([Snippet].self, from: Data(text(9).utf8))) ?? []
+            e.bodyBytes = Int(sqlite3_column_int(stmt, 10))
+            e.response = text(11)
+            e.promptTokens = Int(sqlite3_column_int(stmt, 12))
+            e.completionTokens = Int(sqlite3_column_int(stmt, 13))
+            e.latencyMs = sqlite3_column_double(stmt, 14)
+            e.status = LedgerEntry.Status(rawValue: text(15)) ?? .ok
+            e.error = text(16)
+            out.append(e)
+        }
+        return out
+    }
+
+    func clearLedger() { Self.exec(db, "DELETE FROM ledger") }
+
+    // MARK: Day digest
+
+    func saveDigest(json: String, model: String, isStub: Bool) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO day_digest (id, ts, json, model, is_stub) VALUES (1,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        sqlite3_bind_double(stmt, 1, Date().timeIntervalSince1970)
+        sqlite3_bind_text(stmt, 2, json, -1, t)
+        sqlite3_bind_text(stmt, 3, model, -1, t)
+        sqlite3_bind_int(stmt, 4, isStub ? 1 : 0)
+        sqlite3_step(stmt)
+    }
+
+    func loadDigest() -> (json: String, model: String, isStub: Bool)? {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT json, model, is_stub FROM day_digest WHERE id = 1", -1, &stmt, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_step(stmt) == SQLITE_ROW, let j = sqlite3_column_text(stmt, 0) else { return nil }
+        return (String(cString: j), sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? "", sqlite3_column_int(stmt, 2) != 0)
     }
 }
