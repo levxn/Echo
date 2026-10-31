@@ -44,10 +44,17 @@ nonisolated struct DemoManifest: Codable, Sendable {
 nonisolated struct DemoClock: Sendable {
     let manifest: DemoManifest
 
-    /// Seconds since midnight. Offsets between scenes extrapolate from the preceding scene.
+    /// Seconds since midnight. An offset maps to the *nearest* scene: inside a scene it is that scene,
+    /// and in the dead air between scenes it extrapolates from whichever boundary is closer.
+    /// (Anchoring to the preceding scene mis-stamped each scene's first chunk, because its 2 s
+    /// pre-roll starts in the dead air before the scene.)
     func wallSeconds(forOffset offset: Double) -> Double {
-        let scene = manifest.scenes.last(where: { $0.fileStart <= offset }) ?? manifest.scenes.first
-        guard let scene else { return 0 }
+        func distance(_ scene: DemoManifest.Scene) -> Double {
+            if offset < scene.fileStart { return scene.fileStart - offset }
+            if offset > scene.fileEnd { return offset - scene.fileEnd }
+            return 0
+        }
+        guard let scene = manifest.scenes.min(by: { distance($0) < distance($1) }) else { return 0 }
         return scene.wallSeconds + (offset - scene.fileStart)
     }
 

@@ -1,4 +1,6 @@
 import Foundation
+import NaturalLanguage
+import SQLite3
 import Testing
 @testable import Echo
 
@@ -97,6 +99,32 @@ struct VADTests {
     }
 }
 
+extension VADTests {
+    /// Regression: each scene's first chunk starts in the dead air before the scene (2 s pre-roll) and
+    /// used to be stamped with the previous scene's time.
+    @Test func everySpeechSegmentGetsItsOwnScenesWallClock() throws {
+        let manifest = try DemoManifest.load(from: resources.appending(path: "demo_day.json"))
+        let clock = DemoClock(manifest: manifest)
+        let (samples, _) = try WAV.read(resources.appending(path: "demo_day.wav"))
+        var wrong: [String] = []
+        for seg in runVAD(samples) {
+            let end = seg.startSeconds + seg.duration
+            // True scene = the one whose scripted lines overlap this segment the most.
+            let best = manifest.scenes.enumerated().map { i, scene in
+                (i, scene.lines.reduce(0.0) { $0 + max(0, min(end, $1.end) - max(seg.startSeconds, $1.start)) })
+            }.max { $0.1 < $1.1 }
+            guard let (i, overlap) = best, overlap > 0.5 else { continue }
+            let scene = manifest.scenes[i]
+            let wall = clock.wallSeconds(forOffset: seg.startSeconds)
+            let low = scene.wallSeconds - 5, high = scene.wallSeconds + (scene.fileEnd - scene.fileStart) + 5
+            if !(low...high).contains(wall) {
+                wrong.append("segment @\(seg.startSeconds)s -> \(DemoClock.format(wall)), expected scene \(scene.label)")
+            }
+        }
+        #expect(wrong.isEmpty, "\(wrong)")
+    }
+}
+
 struct TransportTests {
     private func meta(_ i: Int) -> ChunkMeta {
         ChunkMeta(id: "id-\(i)", index: i, wallStart: 32_400 + Double(i), fileOffset: Double(i) * 3, duration: 2.5,
@@ -160,7 +188,43 @@ struct ClockTests {
         let clock = DemoClock(manifest: manifest)
         let lunch = try #require(manifest.scenes.first { $0.label == "Lunch with Priya" })
         #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart)) == "12:30")
-        #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart + 90)) == "12:31")
+        #expect(DemoClock.format(clock.wallSeconds(forOffset: lunch.fileStart + 60)) == "12:31")
         #expect(DemoClock.format(clock.wallSeconds(forOffset: 0)).hasPrefix("09:0"))
+    }
+    @Test func firstChunksOfLaterScenesLandInTheirOwnScene() throws {
+        let manifest = try DemoManifest.load(from: resources.appending(path: "demo_day.json"))
+        let clock = DemoClock(manifest: manifest)
+        // Offsets of the three chunks the Day 1 run stamped with the previous scene's time.
+        for (sceneIndex, offset) in [(1, 113.2), (2, 223.3), (3, 330.1)] {
+            let scene = manifest.scenes[sceneIndex]
+            let wall = clock.wallSeconds(forOffset: offset)
+            #expect(wall >= scene.wallSeconds - 10 && wall <= scene.wallSeconds + 5,
+                    "offset \(offset) -> \(DemoClock.format(wall)), expected about \(scene.wallClock)")
+        }
+    }
+}
+
+struct SpikeTests {
+    @Test func fts5IsAvailableInTheSimulatorSQLite() {
+        var db: OpaquePointer?
+        #expect(sqlite3_open(":memory:", &db) == SQLITE_OK)
+        defer { sqlite3_close(db) }
+        let create = sqlite3_exec(db, "CREATE VIRTUAL TABLE t USING fts5(id UNINDEXED, text, tokenize='porter unicode61')", nil, nil, nil)
+        #expect(create == SQLITE_OK, "FTS5 unavailable: \(String(cString: sqlite3_errmsg(db)))")
+        sqlite3_exec(db, "INSERT INTO t VALUES ('a','I have booked a plumber to come on Friday'),('b','Lisbon the second week of March')", nil, nil, nil)
+        var stmt: OpaquePointer?
+        sqlite3_prepare_v2(db, "SELECT id FROM t WHERE t MATCH 'plumbers' ORDER BY bm25(t)", -1, &stmt, nil)
+        defer { sqlite3_finalize(stmt) }
+        #expect(sqlite3_step(stmt) == SQLITE_ROW, "porter stemming should match plumbers -> plumber")
+    }
+
+    @Test func wordEmbeddingsExistAndRankRelatedWordsCloser() throws {
+        let embedding = try #require(NLEmbedding.wordEmbedding(for: .english))
+        let vector = try #require(embedding.vector(for: "plumber"))
+        let related = embedding.distance(between: "plumber", and: "repair")
+        let unrelated = embedding.distance(between: "plumber", and: "march")
+        let report = "dim=\(vector.count) plumber~repair=\(related) plumber~march=\(unrelated)"
+        try? report.write(toFile: "/tmp/echo_spike_report.txt", atomically: true, encoding: .utf8)
+        #expect(related < unrelated, "\(report)")
     }
 }

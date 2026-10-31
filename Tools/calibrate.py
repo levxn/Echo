@@ -87,3 +87,51 @@ for name, pat in checks.items():
     hit += ok
     print(f"  phrase {'OK  ' if ok else 'MISS'} {name}")
 print(f"phrases found: {hit}/{len(checks)}")
+
+
+# --- Per-scene word error rate (informational) -------------------------------------------------
+ONES = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
+TENS = {20: "twenty", 30: "thirty"}
+
+
+def num_to_words(n):
+    if n < 20:
+        return ONES[n]
+    if n < 40:
+        t = TENS[n // 10 * 10]
+        return t if n % 10 == 0 else f"{t} {ONES[n % 10]}"
+    return str(n)
+
+
+def norm_words(text):
+    text = text.lower().replace("%", " percent ")
+    text = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", text)
+    text = re.sub(r"\d+", lambda m: " " + num_to_words(int(m.group())) + " ", text)
+    text = text.replace("mr ", "mister ").replace("mr.", "mister")
+    return re.sub(r"[^a-z ]", " ", text).split()
+
+
+def edit_distance(a, b):
+    prev = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        cur = [i]
+        for j, y in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
+        prev = cur
+    return prev[-1]
+
+
+print("per-scene word error rate (digits and 'Mr.' normalized; lower is better):")
+total_err = total_ref = 0
+for scene in manifest["scenes"]:
+    ref = norm_words(" ".join(l["text"] for l in scene["lines"]))
+    hyp_parts = []
+    for idx, off, dur, status, conf, confirmed, text in rows:
+        if text and scene["fileStart"] - 3 <= off + dur / 2 <= scene["fileEnd"] + 3:
+            hyp_parts.append(text)
+    hyp = norm_words(" ".join(hyp_parts))
+    err = edit_distance(ref, hyp)
+    total_err += err
+    total_ref += len(ref)
+    print(f"  {scene['label']:<24} WER {100 * err / max(1, len(ref)):5.1f}%  ({err} edits / {len(ref)} words)")
+print(f"  overall WER {100 * total_err / max(1, total_ref):.1f}%")
