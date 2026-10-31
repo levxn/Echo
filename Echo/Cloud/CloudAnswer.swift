@@ -10,9 +10,11 @@ enum EchoSchemas {
         "title":{"type":"string","description":"Short label, e.g. what was promised"},
         "detail":{"type":"string","description":"One sentence of detail"},
         "when":{"type":"string","description":"Due date or time mentioned, or empty"},
+        "source":{"type":"string","description":"Label of the snippet this came from, like S3"},
         "source_time":{"type":"string","description":"HH:MM of the snippet this came from"}},
-        "required":["title","detail","when","source_time"]}}},
-      "required":["answer","items"]}
+        "required":["title","detail","when","source","source_time"]}},
+      "follow_ups":{"type":"array","description":"Two or three short questions the user might ask next","items":{"type":"string"}}},
+      "required":["answer","items","follow_ups"]}
     """
 
     static let digestName = "EchoDigest"
@@ -23,8 +25,9 @@ enum EchoSchemas {
         "time":{"type":"string"},"title":{"type":"string"},"summary":{"type":"string"}},
         "required":["time","title","summary"]}},
       "action_items":{"type":"array","items":{"type":"object","properties":{
-        "what":{"type":"string"},"to_whom":{"type":"string"},"due":{"type":"string"},"source_time":{"type":"string"}},
-        "required":["what","to_whom","due","source_time"]}},
+        "what":{"type":"string"},"to_whom":{"type":"string"},"due":{"type":"string"},
+        "source":{"type":"string","description":"Label of the snippet, like S3"},"source_time":{"type":"string"}},
+        "required":["what","to_whom","due","source","source_time"]}},
       "people":{"type":"array","items":{"type":"string"}}},
       "required":["day_summary","conversations","action_items","people"]}
     """
@@ -44,12 +47,14 @@ struct CloudItem: Codable, Identifiable, Equatable {
     let detail: String
     let when: String
     let sourceTime: String
+    /// Snippet label the model cited ("S3"); older replies and the stub have none and fall back to `sourceTime`.
+    let source: String
     var id: String { "\(sourceTime)|\(title)" }
 
-    enum CodingKeys: String, CodingKey { case title, detail, when, sourceTime = "source_time" }
+    enum CodingKeys: String, CodingKey { case title, detail, when, source, sourceTime = "source_time" }
 
-    init(title: String, detail: String, when: String = "", sourceTime: String = "") {
-        self.title = title; self.detail = detail; self.when = when; self.sourceTime = sourceTime
+    init(title: String, detail: String, when: String = "", sourceTime: String = "", source: String = "") {
+        self.title = title; self.detail = detail; self.when = when; self.sourceTime = sourceTime; self.source = source
     }
 
     init(from decoder: Decoder) throws {
@@ -58,22 +63,27 @@ struct CloudItem: Codable, Identifiable, Equatable {
         detail = try c.decodeIfPresent(String.self, forKey: .detail) ?? ""
         when = try c.decodeIfPresent(String.self, forKey: .when) ?? ""
         sourceTime = try c.decodeIfPresent(String.self, forKey: .sourceTime) ?? ""
+        source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
     }
 }
 
 struct CloudAnswer: Codable, Equatable {
     let answer: String
     let items: [CloudItem]
+    let followUps: [String]
 
-    init(answer: String, items: [CloudItem] = []) { self.answer = answer; self.items = items }
+    init(answer: String, items: [CloudItem] = [], followUps: [String] = []) {
+        self.answer = answer; self.items = items; self.followUps = followUps
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         answer = try c.decode(String.self, forKey: .answer)
         items = try c.decodeIfPresent([CloudItem].self, forKey: .items) ?? []
+        followUps = try c.decodeIfPresent([String].self, forKey: .followUps) ?? []
     }
 
-    enum CodingKeys: String, CodingKey { case answer, items }
+    enum CodingKeys: String, CodingKey { case answer, items, followUps = "follow_ups" }
 
     /// Parses Muse's structured reply, tolerating a code fence or surrounding prose; if no JSON object can be
     /// read, shows the raw text rather than failing.
@@ -99,8 +109,23 @@ struct DigestAction: Codable, Equatable, Identifiable {
     let toWhom: String
     let due: String
     let sourceTime: String
+    let source: String
     var id: String { sourceTime + what }
-    enum CodingKeys: String, CodingKey { case what, toWhom = "to_whom", due, sourceTime = "source_time" }
+    enum CodingKeys: String, CodingKey { case what, toWhom = "to_whom", due, sourceTime = "source_time", source }
+
+    init(what: String, toWhom: String, due: String, sourceTime: String, source: String = "") {
+        self.what = what; self.toWhom = toWhom; self.due = due; self.sourceTime = sourceTime; self.source = source
+    }
+
+    /// `source` is new; digests saved before it existed still load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        what = try c.decode(String.self, forKey: .what)
+        toWhom = try c.decode(String.self, forKey: .toWhom)
+        due = try c.decode(String.self, forKey: .due)
+        sourceTime = try c.decode(String.self, forKey: .sourceTime)
+        source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
+    }
 }
 
 struct DayDigest: Codable, Equatable {

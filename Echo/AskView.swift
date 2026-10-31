@@ -4,6 +4,8 @@ struct AskView: View {
     let ask: AskModel
     let player: ChunkPlayer
     let hasMemory: Bool
+    /// The day's moments, so a citation in a Muse answer can find its audio.
+    let chunks: [ChunkRecord]
 
     @FocusState private var focused: Bool
 
@@ -23,6 +25,7 @@ struct AskView: View {
                     field
                     suggestions
                     result
+                    followUpChips
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.sm)
@@ -132,11 +135,60 @@ struct AskView: View {
             SendingCard(plan: plan, isStub: ask.isStub)
                 .transition(.opacity)
         case .cloudAnswered(let r):
-            CloudAnswerCard(result: r, expandSent: ask.expandSent)
+            CloudAnswerCard(result: r, expandSent: ask.expandSent, player: player) { item in
+                CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail + " " + item.title,
+                                         snippets: r.plan.snippets, chunks: chunks)
+            }
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
         case .cloudFailed(let f):
             CloudFailureCard(failure: f, player: player) { Task { await ask.retry() } }
                 .transition(.opacity)
+        }
+    }
+
+    /// Under an answer: what to ask next. Idle: the last few questions, newest first.
+    private var followUps: (title: String, questions: [String]) {
+        switch ask.state {
+        case .answered(let r) where r.answer != nil:
+            return ("Ask next", FollowUps.local(query: r.query, terms: r.answer?.highlightTerms ?? []))
+        case .cloudAnswered(let r):
+            return ("Ask next", FollowUps.cloud(r.answer, asked: r.query))
+        case .idle:
+            return ("Recent", Array(ask.recent.prefix(3)))
+        default:
+            return ("", [])
+        }
+    }
+
+    @ViewBuilder
+    private var followUpChips: some View {
+        let next = followUps
+        if !next.questions.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text(next.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                    .textCase(.uppercase)
+                ForEach(next.questions, id: \.self) { question in
+                    Button { submit(question) } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "arrow.turn.down.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Palette.teal)
+                            Text(question)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(Palette.textPrimary)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, Spacing.md)
+                        .frame(minHeight: 44)
+                    }
+                    .buttonStyle(EchoPressStyle())
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                }
+            }
+            .transition(.opacity)
         }
     }
 

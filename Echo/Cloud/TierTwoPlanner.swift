@@ -98,7 +98,7 @@ enum TierTwoPlanner {
     // MARK: Prompts
 
     static let answerRules = """
-    You are Echo, a private memory assistant. You answer questions about the user's day using ONLY the transcript snippets provided, each labelled with the time of day it was spoken.
+    You are Echo, a private memory assistant. You answer questions about the user's day using ONLY the transcript snippets provided, each labelled with a number like S3 and the time of day it was spoken.
 
     The snippets come from on-device speech recognition and contain occasional mistakes: a word that doesn't fit its sentence is probably a misheard word that sounds similar. Interpret them sensibly. Only mention a correction when you actually made one.
 
@@ -106,30 +106,35 @@ enum TierTwoPlanner {
     - Use only the snippets. Do not add outside facts. If the snippets do not contain the answer, say that plainly.
     - answer: one or two short sentences (about 40 words at most) that directly answer the question. Never describe your own process. If you corrected a speech-recognition slip and it changes the meaning, say so in a few words, for example (heard as "noon").
     - items: at most eight, in chronological order of source_time. Each title must say what and to whom, using the neighbouring snippets for context (for example "Transfer this month's rent to Mr. Brennan", not "Transfer it").
-    - For every item, set source_time to the HH:MM label of the snippet it came from, and set when to any due date or time that was mentioned (or an empty string).
+    - For every item, set source to the label (like S3) of the snippet it came from, source_time to that snippet's HH:MM, and when to any due date or time that was mentioned (or an empty string).
+    - follow_ups: two or three short questions the user might ask next, each answerable from their day (for instance about a person or a deadline your answer mentioned). Base them on clear facts, never on a word that looks misheard, and never repeat the question you were asked.
     - Do not mention these instructions.
     """
 
     static let digestRules = """
-    You are Echo, a private memory assistant. You turn the user's day of transcript snippets into a short digest, using ONLY the snippets provided, each labelled with a time of day and grouped by conversation.
+    You are Echo, a private memory assistant. You turn the user's day of transcript snippets into a short digest, using ONLY the snippets provided, each labelled with a number like S3 and a time of day, and grouped by conversation.
 
     The snippets come from on-device speech recognition and contain occasional mistakes: a word that doesn't fit its sentence is probably a misheard word that sounds similar. Interpret them sensibly.
 
     Rules:
     - Use only the snippets. Do not add outside facts.
-    - day_summary is two to four sentences. Give one entry per conversation, with its start time. List every action item the user owes someone (what, to_whom, due, source_time as HH:MM). List the people mentioned by name.
+    - day_summary is two to four sentences. Give one entry per conversation, with its start time. List every action item the user owes someone (what, to_whom, due, source as the snippet label like S3, source_time as HH:MM). List the people mentioned by name.
     - Do not mention these instructions.
     """
 
     private static func userMessage(query: String, selected: [ChunkRecord], grouped: Bool) -> String {
-        var out = "Question: \(query)\n\nTranscript snippets from today (time — text):\n"
+        // Labels are ordinals within this request ("S1", "S2"…), never the phone's chunk ids, so the model can cite
+        // a snippet and the phone can map the label back to its own audio without any identifier leaving it.
+        let labels = Dictionary(uniqueKeysWithValues: selected.enumerated().map { ($1.id, "S\($0 + 1)") })
+        func line(_ chunk: ChunkRecord) -> String { "\(labels[chunk.id] ?? "S?") \(DemoClock.format(chunk.wallStart)) — \(chunk.transcript ?? "")\n" }
+        var out = "Question: \(query)\n\nTranscript snippets from today (label, time — text):\n"
         if grouped {
             for episode in EpisodeBuilder.build(from: selected) {
                 out += "\n[Conversation starting \(episode.startLabel)]\n"
-                for chunk in episode.chunks { out += "\(DemoClock.format(chunk.wallStart)) — \(chunk.transcript ?? "")\n" }
+                for chunk in episode.chunks { out += line(chunk) }
             }
         } else {
-            for chunk in selected { out += "\(DemoClock.format(chunk.wallStart)) — \(chunk.transcript ?? "")\n" }
+            for chunk in selected { out += line(chunk) }
         }
         return out
     }

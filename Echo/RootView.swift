@@ -35,7 +35,7 @@ struct RootView: View {
             Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest, player: player) }
             Tab("Pipeline", systemImage: "waveform.path", value: RootTab.pipeline) { PipelineView(model: model) }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
-                AskView(ask: ask, player: player, hasMemory: model.storedCount > 0)
+                AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
             }
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) }
         }

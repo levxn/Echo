@@ -325,6 +325,18 @@ struct AskFlowTests {
         #expect(!r.ledger.entries[0].leftDevice && r.ledger.entries[0].bodyBytes == 0)
     }
 
+    @Test func aCitationInTheReplyFindsItsMomentOnThePhone() async throws {
+        let r = try await rig { $0.result = .success(#"{"answer":"One promise.","items":[{"title":"Second moment","detail":"d","when":"","source":"S2","source_time":"00:00"}],"follow_ups":["Next?"]}"#) }
+        defer { r.restoreSwitch() }
+        await r.ask.ask("What did I promise people today?")
+        guard case .cloudAnswered(let result) = r.ask.state else { Issue.record("expected a cloud answer"); return }
+        let item = try #require(result.answer.items.first)
+        let found = try #require(CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail,
+                                                          snippets: result.plan.snippets, chunks: r.harness.chunks))
+        #expect(found.id == result.plan.snippets[1].chunkID, "S2 is the second snippet of the request, whatever time the reply claims")
+        #expect(result.answer.followUps == ["Next?"])
+    }
+
     @Test func aBroadQuestionSendsOnlyTheChosenSnippetsAndLogsExactlyWhatLeft() async throws {
         let r = try await rig()
         defer { r.restoreSwitch() }

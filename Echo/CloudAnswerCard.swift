@@ -8,6 +8,9 @@ enum ByteFormat {
 struct CloudAnswerCard: View {
     let result: CloudResult
     var expandSent = false
+    let player: ChunkPlayer
+    /// Finds the moment on this phone a citation points at.
+    let chunkFor: (CloudItem) -> ChunkRecord?
 
     private var isStub: Bool { result.response.isStub }
 
@@ -36,7 +39,7 @@ struct CloudAnswerCard: View {
 
             if !result.answer.items.isEmpty {
                 VStack(spacing: Spacing.sm) {
-                    ForEach(result.answer.items) { ItemRow(item: $0) }
+                    ForEach(result.answer.items) { ItemRow(item: $0, chunk: chunkFor($0), player: player) }
                 }
             }
 
@@ -59,18 +62,65 @@ struct CloudAnswerCard: View {
     }
 }
 
-private struct ItemRow: View {
-    let item: CloudItem
+/// The time a citation came from; with its moment found on this phone, it plays the audio.
+struct SourcePlayChip: View {
+    let label: String
+    let chunk: ChunkRecord?
+    let player: ChunkPlayer
+    var tint: Color = Palette.cloud
+
+    private var playing: Bool { chunk.map { player.playingID == $0.id } ?? false }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            if !item.sourceTime.isEmpty {
-                Text(item.sourceTime)
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+        if let chunk {
+            Button { player.toggle(chunk) } label: {
+                Label(label, systemImage: playing ? "stop.fill" : "play.fill")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Palette.cloud)
-                    .frame(width: 44, alignment: .leading)
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 32)
+                    .background(tint.opacity(0.16), in: Capsule())
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(EchoPressStyle())
+            .accessibilityLabel(playing ? "Stop audio" : "Play the audio from \(label)")
+        } else if !label.isEmpty {
+            Text(label)
+                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+        }
+    }
+}
+
+private struct ItemRow: View {
+    let item: CloudItem
+    let chunk: ChunkRecord?
+    let player: ChunkPlayer
+    @State private var showQuote = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            content
+            if showQuote, let transcript = chunk?.transcript {
+                Text("Heard at \(item.sourceTime): “\(transcript)”")
+                    .font(.caption)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture { if chunk != nil { withAnimation(.smooth(duration: 0.25)) { showQuote.toggle() } } }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var content: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))
@@ -90,10 +140,8 @@ private struct ItemRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            SourcePlayChip(label: item.sourceTime, chunk: chunk, player: player)
         }
-        .padding(Spacing.md)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 }
 

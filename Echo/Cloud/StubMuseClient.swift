@@ -24,9 +24,10 @@ struct StubMuseClient: MuseClient {
                 CloudItem(title: "Answer the landlord about renewing", detail: "Final answer on the 4% rent increase.", when: "Before November 20", sourceTime: "15:10"),
                 CloudItem(title: "Transfer this month's rent", detail: "Outstanding rent for the apartment.", when: "Tomorrow", sourceTime: "15:10"),
                 CloudItem(title: "Call Grandma", detail: "Promised to call.", when: "Sunday afternoon", sourceTime: "18:40"),
-            ])
+            ], followUps: ["What did Mister Brennan say about the lease?", "Summarize my day"])
         } else {
-            result = CloudAnswer(answer: "Stub preview: four conversations today. A morning stand-up about the billing service launch, lunch with Priya about a Lisbon trip, a call with the landlord about a plumber and the lease, and a family dinner planning a birthday weekend.", items: [])
+            result = CloudAnswer(answer: "Stub preview: four conversations today. A morning stand-up about the billing service launch, lunch with Priya about a Lisbon trip, a call with the landlord about a plumber and the lease, and a family dinner planning a birthday weekend.", items: [],
+                                 followUps: ["What did I promise people today?", "When is the plumber coming?"])
         }
         return (try? String(data: JSONEncoder().encode(result), encoding: .utf8)) ?? ""
     }

@@ -4,12 +4,13 @@ import SwiftUI
 struct DigestSection: View {
     let digest: DigestModel
     let model: PipelineModel
+    let player: ChunkPlayer
 
     var body: some View {
         switch digest.state {
         case .idle: prompt
         case .working(let plan): working(plan)
-        case .ready(let ready): DigestCard(ready: ready) { run() }
+        case .ready(let ready): DigestCard(ready: ready, model: model, player: player) { run() }
         case .failed(let message): failed(message)
         case .cloudOff: notice(icon: "cloud.slash.fill", title: "Cloud is off",
                                text: "Turn it back on in the Privacy Ledger to let Muse summarize your day.")
@@ -80,6 +81,8 @@ struct DigestSection: View {
 
 private struct DigestCard: View {
     let ready: DigestModel.Ready
+    let model: PipelineModel
+    let player: ChunkPlayer
     let onRerun: () -> Void
 
     var body: some View {
@@ -123,10 +126,10 @@ private struct DigestCard: View {
                                     .font(.footnote).foregroundStyle(Palette.textSecondary)
                             }
                             Spacer(minLength: 0)
-                            Text(item.sourceTime)
-                                .font(.system(.caption, design: .rounded, weight: .semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(Palette.cloud)
+                            SourcePlayChip(label: item.sourceTime,
+                                           chunk: CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime,
+                                                                           detail: item.what, snippets: [], chunks: model.chunks),
+                                           player: player)
                         }
                         .padding(Spacing.md)
                         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))

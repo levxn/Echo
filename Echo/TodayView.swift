@@ -27,7 +27,7 @@ struct TodayView: View {
                 }
                 FunnelCard(model: model)
                 if model.chunks.isEmpty { EmptyDayHint() }
-                if model.isSettled { DigestSection(digest: digest, model: model) }
+                if model.isSettled { DigestSection(digest: digest, model: model, player: player) }
                 if !promises.isEmpty {
                     PromisesSection(promises: promises, model: model, player: player)
                         .id("promises")
