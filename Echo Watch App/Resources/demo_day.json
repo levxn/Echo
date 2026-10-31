@@ -1,0 +1,308 @@
+{
+  "sampleRate": 16000,
+  "duration": 426.94,
+  "scenes": [
+    {
+      "label": "Morning standup",
+      "wallClock": "09:05",
+      "fileStart": 20.0,
+      "fileEnd": 81.14,
+      "lines": [
+        {
+          "speaker": "Maya",
+          "text": "Okay, let's start. Jordan, where are we on the billing service?",
+          "start": 20.0,
+          "end": 24.0
+        },
+        {
+          "speaker": "Jordan",
+          "text": "The migration is done in staging. I think we can deploy to production on Thursday morning.",
+          "start": 24.8,
+          "end": 31.24
+        },
+        {
+          "speaker": "Ravi",
+          "text": "Thursday works for me, but I still need the API spec for the invoices endpoint.",
+          "start": 32.45,
+          "end": 37.9
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Right. I will send you the API spec by Wednesday noon, that's a promise.",
+          "start": 39.08,
+          "end": 44.95
+        },
+        {
+          "speaker": "Maya",
+          "text": "Great. I will review the design document on Tuesday and leave comments before the end of the day.",
+          "start": 46.09,
+          "end": 51.29
+        },
+        {
+          "speaker": "Ravi",
+          "text": "One risk. The payment provider changes their webhook format on November eighth.",
+          "start": 52.32,
+          "end": 57.23
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Good catch. I will add a compatibility layer so both formats work during the switch.",
+          "start": 58.19,
+          "end": 64.47
+        },
+        {
+          "speaker": "Maya",
+          "text": "Perfect. Budget is tight, so let's not add new features before the launch.",
+          "start": 65.75,
+          "end": 70.15
+        },
+        {
+          "speaker": "Ravi",
+          "text": "Agreed. I will also ask finance about the extra cloud credits we discussed.",
+          "start": 71.21,
+          "end": 76.39
+        },
+        {
+          "speaker": "Maya",
+          "text": "Thanks everyone. Same time tomorrow.",
+          "start": 77.59,
+          "end": 80.05
+        }
+      ]
+    },
+    {
+      "label": "Lunch with Priya",
+      "wallClock": "12:30",
+      "fileStart": 115.28,
+      "fileEnd": 182.63,
+      "lines": [
+        {
+          "speaker": "Priya",
+          "text": "I finally booked the trip. Lisbon, the second week of March.",
+          "start": 115.28,
+          "end": 119.09
+        },
+        {
+          "speaker": "Jordan",
+          "text": "That sounds amazing. Which hotel did you pick?",
+          "start": 119.96,
+          "end": 123.53
+        },
+        {
+          "speaker": "Priya",
+          "text": "A small place near the Alfama district. I will text you the link if you want to join.",
+          "start": 124.27,
+          "end": 129.11
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Yes, please send it. I will think about taking leave from the fifteenth to the twentieth.",
+          "start": 130.61,
+          "end": 136.9
+        },
+        {
+          "speaker": "Priya",
+          "text": "By the way, you mentioned your tooth was bothering you. See Doctor Okafor, she is excellent.",
+          "start": 137.79,
+          "end": 143.28
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Thanks. I will call her office tomorrow morning and book an appointment.",
+          "start": 144.26,
+          "end": 149.49
+        },
+        {
+          "speaker": "Priya",
+          "text": "Also, what are you getting your mom for her birthday?",
+          "start": 150.41,
+          "end": 153.07
+        },
+        {
+          "speaker": "Jordan",
+          "text": "I was thinking of a book about pottery, she has been wanting to take a class.",
+          "start": 154.43,
+          "end": 159.57
+        },
+        {
+          "speaker": "Priya",
+          "text": "Lovely idea. Pair it with a voucher for a beginner workshop.",
+          "start": 160.63,
+          "end": 163.99
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Oh, that's good. I will order the book tonight and look up workshops this weekend.",
+          "start": 165.39,
+          "end": 171.33
+        },
+        {
+          "speaker": "Priya",
+          "text": "And tonight, don't forget to send me that recipe for the lentil soup.",
+          "start": 172.66,
+          "end": 176.45
+        },
+        {
+          "speaker": "Jordan",
+          "text": "I will send the lentil soup recipe this evening, I promise.",
+          "start": 177.62,
+          "end": 181.75
+        }
+      ]
+    },
+    {
+      "label": "Call with the landlord",
+      "wallClock": "15:10",
+      "fileStart": 225.32,
+      "fileEnd": 295.07,
+      "lines": [
+        {
+          "speaker": "Brennan",
+          "text": "Hello Jordan, this is Mister Brennan, calling about the apartment.",
+          "start": 225.32,
+          "end": 229.38
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Hi Mister Brennan. Thanks for calling back. The bathroom ceiling is still leaking.",
+          "start": 230.56,
+          "end": 236.95
+        },
+        {
+          "speaker": "Brennan",
+          "text": "Yes, I received your photos. I have booked a plumber to come on Friday at ten in the morning.",
+          "start": 238.21,
+          "end": 243.86
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Friday at ten works. I will make sure I am home to let them in.",
+          "start": 244.87,
+          "end": 249.58
+        },
+        {
+          "speaker": "Brennan",
+          "text": "Wonderful. Now, about your lease. It ends on December thirty first.",
+          "start": 250.66,
+          "end": 255.43
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Right, I wanted to ask about renewing.",
+          "start": 256.68,
+          "end": 259.75
+        },
+        {
+          "speaker": "Brennan",
+          "text": "I can offer a twelve month renewal, with a four percent rent increase.",
+          "start": 261.24,
+          "end": 265.44
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Four percent is a bit more than I expected. Can I think about it and let you know?",
+          "start": 266.68,
+          "end": 272.51
+        },
+        {
+          "speaker": "Brennan",
+          "text": "Of course. I need your decision by November twentieth.",
+          "start": 273.67,
+          "end": 277.17
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Understood. I will give you a final answer before November twentieth.",
+          "start": 278.68,
+          "end": 283.73
+        },
+        {
+          "speaker": "Brennan",
+          "text": "Excellent. Also, rent for this month is still outstanding.",
+          "start": 284.47,
+          "end": 288.37
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Sorry about that. I will transfer it tomorrow, first thing.",
+          "start": 289.47,
+          "end": 294.32
+        }
+      ]
+    },
+    {
+      "label": "Family dinner",
+      "wallClock": "18:40",
+      "fileStart": 332.15,
+      "fileEnd": 393.39,
+      "lines": [
+        {
+          "speaker": "Mom",
+          "text": "Dinner is ready everyone. Jordan, can you bring the salad?",
+          "start": 332.15,
+          "end": 336.75
+        },
+        {
+          "speaker": "Jordan",
+          "text": "Sure, Mom. Smells fantastic.",
+          "start": 337.9,
+          "end": 341.07
+        },
+        {
+          "speaker": "Dad",
+          "text": "Your mother's birthday is on November fourteenth, and I want to take her to the lake cabin for the weekend.",
+          "start": 342.59,
+          "end": 349.04
+        },
+        {
+          "speaker": "Jordan",
+          "text": "That's a great idea, Dad. I can drive you both on Saturday morning.",
+          "start": 350.08,
+          "end": 355.31
+        },
+        {
+          "speaker": "Mom",
+          "text": "You don't need to fuss. But I would love to see the lake in autumn.",
+          "start": 356.19,
+          "end": 360.61
+        },
+        {
+          "speaker": "Dad",
+          "text": "Jordan, remember to call Grandma on Sunday. She has been asking about you.",
+          "start": 361.87,
+          "end": 367.3
+        },
+        {
+          "speaker": "Jordan",
+          "text": "I will call Grandma this Sunday afternoon, I promise.",
+          "start": 368.14,
+          "end": 371.99
+        },
+        {
+          "speaker": "Mom",
+          "text": "We also need groceries. Eggs, olive oil, and oranges for the juice.",
+          "start": 373.39,
+          "end": 379.42
+        },
+        {
+          "speaker": "Jordan",
+          "text": "I will pick those up on my way home from work tomorrow.",
+          "start": 380.39,
+          "end": 383.8
+        },
+        {
+          "speaker": "Dad",
+          "text": "And bring an umbrella. They say it will rain all week.",
+          "start": 384.6,
+          "end": 387.98
+        },
+        {
+          "speaker": "Mom",
+          "text": "Alright, let's eat before it gets cold.",
+          "start": 389.47,
+          "end": 392.47
+        }
+      ]
+    }
+  ]
+}
