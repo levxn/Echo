@@ -122,6 +122,15 @@ struct AskView: View {
         case .answered(let r):
             AnswerCard(result: r, player: player)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
+        case .sending(_, let plan, _):
+            SendingCard(plan: plan, isStub: ask.isStub)
+                .transition(.opacity)
+        case .cloudAnswered(let r):
+            CloudAnswerCard(result: r)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+        case .cloudFailed(let f):
+            CloudFailureCard(failure: f, player: player) { Task { await ask.retry() } }
+                .transition(.opacity)
         }
     }
 

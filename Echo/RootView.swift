@@ -8,12 +8,15 @@ struct RootView: View {
     let model: PipelineModel
 
     @State private var ask: AskModel
+    @State private var ledger: LedgerModel
     @State private var player: ChunkPlayer
     @State private var tab: RootTab
 
     init(model: PipelineModel) {
         self.model = model
-        _ask = State(initialValue: AskModel(store: model.store))
+        let ledger = LedgerModel(store: model.store)
+        _ledger = State(initialValue: ledger)
+        _ask = State(initialValue: AskModel(store: model.store, ledger: ledger, client: MuseClientFactory.make()))
         _player = State(initialValue: ChunkPlayer(directory: model.store.chunksDirectory))
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
         let args = ProcessInfo.processInfo.arguments
@@ -37,6 +40,7 @@ struct RootView: View {
                 _ = TextNormalizer.lemmas("warming up")
                 _ = TextNormalizer.nameTokens(in: "Warm Up")
             }
+            await ledger.reload()
             // Dev hook: `-ask "question"` runs a query once the stored day has loaded.
             let args = ProcessInfo.processInfo.arguments
             guard let i = args.firstIndex(of: "-ask"), i + 1 < args.count else { return }

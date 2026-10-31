@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Shows where a question was answered: this phone, the (design-only) on-device Glimmer tier, or Muse in the cloud.
 struct RouteStrip: View {
-    let active: Tier
+    enum Active { case local, cloud, none }
+    let active: Active
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
@@ -63,30 +64,41 @@ struct AnswerCard: View {
     let result: AskResult
     let player: ChunkPlayer
 
-    private var isLocal: Bool { result.decision.tier == .local }
+    private var held: Bool { result.note != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            RouteStrip(active: result.decision.tier)
+            RouteStrip(active: held ? .none : .local)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: 6) {
-                    Image(systemName: isLocal ? "lock.fill" : "cloud.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(isLocal ? "Answered on this phone" : "Needs Muse Spark")
+                switch result.note {
+                case .cloudOff:
+                    Label("Cloud is off", systemImage: "cloud.slash.fill")
                         .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.amber)
+                    Text("This question needs synthesis, but you've switched the cloud off, so nothing was sent. Here are the closest moments on this phone. Turn the cloud back on in the Privacy Ledger to let Muse answer.")
+                        .font(.subheadline).foregroundStyle(Palette.textSecondary)
+                case .nothingMatched:
+                    Label("Nothing matched", systemImage: "magnifyingglass")
+                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.amber)
+                    Text("Nothing in today's transcripts matches that closely enough, so nothing was sent anywhere.")
+                        .font(.subheadline).foregroundStyle(Palette.textSecondary)
+                case nil:
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.fill").font(.system(size: 12, weight: .semibold))
+                        Text("Answered on this phone")
+                            .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    }
+                    .foregroundStyle(Palette.local)
+                    Text(result.decision.reason)
+                        .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 }
-                .foregroundStyle(isLocal ? Palette.local : Palette.cloud)
-                Text(result.decision.reason)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            .fixedSize(horizontal: false, vertical: true)
 
-            if isLocal, let answer = result.answer {
-                localAnswer(answer)
-            } else {
-                escalation
+            if let answer = result.answer {
+                if held { sources(answer) } else { localAnswer(answer) }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,7 +106,15 @@ struct AnswerCard: View {
         .accessibilityElement(children: .contain)
     }
 
-    // MARK: Tier 0
+    private func sources(_ answer: Answer) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Closest moments")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.textSecondary)
+                .textCase(.uppercase)
+            ForEach(answer.sources) { SourceRow(hit: $0, terms: answer.highlightTerms, player: player) }
+        }
+    }
 
     @ViewBuilder
     private func localAnswer(_ answer: Answer) -> some View {
@@ -123,38 +143,9 @@ struct AnswerCard: View {
             .font(.caption)
             .foregroundStyle(Palette.textSecondary)
     }
-
-    // MARK: Tier 2
-
-    private var escalation: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Echo would send only text snippets, never audio:")
-                .font(.subheadline)
-                .foregroundStyle(Palette.textPrimary)
-            ForEach(result.outcome.hits.prefix(3)) { hit in
-                HStack(alignment: .top, spacing: Spacing.sm) {
-                    Text(hit.chunk.wallLabel)
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(Palette.cloud)
-                        .frame(width: 44, alignment: .leading)
-                    Text(hit.chunk.transcript ?? "")
-                        .font(.footnote)
-                        .foregroundStyle(Palette.textSecondary)
-                        .lineLimit(2)
-                }
-            }
-            Text("The cloud step connects to the Meta Model API next.")
-                .font(.caption)
-                .foregroundStyle(Palette.textSecondary)
-        }
-        .padding(Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.cloud.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
 }
 
-private struct SourceRow: View {
+struct SourceRow: View {
     let hit: Hit
     let terms: [String]
     let player: ChunkPlayer
