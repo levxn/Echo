@@ -71,16 +71,6 @@
 		9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Echo Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		9749D0C33096075B00D25995 /* Exceptions for "Echo Watch App" folder in "Echo Watch App" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Echo-Watch-App-Info.plist",
-			);
-			target = 9749D08B309605B800D25995 /* Echo Watch App */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9749D06B309605B700D25995 /* Echo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -99,9 +89,6 @@
 		};
 		9749D090309605B800D25995 /* Echo Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				9749D0C33096075B00D25995 /* Exceptions for "Echo Watch App" folder in "Echo Watch App" target */,
-			);
 			path = "Echo Watch App";
 			sourceTree = "<group>";
 		};
@@ -113,6 +100,11 @@
 		9749D0A8309605B800D25995 /* Echo Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Echo Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		9749D0C100000000000000A1 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -172,6 +164,7 @@
 				9749D090309605B800D25995 /* Echo Watch App */,
 				9749D09E309605B800D25995 /* Echo Watch AppTests */,
 				9749D0A8309605B800D25995 /* Echo Watch AppUITests */,
+				9749D0C100000000000000A1 /* Shared */,
 				9749D06A309605B700D25995 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -208,6 +201,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9749D06B309605B700D25995 /* Echo */,
+				9749D0C100000000000000A1 /* Shared */,
 			);
 			name = Echo;
 			packageProductDependencies = (
@@ -276,6 +270,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9749D090309605B800D25995 /* Echo Watch App */,
+				9749D0C100000000000000A1 /* Shared */,
 			);
 			name = "Echo Watch App";
 			packageProductDependencies = (
@@ -704,6 +699,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo transcribes your captured conversations on this device to build a private, searchable memory.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -739,6 +735,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo transcribes your captured conversations on this device to build a private, searchable memory.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
