@@ -5,3 +5,4 @@ build/
 Secrets.xcconfig
 *.key
 meta_api_key
+Config/meta_api_key.txt

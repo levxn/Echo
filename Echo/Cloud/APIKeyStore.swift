@@ -8,14 +8,21 @@ enum APIKeyStore {
         URL.applicationSupportDirectory.appending(path: "Echo", directoryHint: .isDirectory)
     }
 
+    /// The placeholder shipped in `Config/meta_api_key.txt` starts with this; it must never be used as a key.
+    static let placeholderPrefix = "PASTE_"
+
+    /// Returns a usable key, or nil for blank values, the placeholder, or anything with whitespace inside.
+    static func sanitized(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !key.hasPrefix(placeholderPrefix),
+              key.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else { return nil }
+        return key
+    }
+
     static func load(directory: URL = APIKeyStore.directory, environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
-        if let fromEnv = environment["MODEL_API_KEY"]?.trimmingCharacters(in: .whitespacesAndNewlines), !fromEnv.isEmpty {
-            return fromEnv
-        }
-        let file = directory.appending(path: "meta_api_key")
-        guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
-        let key = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return key.isEmpty ? nil : key
+        if let fromEnv = sanitized(environment["MODEL_API_KEY"]) { return fromEnv }
+        return sanitized(try? String(contentsOf: directory.appending(path: "meta_api_key"), encoding: .utf8))
     }
 
     /// Replaces any occurrence of the key in text that might be logged or shown.

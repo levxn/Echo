@@ -20,6 +20,7 @@ xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp 2>/dev/null || true
 xcrun simctl terminate "$PHONE" levtech.Echo 2>/dev/null || true
 xcrun simctl install "$PHONE" "$DD/Build/Products/Debug-iphonesimulator/Echo.app"
 xcrun simctl install "$WATCH" "$DD/Build/Products/Debug-watchsimulator/Echo Watch App.app"
+"$(dirname "$0")/set_api_key.sh" --auto || true   # installs the key from Config/meta_api_key.txt if it is filled in
 xcrun simctl launch "$PHONE" levtech.Echo
 sleep 3
 case "${1:-}" in

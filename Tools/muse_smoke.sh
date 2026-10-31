@@ -1,17 +1,22 @@
 #!/bin/bash
 # One tiny call to the Meta Model API to confirm the key works, which model your account can use,
 # and that your region is allowed. Prints only the HTTP status, model, token usage and latency.
-# Reads the key saved by Tools/set_api_key.sh, or $MODEL_API_KEY if set. Never prints the key.
+# Reads $MODEL_API_KEY, else Config/meta_api_key.txt, else the key saved in the simulator app. Never prints the key.
 set -uo pipefail
 PHONE=3BDBF6CE-2235-4CFE-9437-1EB803417569
 
 KEY="${MODEL_API_KEY:-}"
+CONFIG="$(cd "$(dirname "$0")/.." && pwd)/Config/meta_api_key.txt"
+if [ -z "$KEY" ] && [ -f "$CONFIG" ]; then
+  CANDIDATE=$(tr -d '[:space:]' < "$CONFIG")
+  case "$CANDIDATE" in ""|PASTE_*) ;; *) KEY="$CANDIDATE" ;; esac
+fi
 if [ -z "$KEY" ]; then
   CONTAINER=$(xcrun simctl get_app_container "$PHONE" levtech.Echo data 2>/dev/null || true)
   FILE="$CONTAINER/Library/Application Support/Echo/meta_api_key"
   [ -f "$FILE" ] && KEY=$(cat "$FILE")
 fi
-[ -n "$KEY" ] || { echo "No key found. Run Tools/set_api_key.sh or export MODEL_API_KEY." >&2; exit 1; }
+[ -n "$KEY" ] || { echo "No key found. Put it in Config/meta_api_key.txt (replace the placeholder) or export MODEL_API_KEY." >&2; exit 1; }
 
 for MODEL in muse-spark-1.3 muse-spark-1.2 muse-spark-1.1; do
   BODY=$(printf '{"model":"%s","messages":[{"role":"user","content":"Reply with the single word OK."}],"max_completion_tokens":50,"reasoning_effort":"low"}' "$MODEL")

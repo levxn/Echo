@@ -221,4 +221,31 @@ struct APIKeyStoreTests {
         #expect(APIKeyStore.redacted("auth failed for sk-123 today", key: "sk-123") == "auth failed for ••• today")
         #expect(APIKeyStore.redacted("nothing here", key: nil) == "nothing here")
     }
+
+    @Test func thePlaceholderBlankAndMalformedValuesAreNeverUsedAsAKey() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appending(path: "meta_api_key")
+        for bad in ["PASTE_YOUR_META_API_KEY_HERE", "PASTE_YOUR_META_API_KEY_HERE\n", "", "  \n ", "two words", "abc\ndef"] {
+            try bad.write(to: file, atomically: true, encoding: .utf8)
+            #expect(APIKeyStore.load(directory: dir, environment: [:]) == nil, "\(bad.debugDescription) must count as no key")
+        }
+        #expect(APIKeyStore.sanitized("PASTE_ANYTHING") == nil)
+        #expect(APIKeyStore.sanitized("  real-key_123\n") == "real-key_123")
+    }
+
+    @Test func aPlaceholderInTheEnvironmentFallsBackToTheFile() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try "from-file".write(to: dir.appending(path: "meta_api_key"), atomically: true, encoding: .utf8)
+        #expect(APIKeyStore.load(directory: dir, environment: ["MODEL_API_KEY": "PASTE_YOUR_META_API_KEY_HERE"]) == "from-file")
+    }
+
+    @Test func withNoUsableKeyTheFactoryChoosesTheLabeledStub() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try "PASTE_YOUR_META_API_KEY_HERE".write(to: dir.appending(path: "meta_api_key"), atomically: true, encoding: .utf8)
+        // load() is what MuseClientFactory.make() consults; nil means StubMuseClient.
+        #expect(APIKeyStore.load(directory: dir, environment: [:]) == nil)
+    }
 }
