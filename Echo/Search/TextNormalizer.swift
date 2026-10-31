@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Normalizes transcripts and queries identically so they can be matched: ASR writes "10" and "4%" and
 /// "Mr.", while people ask about "ten", "four percent" and "Mister".
@@ -16,7 +17,28 @@ nonisolated enum TextNormalizer {
     ]
     private static let aliases: [String: String] = [
         "mr": "mister", "dr": "doctor", "mrs": "missus", "ok": "okay",
+        // Derivations the porter stemmer won't join ("decide" vs "decision").
+        "decision": "decide", "decisions": "decide", "renewal": "renew", "renewing": "renew",
+        "arrival": "arrive", "payment": "pay", "payments": "pay", "commitment": "commit", "commitments": "commit",
     ]
+
+    /// Titles identify a person rather than a topic; they get almost no weight when picking an answer sentence.
+    static let titles: Set<String> = ["mister", "doctor", "missus"]
+
+    /// Names of people, places and organizations in a raw query ("Brennan", "Priya"), normalized.
+    static func nameTokens(in text: String) -> Set<String> {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var out: Set<String> = []
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
+                             options: [.omitPunctuation, .omitWhitespace, .joinNames]) { tag, range in
+            if let tag, [.personalName, .placeName, .organizationName].contains(tag) {
+                tokens(String(text[range])).forEach { out.insert($0) }
+            }
+            return true
+        }
+        return out
+    }
 
     static let stopwords: Set<String> = [
         "a", "about", "after", "again", "all", "also", "am", "an", "and", "any", "are", "as", "at", "be", "been",
@@ -27,13 +49,16 @@ nonisolated enum TextNormalizer {
         "these", "they", "this", "to", "too", "up", "us", "was", "we", "were", "what", "when", "where", "which",
         "who", "why", "will", "with", "would", "yes", "you", "your", "say", "said", "says", "people", "today",
         "thing", "things", "yeah", "well", "okay", "oh", "right", "sure", "thanks", "thank",
+        "around", "during", "between", "since", "until", "over", "under", "very", "really", "more", "most",
+        "much", "many", "other", "such",
     ]
 
     /// All normalized tokens, in order, stopwords included.
     static func tokens(_ text: String) -> [String] {
         var s = text.lowercased()
         s = s.replacingOccurrences(of: "%", with: " percent ")
-        s = s.replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "\u{2019}", with: "")
+        s = s.replacingOccurrences(of: "\u{2019}", with: "'")
+        s = s.replacingOccurrences(of: "'s ", with: " ").replacingOccurrences(of: "'", with: "")   // Mom's -> mom
         let raw = s.split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
 
         var out: [String] = []
@@ -66,6 +91,26 @@ nonisolated enum TextNormalizer {
     /// Tokens with stopwords removed: what gets indexed and searched.
     static func contentTokens(_ text: String) -> [String] {
         tokens(text).filter { !stopwords.contains($0) && $0.count > 1 || Int($0) != nil }
+    }
+
+    /// Dictionary forms of the words in `text` ("coming" -> "come", "plumbers" -> "plumber"), used to match
+    /// query terms against words for highlighting and sentence scoring. Ranking itself uses FTS5's porter
+    /// tokenizer, so the two stay consistent where it matters.
+    static func lemmas(_ text: String) -> [String] {
+        let tagger = NLTagger(tagSchemes: [.lemma])
+        tagger.string = text
+        var out: [String] = []
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .lemma,
+                             options: [.omitPunctuation, .omitWhitespace]) { tag, range in
+            out.append((tag?.rawValue ?? String(text[range])).lowercased())
+            return true
+        }
+        return out
+    }
+
+    /// Lemmas of the normalized form of `text` (digits, titles and spoken numbers already unified).
+    static func normalizedLemmas(_ text: String) -> Set<String> {
+        Set(lemmas(tokens(text).joined(separator: " ")))
     }
 
     /// Text stored in the FTS index.

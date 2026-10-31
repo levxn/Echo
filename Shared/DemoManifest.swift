@@ -58,8 +58,9 @@ nonisolated struct DemoClock: Sendable {
         return scene.wallSeconds + (offset - scene.fileStart)
     }
 
+    /// "HH:MM", rounded to the nearest minute (a chunk at 12:29:58 reads as 12:30).
     static func format(_ wallSeconds: Double) -> String {
-        let total = Int(wallSeconds.rounded()) % 86_400
-        return String(format: "%02d:%02d", total / 3600, (total % 3600) / 60)
+        let minutes = Int((wallSeconds / 60).rounded()) % 1_440
+        return String(format: "%02d:%02d", minutes / 60, minutes % 60)
     }
 }

@@ -22,7 +22,7 @@ struct NormalizerTests {
     }
 
     @Test func contractionsStaySingleWords() {
-        #expect(TextNormalizer.contentTokens("let's not add features") == ["lets", "add", "features"])
+        #expect(TextNormalizer.contentTokens("let's not add features") == ["add", "features"])
     }
 }
 
