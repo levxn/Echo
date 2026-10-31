@@ -2,16 +2,19 @@
 # Builds the demo video from the two simulator recordings: the phone and the watch side by side on a dark
 # canvas, optionally with one section sped up (the ~70 s sync), and optionally with a voiceover.
 #
-#   Tools/compose_video.sh [--dir DIR] [--speed START END FACTOR] [--voice FILE] [--out FILE]
+#   Tools/compose_video.sh [--dir DIR] [--trim-start SECONDS|auto] [--speed START END FACTOR] [--voice FILE] [--out FILE]
 #
 # Typical workflow: first compose a silent cut with the speed-up, record the voiceover against it, then
-# run again with --voice. START and END are seconds in the *recorded* footage.
+# run again with --voice. START and END are seconds in the footage *after* --trim-start is applied.
+# --trim-start auto cuts everything up to the end of the last black stretch in the first 12 s of either
+# recording (an app relaunching), plus 0.3 s, which removes launch flashes without a hand-tuned number.
 set -euo pipefail
 DIR="${ECHO_VIDEO_DIR:-$HOME/Desktop/echo-demo}"
-SPEED=""; VOICE=""; OUT=""
+SPEED=""; VOICE=""; OUT=""; TRIM=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --dir) DIR="$2"; shift 2 ;;
+    --trim-start) TRIM="$2"; shift 2 ;;
     --speed) SPEED="$2 $3 $4"; shift 4 ;;
     --voice) VOICE="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
@@ -23,7 +26,21 @@ command -v ffmpeg >/dev/null || { echo "ffmpeg is not installed (brew install ff
 [ -f "$DIR/phone.mov" ] && [ -f "$DIR/watch.mov" ] || { echo "Missing $DIR/phone.mov or watch.mov. Record with Tools/record_demo.sh first." >&2; exit 1; }
 
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
-LEN=$(python3 -I -c "print(min($(dur "$DIR/phone.mov"), $(dur "$DIR/watch.mov")))")
+
+if [ "$TRIM" = "auto" ]; then
+  TRIM=$(python3 -I - "$DIR/phone.mov" "$DIR/watch.mov" <<'PY'
+import re, subprocess, sys
+best = 0.0
+for f in sys.argv[1:]:
+    err = subprocess.run(["ffmpeg", "-hide_banner", "-i", f, "-t", "12", "-vf", "blackdetect=d=0.05:pic_th=0.93:pix_th=0.12",
+                          "-an", "-f", "null", "-"], capture_output=True, text=True).stderr
+    ends = [float(m) for m in re.findall(r"black_end:([\d.]+)", err)]
+    if ends: best = max(best, max(ends))
+print(f"{best + 0.3:.2f}" if best else "0")
+PY
+)
+fi
+LEN=$(python3 -I -c "print(max(0.5, min($(dur "$DIR/phone.mov"), $(dur "$DIR/watch.mov")) - $TRIM))")
 
 # Phone on the left, watch on the right, centered as a pair on the app's dark background. The watch
 # simulator ignores the status bar override, so its real clock would disagree with the phone's 9:41:
@@ -41,7 +58,7 @@ else
   GRAPH="$GRAPH;[v0]null[v]"
 fi
 
-ARGS=(-y -i "$DIR/phone.mov" -i "$DIR/watch.mov")
+ARGS=(-y -ss "$TRIM" -i "$DIR/phone.mov" -ss "$TRIM" -i "$DIR/watch.mov")
 if [ -n "$VOICE" ]; then ARGS+=(-i "$VOICE"); fi
 ARGS+=(-t "$LEN" -filter_complex "$GRAPH" -map "[v]")
 if [ -n "$VOICE" ]; then ARGS+=(-map 2:a -c:a aac -b:a 160k); fi
