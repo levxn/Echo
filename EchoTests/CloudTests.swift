@@ -135,6 +135,88 @@ struct MuseClientTests {
         #expect(calls == 2, "exactly one retry")
     }
 
+    @Test func refusedStructuredOutputIsRetriedAsPlainJSONInstructions() async throws {
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in
+            calls += 1
+            return calls == 1 ? MockURLProtocol.respond(400, #"{"error":{"message":"response_format json_schema is not supported with reasoning"}}"#)
+                              : MockURLProtocol.respond(200, documentedResponse)
+        }
+        let response = try await makeClient().complete(sampleRequest())
+        #expect(calls == 2 && CloudAnswer.parse(response.content).answer == "You promised the API spec.")
+
+        let first = try JSONSerialization.jsonObject(with: try #require(MockURLProtocol.bodies.first)) as! [String: Any]
+        let second = try JSONSerialization.jsonObject(with: try #require(MockURLProtocol.bodies.last)) as! [String: Any]
+        #expect(first["response_format"] != nil)
+        #expect(second["response_format"] == nil, "the retry drops the structured-output parameter")
+        let rules = ((second["messages"] as! [[String: String]]).first?["content"]) ?? ""
+        #expect(rules.contains("JSON Schema") && rules.contains("source_time"), "the schema moves into the instructions")
+    }
+
+    @Test func aRepeatedSchemaRefusalIsReportedNotLooped() async {
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in calls += 1; return MockURLProtocol.respond(400, #"{"error":{"message":"invalid schema"}}"#) }
+        do { _ = try await makeClient().complete(sampleRequest()); Issue.record("expected a failure") }
+        catch { #expect(error as? MuseError == .badRequest("invalid schema")) }
+        #expect(calls == 2, "one structured attempt and one plain retry, then stop")
+    }
+
+    @Test func anUnavailableModelFallsBackToTheNextOlderOne() async throws {
+        let key = "echo.museModel"
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer { saved == nil ? UserDefaults.standard.removeObject(forKey: key) : UserDefaults.standard.set(saved, forKey: key) }
+        UserDefaults.standard.removeObject(forKey: key)
+
+        MockURLProtocol.reset()
+        MockURLProtocol.handler = { _ in
+            // URLSession delivers the body as a stream; the mock has already captured it.
+            let body = String(decoding: MockURLProtocol.bodies.last ?? Data(), as: UTF8.self)
+            return body.contains("muse-spark-1.3") ? MockURLProtocol.respond(404, #"{"error":{"message":"The model muse-spark-1.3 does not exist or you do not have access"}}"#)
+                                                   : MockURLProtocol.respond(200, documentedResponse)
+        }
+        _ = try await makeClient().complete(sampleRequest())
+        let models = MockURLProtocol.bodies.compactMap { body -> String? in
+            (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["model"] as? String
+        }
+        #expect(models == ["muse-spark-1.3", "muse-spark-1.2"], "\(models)")
+        #expect(UserDefaults.standard.string(forKey: key) == "muse-spark-1.2", "the working model is remembered")
+    }
+
+    @Test func aForbiddenResponseThatNamesTheModelAlsoFallsBack() async throws {
+        let key = "echo.museModel"
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer { saved == nil ? UserDefaults.standard.removeObject(forKey: key) : UserDefaults.standard.set(saved, forKey: key) }
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in
+            calls += 1
+            return calls == 1 ? MockURLProtocol.respond(403, #"{"error":{"message":"your account has no access to this model"}}"#)
+                              : MockURLProtocol.respond(200, documentedResponse)
+        }
+        _ = try await makeClient().complete(sampleRequest())
+        #expect(calls == 2)
+    }
+
+    @Test func fallingThroughEveryModelEndsInAnErrorAfterThreeTries() async {
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in calls += 1; return MockURLProtocol.respond(404, #"{"error":{"message":"model not found"}}"#) }
+        do { _ = try await makeClient().complete(sampleRequest()); Issue.record("expected a failure") }
+        catch { #expect(error as? MuseError == .server(404, "model not found")) }
+        #expect(calls == 3, "1.3, 1.2 and 1.1, then stop")
+    }
+
+    @Test func aRejectedKeyIsNotMistakenForAModelProblem() async {
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in calls += 1; return MockURLProtocol.respond(403, #"{"error":{"message":"invalid api key"}}"#) }
+        do { _ = try await makeClient().complete(sampleRequest()); Issue.record("expected a failure") }
+        catch { #expect(error as? MuseError == .rejected("invalid api key")) }
+        #expect(calls == 1, "no fallback for a bad key")
+    }
+
     @Test func networkFailuresMapToOfflineAndTimeout() async {
         func fail(_ code: URLError.Code) async -> MuseError? {
             MockURLProtocol.reset()

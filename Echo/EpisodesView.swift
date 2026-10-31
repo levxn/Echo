@@ -11,7 +11,7 @@ struct EpisodesSection: View {
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
-                Text("\(episodes.count) conversations")
+                Text("\(episodes.count) conversation\(episodes.count == 1 ? "" : "s")")
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
             }
