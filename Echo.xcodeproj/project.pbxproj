@@ -1,0 +1,1019 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9749D08D309605B800D25995 /* Echo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9749D08C309605B800D25995 /* Echo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9749D077309605B800D25995 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D068309605B700D25995;
+			remoteInfo = Echo;
+		};
+		9749D081309605B800D25995 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D068309605B700D25995;
+			remoteInfo = Echo;
+		};
+		9749D08E309605B800D25995 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D08B309605B800D25995;
+			remoteInfo = "Echo Watch App";
+		};
+		9749D09C309605B800D25995 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D08B309605B800D25995;
+			remoteInfo = "Echo Watch App";
+		};
+		9749D0A6309605B800D25995 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D08B309605B800D25995;
+			remoteInfo = "Echo Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9749D0B2309605B900D25995 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				9749D08D309605B800D25995 /* Echo Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9749D069309605B700D25995 /* Echo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Echo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D076309605B800D25995 /* EchoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EchoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D080309605B800D25995 /* EchoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EchoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D08C309605B800D25995 /* Echo Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Echo Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D09B309605B800D25995 /* Echo Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Echo Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Echo Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9749D0C33096075B00D25995 /* Exceptions for "Echo Watch App" folder in "Echo Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Echo-Watch-App-Info.plist",
+			);
+			target = 9749D08B309605B800D25995 /* Echo Watch App */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9749D06B309605B700D25995 /* Echo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Echo;
+			sourceTree = "<group>";
+		};
+		9749D079309605B800D25995 /* EchoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EchoTests;
+			sourceTree = "<group>";
+		};
+		9749D083309605B800D25995 /* EchoUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EchoUITests;
+			sourceTree = "<group>";
+		};
+		9749D090309605B800D25995 /* Echo Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9749D0C33096075B00D25995 /* Exceptions for "Echo Watch App" folder in "Echo Watch App" target */,
+			);
+			path = "Echo Watch App";
+			sourceTree = "<group>";
+		};
+		9749D09E309605B800D25995 /* Echo Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Echo Watch AppTests";
+			sourceTree = "<group>";
+		};
+		9749D0A8309605B800D25995 /* Echo Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Echo Watch AppUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9749D066309605B700D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D073309605B800D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D07D309605B800D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D089309605B800D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D098309605B800D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0A2309605B800D25995 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9749D060309605B700D25995 = {
+			isa = PBXGroup;
+			children = (
+				9749D06B309605B700D25995 /* Echo */,
+				9749D079309605B800D25995 /* EchoTests */,
+				9749D083309605B800D25995 /* EchoUITests */,
+				9749D090309605B800D25995 /* Echo Watch App */,
+				9749D09E309605B800D25995 /* Echo Watch AppTests */,
+				9749D0A8309605B800D25995 /* Echo Watch AppUITests */,
+				9749D06A309605B700D25995 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9749D06A309605B700D25995 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9749D069309605B700D25995 /* Echo.app */,
+				9749D076309605B800D25995 /* EchoTests.xctest */,
+				9749D080309605B800D25995 /* EchoUITests.xctest */,
+				9749D08C309605B800D25995 /* Echo Watch App.app */,
+				9749D09B309605B800D25995 /* Echo Watch AppTests.xctest */,
+				9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9749D068309605B700D25995 /* Echo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0B3309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo" */;
+			buildPhases = (
+				9749D065309605B700D25995 /* Sources */,
+				9749D066309605B700D25995 /* Frameworks */,
+				9749D067309605B700D25995 /* Resources */,
+				9749D0B2309605B900D25995 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9749D08F309605B800D25995 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9749D06B309605B700D25995 /* Echo */,
+			);
+			name = Echo;
+			packageProductDependencies = (
+			);
+			productName = Echo;
+			productReference = 9749D069309605B700D25995 /* Echo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9749D075309605B800D25995 /* EchoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0B6309605B900D25995 /* Build configuration list for PBXNativeTarget "EchoTests" */;
+			buildPhases = (
+				9749D072309605B800D25995 /* Sources */,
+				9749D073309605B800D25995 /* Frameworks */,
+				9749D074309605B800D25995 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9749D078309605B800D25995 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9749D079309605B800D25995 /* EchoTests */,
+			);
+			name = EchoTests;
+			packageProductDependencies = (
+			);
+			productName = EchoTests;
+			productReference = 9749D076309605B800D25995 /* EchoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9749D07F309605B800D25995 /* EchoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0B9309605B900D25995 /* Build configuration list for PBXNativeTarget "EchoUITests" */;
+			buildPhases = (
+				9749D07C309605B800D25995 /* Sources */,
+				9749D07D309605B800D25995 /* Frameworks */,
+				9749D07E309605B800D25995 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9749D082309605B800D25995 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9749D083309605B800D25995 /* EchoUITests */,
+			);
+			name = EchoUITests;
+			packageProductDependencies = (
+			);
+			productName = EchoUITests;
+			productReference = 9749D080309605B800D25995 /* EchoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		9749D08B309605B800D25995 /* Echo Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0AF309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch App" */;
+			buildPhases = (
+				9749D088309605B800D25995 /* Sources */,
+				9749D089309605B800D25995 /* Frameworks */,
+				9749D08A309605B800D25995 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9749D090309605B800D25995 /* Echo Watch App */,
+			);
+			name = "Echo Watch App";
+			packageProductDependencies = (
+			);
+			productName = "Echo Watch App";
+			productReference = 9749D08C309605B800D25995 /* Echo Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9749D09A309605B800D25995 /* Echo Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0BC309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch AppTests" */;
+			buildPhases = (
+				9749D097309605B800D25995 /* Sources */,
+				9749D098309605B800D25995 /* Frameworks */,
+				9749D099309605B800D25995 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9749D09D309605B800D25995 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9749D09E309605B800D25995 /* Echo Watch AppTests */,
+			);
+			name = "Echo Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "Echo Watch AppTests";
+			productReference = 9749D09B309605B800D25995 /* Echo Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9749D0A4309605B800D25995 /* Echo Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0BF309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch AppUITests" */;
+			buildPhases = (
+				9749D0A1309605B800D25995 /* Sources */,
+				9749D0A2309605B800D25995 /* Frameworks */,
+				9749D0A3309605B800D25995 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9749D0A7309605B800D25995 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9749D0A8309605B800D25995 /* Echo Watch AppUITests */,
+			);
+			name = "Echo Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "Echo Watch AppUITests";
+			productReference = 9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9749D061309605B700D25995 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2610;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					9749D068309605B700D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					9749D075309605B800D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 9749D068309605B700D25995;
+					};
+					9749D07F309605B800D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 9749D068309605B700D25995;
+					};
+					9749D08B309605B800D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					9749D09A309605B800D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 9749D08B309605B800D25995;
+					};
+					9749D0A4309605B800D25995 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 9749D08B309605B800D25995;
+					};
+				};
+			};
+			buildConfigurationList = 9749D064309605B700D25995 /* Build configuration list for PBXProject "Echo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9749D060309605B700D25995;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9749D06A309605B700D25995 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9749D068309605B700D25995 /* Echo */,
+				9749D075309605B800D25995 /* EchoTests */,
+				9749D07F309605B800D25995 /* EchoUITests */,
+				9749D08B309605B800D25995 /* Echo Watch App */,
+				9749D09A309605B800D25995 /* Echo Watch AppTests */,
+				9749D0A4309605B800D25995 /* Echo Watch AppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9749D067309605B700D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D074309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D07E309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D08A309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D099309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0A3309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9749D065309605B700D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D072309605B800D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D07C309605B800D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D088309605B800D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D097309605B800D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0A1309605B800D25995 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9749D078309605B800D25995 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D068309605B700D25995 /* Echo */;
+			targetProxy = 9749D077309605B800D25995 /* PBXContainerItemProxy */;
+		};
+		9749D082309605B800D25995 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D068309605B700D25995 /* Echo */;
+			targetProxy = 9749D081309605B800D25995 /* PBXContainerItemProxy */;
+		};
+		9749D08F309605B800D25995 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D08B309605B800D25995 /* Echo Watch App */;
+			targetProxy = 9749D08E309605B800D25995 /* PBXContainerItemProxy */;
+		};
+		9749D09D309605B800D25995 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D08B309605B800D25995 /* Echo Watch App */;
+			targetProxy = 9749D09C309605B800D25995 /* PBXContainerItemProxy */;
+		};
+		9749D0A7309605B800D25995 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D08B309605B800D25995 /* Echo Watch App */;
+			targetProxy = 9749D0A6309605B800D25995 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		9749D0AD309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		9749D0AE309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		9749D0B0309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Echo-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = levtech.Echo;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		9749D0B1309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Echo-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = levtech.Echo;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+		9749D0B4309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9749D0B5309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9749D0B7309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.EchoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Echo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Echo";
+			};
+			name = Debug;
+		};
+		9749D0B8309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.EchoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Echo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Echo";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9749D0BA309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.EchoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Echo;
+			};
+			name = Debug;
+		};
+		9749D0BB309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.EchoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Echo;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9749D0BD309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "levtech.Echo-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Echo Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Echo Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		9749D0BE309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "levtech.Echo-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Echo Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Echo Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+		9749D0C0309605B900D25995 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "levtech.Echo-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "Echo Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		9749D0C1309605B900D25995 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "levtech.Echo-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "Echo Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9749D064309605B700D25995 /* Build configuration list for PBXProject "Echo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0AD309605B900D25995 /* Debug */,
+				9749D0AE309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0AF309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0B0309605B900D25995 /* Debug */,
+				9749D0B1309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0B3309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0B4309605B900D25995 /* Debug */,
+				9749D0B5309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0B6309605B900D25995 /* Build configuration list for PBXNativeTarget "EchoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0B7309605B900D25995 /* Debug */,
+				9749D0B8309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0B9309605B900D25995 /* Build configuration list for PBXNativeTarget "EchoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0BA309605B900D25995 /* Debug */,
+				9749D0BB309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0BC309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0BD309605B900D25995 /* Debug */,
+				9749D0BE309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0BF309605B900D25995 /* Build configuration list for PBXNativeTarget "Echo Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0C0309605B900D25995 /* Debug */,
+				9749D0C1309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9749D061309605B700D25995 /* Project object */;
+}
