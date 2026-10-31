@@ -6,8 +6,14 @@ cd "$(dirname "$0")/.."
 PHONE=3BDBF6CE-2235-4CFE-9437-1EB803417569   # iPhone 17 Pro
 WATCH=373A257B-EB2B-4A7B-8E94-CFF47E52792D   # Apple Watch Series 11 (46mm)
 DD=/tmp/echo-dd
-xcodebuild -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath "$DD" build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+LOG=$(mktemp)
+if ! xcodebuild -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -derivedDataPath "$DD" build > "$LOG" 2>&1; then
+  grep -E "error:" "$LOG" | sort -u | head -20
+  echo "BUILD FAILED"
+  exit 1
+fi
+echo "BUILD SUCCEEDED"
 xcrun simctl boot "$PHONE" 2>/dev/null || true
 xcrun simctl boot "$WATCH" 2>/dev/null || true
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp 2>/dev/null || true
@@ -18,6 +24,6 @@ xcrun simctl launch "$PHONE" levtech.Echo
 sleep 3
 case "${1:-}" in
   --no-launch-watch) ;;
-  --autostart) xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart ;;
+  --autostart) xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "$(date +%s)" ;;
   *) xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp ;;
 esac

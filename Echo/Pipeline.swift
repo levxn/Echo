@@ -1,0 +1,76 @@
+import Foundation
+import os
+
+/// Runs each received chunk through stage-2 VAD and on-device ASR, one at a time, updating the model
+/// as it goes so the UI can show progress.
+@MainActor
+final class Pipeline {
+    /// Minimum "speech" confidence for stage 2 to keep a chunk. Calibrated against the demo manifest.
+    static let speechThreshold = 0.5
+    /// Padding kept around the detected speech span when trimming.
+    static let spanPadding = 0.3
+
+    private let model: PipelineModel
+    private var pending: [ChunkRecord] = []
+    private var running = false
+
+    init(model: PipelineModel) { self.model = model }
+
+    func enqueue(_ record: ChunkRecord) {
+        pending.append(record)
+        if !running { Task { await drain() } }
+    }
+
+    private func drain() async {
+        running = true
+        defer { running = false }
+        while !pending.isEmpty {
+            await process(pending.removeFirst())
+        }
+    }
+
+    private func process(_ record: ChunkRecord) async {
+        let url = await model.store.url(for: record.audioFile)
+        var chunk = record
+
+        // Stage 2: is there really speech in here, and where?
+        do {
+            let result = try await Stage2VAD.analyze(url: url)
+            chunk.speechConfidence = result.maxSpeech
+            guard let span = result.speechSpan(threshold: Self.speechThreshold) else {
+                chunk.status = .dropped
+                chunk.confirmedSeconds = 0
+                model.put(chunk)
+                Log.pipe.info("chunk \(chunk.index) dropped (speech \(result.maxSpeech, format: .fixed(precision: 2)))")
+                return
+            }
+            let lo = max(0, span.lowerBound - Self.spanPadding)
+            let hi = min(chunk.duration, span.upperBound + Self.spanPadding)
+            chunk.confirmedSeconds = max(0, hi - lo)
+            chunk.status = .vad
+            model.put(chunk)
+        } catch {
+            Log.pipe.error("stage 2 failed for chunk \(chunk.index): \(error.localizedDescription)")
+            chunk.status = .failed
+            model.put(chunk)
+            return
+        }
+
+        // ASR, fully on-device.
+        do {
+            let text = try await OnDeviceASR.transcribe(url: url)
+            chunk.transcript = text
+            chunk.status = .asr
+            model.put(chunk)
+            Log.pipe.info("chunk \(chunk.index) ASR: \(text)")
+        } catch {
+            Log.pipe.error("ASR failed for chunk \(chunk.index): \(error.localizedDescription)")
+            chunk.status = .failed
+            model.put(chunk)
+            return
+        }
+
+        chunk.status = .stored
+        model.put(chunk)
+    }
+}
