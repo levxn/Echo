@@ -219,7 +219,12 @@ struct PlannerTests {
         #expect(promiseChunks.count >= 3)
         let sentTexts = Set(plan.snippets.map(\.text))
         for c in promiseChunks { #expect(sentTexts.contains(c.transcript ?? ""), "missing: \(c.transcript ?? "")") }
-        #expect(plan.snippets.count >= 8 && plan.snippets.count <= TierTwoPlanner.commitmentCap, "\(plan.snippets.count) snippets")
+        #expect(plan.snippets.count >= 8 && plan.snippets.count <= TierTwoPlanner.commitmentCap + TierTwoPlanner.commitmentContextCap, "\(plan.snippets.count) snippets")
+        // Each promise comes with the line spoken just before it, so Muse can tell who it was made to.
+        let ordered = h.chunks.sorted { $0.wallStart < $1.wallStart }
+        for (i, chunk) in ordered.enumerated() where i > 0 && ((chunk.transcript ?? "").lowercased().contains("promise")) {
+            #expect(sentTexts.contains(ordered[i - 1].transcript ?? ""), "context line missing before: \(chunk.transcript ?? "")")
+        }
         #expect(plan.snippets.map(\.time) == plan.snippets.map(\.time).sorted(), "snippets are in time order")
         #expect(plan.canCall && plan.textBytes > 0)
 

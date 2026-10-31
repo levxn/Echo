@@ -70,8 +70,8 @@ struct MuseClientTests {
         #expect(body["model"] as? String == "muse-spark-1.3")
         let messages = body["messages"] as! [[String: String]]
         #expect(messages.map { $0["role"] } == ["developer", "user"], "Meta prefers developer over system")
-        #expect(body["max_completion_tokens"] as? Int == 800)
-        #expect(body["reasoning_effort"] as? String == "low", "'none' is rejected by Muse Spark")
+        #expect(body["max_completion_tokens"] as? Int == 3000, "reasoning tokens count against this budget")
+        #expect(body["reasoning_effort"] as? String == "minimal", "'none' is rejected by Muse Spark")
 
         let format = body["response_format"] as! [String: Any]
         #expect(format["type"] as? String == "json_schema")
@@ -215,6 +215,38 @@ struct MuseClientTests {
         do { _ = try await makeClient().complete(sampleRequest()); Issue.record("expected a failure") }
         catch { #expect(error as? MuseError == .rejected("invalid api key")) }
         #expect(calls == 1, "no fallback for a bad key")
+    }
+
+    @Test func aReplyCutOffByTheTokenBudgetIsRetriedWithDoubleTheRoom() async throws {
+        // What the real API did at 800 tokens: HTTP 200, finish_reason "length", content null.
+        let cutOff = #"{"model":"muse-spark-1.3","choices":[{"index":0,"message":{"role":"assistant","content":null,"refusal":null},"finish_reason":"length"}],"usage":{"prompt_tokens":15,"completion_tokens":800}}"#
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in calls += 1; return calls == 1 ? MockURLProtocol.respond(200, cutOff) : MockURLProtocol.respond(200, documentedResponse) }
+        let response = try await makeClient().complete(sampleRequest())
+        #expect(calls == 2 && CloudAnswer.parse(response.content).answer == "You promised the API spec.")
+        let budgets = MockURLProtocol.bodies.compactMap { (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["max_completion_tokens"] as? Int }
+        #expect(budgets == [3000, 6000], "\(budgets)")
+    }
+
+    @Test func aReplyThatIsStillCutOffAfterTheRetryIsReportedAsTruncated() async {
+        let cutOff = #"{"choices":[{"message":{"content":null},"finish_reason":"length"}]}"#
+        MockURLProtocol.reset()
+        var calls = 0
+        MockURLProtocol.handler = { _ in calls += 1; return MockURLProtocol.respond(200, cutOff) }
+        do { _ = try await makeClient().complete(sampleRequest()); Issue.record("expected a failure") }
+        catch { #expect(error as? MuseError == .truncated) }
+        #expect(calls == 2, "one retry, then stop")
+    }
+
+    @Test func aRefusalIsReportedAndAnEmptyReplyIsMalformed() async {
+        func respond(_ body: String) async -> MuseError? {
+            MockURLProtocol.reset()
+            MockURLProtocol.handler = { _ in MockURLProtocol.respond(200, body) }
+            do { _ = try await makeClient().complete(sampleRequest()); return nil } catch { return error as? MuseError }
+        }
+        #expect(await respond(#"{"choices":[{"message":{"content":null,"refusal":"I can't help with that"},"finish_reason":"stop"}]}"#) == .refused("I can't help with that"))
+        #expect(await respond(#"{"choices":[{"message":{"content":""},"finish_reason":"stop"}]}"#) == .malformed)
     }
 
     @Test func networkFailuresMapToOfflineAndTimeout() async {

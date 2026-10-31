@@ -11,9 +11,12 @@ struct MuseRequest {
     var schemaName: String
     /// JSON Schema (as JSON text) for `response_format`.
     var schemaJSON: String
-    var maxCompletionTokens = 800
-    /// `none` is rejected by Muse Spark (HTTP 400).
-    var reasoningEffort = "low"
+    /// Reasoning tokens count against this budget. At 800 with `low` effort, Muse spent 798 tokens thinking
+    /// and returned an empty answer, so the default is generous.
+    var maxCompletionTokens = 3000
+    /// `none` is rejected by Muse Spark (HTTP 400). `minimal` answered the real questions in ~7 s with
+    /// 4x fewer reasoning tokens than `low`.
+    var reasoningEffort = "minimal"
 
     /// True: ask for JSON-schema structured output. False: the fallback some accounts or models need, where
     /// the schema is spelled out in the instructions instead.
@@ -61,6 +64,8 @@ enum MuseError: Error, Equatable, LocalizedError {
     case badRequest(String)     // 400
     case rateLimited            // 429 after one retry
     case timedOut               // 504 or client timeout
+    case truncated              // 200, but the token budget ran out before an answer was written
+    case refused(String)        // the model declined to answer
     case offline
     case server(Int, String)
     case malformed
@@ -71,6 +76,8 @@ enum MuseError: Error, Equatable, LocalizedError {
         case .badRequest(let m): "Meta couldn't process the request: \(m)"
         case .rateLimited: "Meta's API is rate limiting requests right now. Try again in a moment."
         case .timedOut: "Muse took too long to answer."
+        case .truncated: "Muse ran out of room before finishing its answer. Try again."
+        case .refused(let m): "Muse declined to answer\(m.isEmpty ? "" : ": \(m)")."
         case .offline: "No internet connection, so Muse couldn't be reached."
         case .server(let code, let m): "Meta's API returned an error (\(code)\(m.isEmpty ? "" : ": \(m)"))."
         case .malformed: "Muse's reply couldn't be read."
@@ -95,7 +102,7 @@ struct MetaModelAPIClient: MuseClient {
 
     func complete(_ request: MuseRequest) async throws -> MuseResponse {
         var current = request
-        var triedPlain = false, retriedRateLimit = false
+        var triedPlain = false, retriedRateLimit = false, retriedTruncation = false
         var triedModels: Set<String> = [request.model]
         let clock = ContinuousClock()
         let started = clock.now
@@ -107,8 +114,15 @@ struct MetaModelAPIClient: MuseClient {
 
             switch status {
             case 200..<300:
-                if current.model != request.model { MuseClientFactory.remember(model: current.model) }
-                return try Self.parse(data, elapsed: started.duration(to: clock.now))
+                do {
+                    let response = try Self.parse(data, elapsed: started.duration(to: clock.now))
+                    if current.model != request.model { MuseClientFactory.remember(model: current.model) }
+                    return response
+                } catch MuseError.truncated where !retriedTruncation && current.maxCompletionTokens < 8000 {
+                    // Reasoning ate the budget: try once more with twice the room.
+                    retriedTruncation = true
+                    current.maxCompletionTokens = min(8000, current.maxCompletionTokens * 2)
+                }
             case 429:
                 guard !retriedRateLimit else { throw MuseError.rateLimited }
                 retriedRateLimit = true
@@ -155,8 +169,12 @@ struct MetaModelAPIClient: MuseClient {
     static func parse(_ data: Data, elapsed: Duration) throws -> MuseResponse {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = root["choices"] as? [[String: Any]],
-              let message = choices.first?["message"] as? [String: Any],
-              let content = message["content"] as? String else { throw MuseError.malformed }
+              let message = choices.first?["message"] as? [String: Any] else { throw MuseError.malformed }
+        if let refusal = message["refusal"] as? String, !refusal.isEmpty { throw MuseError.refused(refusal) }
+        // `content` is null when the model ran out of tokens while reasoning.
+        guard let content = message["content"] as? String, !content.isEmpty else {
+            throw (choices.first?["finish_reason"] as? String) == "length" ? MuseError.truncated : MuseError.malformed
+        }
         let usage = root["usage"] as? [String: Any]
         let ms = Double(elapsed.components.seconds) * 1000 + Double(elapsed.components.attoseconds) / 1e15
         return MuseResponse(content: content, model: root["model"] as? String ?? "muse",

@@ -19,7 +19,7 @@ fi
 [ -n "$KEY" ] || { echo "No key found. Put it in Config/meta_api_key.txt (replace the placeholder) or export MODEL_API_KEY." >&2; exit 1; }
 
 for MODEL in muse-spark-1.3 muse-spark-1.2 muse-spark-1.1; do
-  BODY=$(printf '{"model":"%s","messages":[{"role":"user","content":"Reply with the single word OK."}],"max_completion_tokens":50,"reasoning_effort":"low"}' "$MODEL")
+  BODY=$(printf '{"model":"%s","messages":[{"role":"user","content":"Reply with the single word OK."}],"max_completion_tokens":400,"reasoning_effort":"low"}' "$MODEL")
   OUT=$(mktemp)
   # The key goes to curl on stdin (-H @-) so it never appears in the process list.
   META=$(printf 'Authorization: Bearer %s\n' "$KEY" | curl -sS -o "$OUT" -w '%{http_code} %{time_total}' \
@@ -33,9 +33,12 @@ try: d = json.loads(raw)
 except Exception: d = {}
 if code.startswith("2"):
     u = d.get("usage", {})
-    text = (d.get("choices") or [{}])[0].get("message", {}).get("content", "")
+    choice = (d.get("choices") or [{}])[0]
+    text = (choice.get("message") or {}).get("content") or ""     # null when the model runs out of tokens while reasoning
+    reasoning = (u.get("completion_tokens_details") or {}).get("reasoning_tokens")
+    note = "" if text else f"  (EMPTY reply, finish_reason={choice.get('finish_reason')}: reasoning used the whole token budget)"
     print(f"OK  {model}: HTTP {code} in {float(t):.2f}s, model={d.get('model')}, "
-          f"tokens in/out={u.get('prompt_tokens')}/{u.get('completion_tokens')}, reply={text[:40]!r}")
+          f"tokens in/out={u.get('prompt_tokens')}/{u.get('completion_tokens')} (reasoning {reasoning}), reply={text[:40]!r}{note}")
 else:
     err = d.get("error", {})
     msg = err.get("message") if isinstance(err, dict) else str(err)
