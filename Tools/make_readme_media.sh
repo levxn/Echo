@@ -83,8 +83,8 @@ scene today 7.5 -tab today
 scene pipeline 6.5 -tab pipeline
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
 scene ask-lease 7.5 -tab ask -ask "What did Mister Brennan say about the lease?"
-scene ask-cloud 9.5 -tab ask -ask "What did I promise people today?"
-scene digest 9.5 -digest
+scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
+scene digest 17 -digest                                             # the digest takes ~11 s live
 scene ledger 7.5 -tab ledger
 scene architecture 8.5 -tab ledger -architecture
 

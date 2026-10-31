@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-75%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-78%20passing-34D399)
 ![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
@@ -31,7 +31,7 @@ Echo turns a day of conversations into something you can ask questions of, **wit
   <a href="docs/media/echo-demo-preview.mp4"><b>▶ Watch the full-quality preview (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered on the phone. The cloud answers in this preview come from Echo's clearly labeled <b>offline stub</b>, because no API key was configured when it was recorded. Run <code>Tools/make_readme_media.sh</code> with a key to regenerate it with live Muse answers.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>.</sub></p>
 
 ## A tour of the screens
 
@@ -61,9 +61,9 @@ The watch is a silent sensor, so its screen is a proof of life: a ring that trac
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-lease.jpg" width="250" alt="Ask, a second local answer"><br><sub><b>Ask, another lookup</b><br>The headline is the sentence that answers</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, a synthesis question routed to Tier 2"><br><sub><b>Ask, synthesis</b><br>Routed to Tier 2 (offline stub in this shot)</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-digest.jpg" width="250" alt="Today, the day digest"><br><sub><b>Day digest</b><br>Conversations, action items, people (stub in this shot)</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, what left, the cloud switch</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, a synthesis question routed to Tier 2"><br><sub><b>Ask, synthesis</b><br>Answered live by Muse Spark (Tier 2)</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-digest.jpg" width="250" alt="Today, the day digest"><br><sub><b>Day digest</b><br>Conversations, action items and people, written by Muse</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, exactly what left, the cloud switch</sub></td>
   </tr>
   <tr>
     <td align="center" valign="top" colspan="3"><img src="docs/media/screenshots/phone-architecture.jpg" width="250" alt="How Echo works"><br><sub><b>How Echo works</b><br>The whole system with live numbers and honesty labels</sub></td>
@@ -85,7 +85,7 @@ The watch is a silent sensor, so its screen is a proof of life: a ring that trac
 |---|---|
 | Voice detection on the watch, chunking, AAC compression, streaming to the phone | **Real** (running in the watchOS simulator) |
 | Stage-2 speech check, on-device transcription, SQLite FTS5 + word-vector index, retriever, router, answers | **Real** |
-| Muse Spark client (structured output, text-only snippets, ledger, error handling) | **Implemented** to Meta's documented API and covered by mocked-network tests. Live calls need an API key in `Config/meta_api_key.txt`; without one Echo uses a **labeled offline stub** (the screenshots above show the stub) |
+| Muse Spark calls (structured output, text-only snippets, ledger, error handling) | **Real**: live calls to `muse-spark-1.3` through the Meta Model API (the screenshots above are live answers), plus a mocked-network test suite. Without an API key in `Config/meta_api_key.txt` Echo falls back to a **labeled offline stub** |
 | The microphone | **Simulated**: a pre-recorded day (text-to-speech voices, 4 conversations) replayed as the mic |
 | Watch ↔ phone link | **Simulated hardware**: WatchConnectivity messages between two simulators |
 | Muse Glimmer on-device (Tier 1) | **Design only**: shown in the UI as not available, never run |
@@ -120,7 +120,8 @@ flowchart LR
 | Stage 2 | 45 of 45 speech chunks kept, 11 of 11 noise chunks rejected (the noise is synthetic, so this flatters it) |
 | Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
-| Tests | 75 unit tests, including a retrieval and routing eval over a fixed transcript fixture and a mocked-network suite for the Muse client |
+| Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 6 s (27 snippets, 4.2 KB sent, ~950 tokens in and out); "Summarize my day" about 6.5 s; the day digest about 10 s (45 snippets, 5.2 KB) |
+| Tests | 78 unit tests, including a retrieval and routing eval over a fixed transcript fixture and a mocked-network suite for the Muse client; plus an end-to-end script (`Tools/e2e_check.sh`) whose 17 checks pass against live Muse |
 
 ## The privacy model
 
@@ -132,7 +133,9 @@ flowchart LR
 
 ## How Echo uses Muse Spark
 
-Echo calls `POST https://api.meta.ai/v1/chat/completions` with model `muse-spark-1.3`, a `developer` message with the rules, a `user` message with the question and time-labelled snippets, `reasoning_effort: "low"`, and a JSON-schema `response_format`. If the account can't use that model, the client falls back to 1.2 then 1.1; if structured output is refused, it retries once with the schema in the instructions. The answer comes back as structured data (an answer plus items with a due date and the time of the moment each came from) and is rendered as cards. The prompt tells Muse that the transcripts are noisy speech recognition, so it can reconcile slips like "Wednesday Lou" and say when it did. The same path produces the one-tap "Summarize my day" digest of conversations, action items and people.
+Echo calls `POST https://api.meta.ai/v1/chat/completions` with model `muse-spark-1.3`, a `developer` message with the rules, a `user` message with the question and time-labelled snippets, `reasoning_effort: "minimal"`, and a JSON-schema `response_format`. The answer comes back as structured data (an answer plus items with a due date and the time of the moment each came from) and is rendered as cards. The prompt tells Muse that the transcripts are noisy speech recognition and to say so only when it actually corrected something. The same path produces the one-tap "Summarize my day" digest of conversations, action items and people.
+
+Two things the live API taught us, both now handled and tested: **reasoning tokens count against `max_completion_tokens`** (at 800 tokens Muse spent 798 thinking and returned an empty reply, so Echo uses a 3000-token budget and retries once with double if a reply is cut off), and `minimal` reasoning answers the real questions in about 6 s versus 11 s at `low`. If the account can't use the model the client falls back to 1.2 then 1.1, and if structured output is refused it retries once with the schema in the instructions.
 
 ## Run it
 
