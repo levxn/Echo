@@ -5,7 +5,6 @@ struct LedgerView: View {
     let ledger: LedgerModel
     let model: PipelineModel
 
-    @State private var showArchitecture = ProcessInfo.processInfo.arguments.contains("-architecture")
     @State private var confirmClear = false
 
     var body: some View {
@@ -15,7 +14,7 @@ struct LedgerView: View {
                 SummaryCard(totals: ledger.totals)
                 cloudSwitch
                 entries
-                Button { showArchitecture = true } label: {
+                Button { ledger.showArchitecture = true } label: {
                     Label("How Echo works", systemImage: "square.stack.3d.up.fill")
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundStyle(Palette.textPrimary)
@@ -35,7 +34,7 @@ struct LedgerView: View {
         }
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
-        .sheet(isPresented: $showArchitecture) { ArchitectureView(model: model, ledger: ledger) }
+        .sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) }
         .confirmationDialog("Clear the privacy ledger?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Clear ledger", role: .destructive) { Task { await ledger.clear() } }
         } message: {

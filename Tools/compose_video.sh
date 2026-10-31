@@ -10,11 +10,12 @@
 # recording (an app relaunching), plus 0.3 s, which removes launch flashes without a hand-tuned number.
 set -euo pipefail
 DIR="${ECHO_VIDEO_DIR:-$HOME/Desktop/echo-demo}"
-SPEED=""; VOICE=""; OUT=""; TRIM=0
+SPEED=""; VOICE=""; OUT=""; TRIM=0; PRINT_TRIM=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --dir) DIR="$2"; shift 2 ;;
     --trim-start) TRIM="$2"; shift 2 ;;
+    --print-trim) PRINT_TRIM=1; shift ;;
     --speed) SPEED="$2 $3 $4"; shift 4 ;;
     --voice) VOICE="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
@@ -40,6 +41,8 @@ print(f"{best + 0.3:.2f}" if best else "0")
 PY
 )
 fi
+
+if [ "$PRINT_TRIM" = 1 ]; then echo "$TRIM"; exit 0; fi
 LEN=$(python3 -I -c "print(max(0.5, min($(dur "$DIR/phone.mov"), $(dur "$DIR/watch.mov")) - $TRIM))")
 
 # Phone on the left, watch on the right, centered as a pair on the app's dark background. The watch

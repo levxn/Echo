@@ -7,6 +7,7 @@ enum ByteFormat {
 /// A structured answer from Muse Spark (or the labeled stub), with exactly what was sent.
 struct CloudAnswerCard: View {
     let result: CloudResult
+    var expandSent = false
 
     private var isStub: Bool { result.response.isStub }
 
@@ -39,7 +40,7 @@ struct CloudAnswerCard: View {
                 }
             }
 
-            SentDisclosure(plan: result.plan, isStub: isStub)
+            SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")
 
             Text(footer)
                 .font(.caption)
@@ -100,6 +101,8 @@ private struct ItemRow: View {
 struct SentDisclosure: View {
     let plan: TierTwoPlan
     let isStub: Bool
+    /// Lets the demo driver open the panel from outside; a tap toggles it as usual.
+    var expand = false
     @State private var expanded = false
 
     var body: some View {
@@ -156,6 +159,7 @@ struct SentDisclosure: View {
                 .transition(.opacity)
             }
         }
+        .onChange(of: expand) { _, open in withAnimation(.smooth(duration: 0.25)) { expanded = open } }
     }
 }
 

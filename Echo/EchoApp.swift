@@ -21,7 +21,7 @@ struct EchoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(model: model).task {
+            RootView(model: model, link: link).task {
                 await model.load()
                 let authorized = await OnDeviceASR.authorize()
                 Log.app.info("speech authorized: \(authorized)")

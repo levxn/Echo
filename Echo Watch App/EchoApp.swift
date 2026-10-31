@@ -7,8 +7,10 @@ struct EchoWatchApp: App {
 
     init() {
         let link = WatchLink()
+        let engine = CaptureEngine(link: link)
+        link.onRemoteStart = { engine.start() }
         _link = State(initialValue: link)
-        _engine = State(initialValue: CaptureEngine(link: link))
+        _engine = State(initialValue: engine)
     }
 
     var body: some Scene {

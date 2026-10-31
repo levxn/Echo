@@ -16,20 +16,26 @@ struct AskView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.xl) {
-                header
-                field
-                suggestions
-                result
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.xl) {
+                    header.id("askTop")
+                    field
+                    suggestions
+                    result
+                }
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.sm)
+                .padding(.bottom, Spacing.xxl)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.sm)
-            .padding(.bottom, Spacing.xxl)
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .background { AuroraBackground() }
+            // The demo driver opens the "What left your phone" panel, which sits below the answer's items.
+            .onChange(of: ask.expandSent) { _, open in
+                withAnimation(.smooth(duration: 0.8)) { proxy.scrollTo(open ? "sentPanel" : "askTop", anchor: open ? .center : .top) }
+            }
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .background { AuroraBackground() }
     }
 
     private var header: some View {
@@ -126,7 +132,7 @@ struct AskView: View {
             SendingCard(plan: plan, isStub: ask.isStub)
                 .transition(.opacity)
         case .cloudAnswered(let r):
-            CloudAnswerCard(result: r)
+            CloudAnswerCard(result: r, expandSent: ask.expandSent)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
         case .cloudFailed(let f):
             CloudFailureCard(failure: f, player: player) { Task { await ask.retry() } }

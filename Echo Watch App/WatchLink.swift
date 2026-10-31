@@ -17,6 +17,10 @@ final class WatchLink: NSObject, WCSessionDelegate {
     /// Seconds of the recording processed so far; sent with each message so the phone can show the funnel.
     var recordedSoFar = 0.0
 
+    /// Called when the phone asks the watch to start the replay (the demo driver does this; it is the same
+    /// as tapping Start day).
+    var onRemoteStart: (() -> Void)?
+
     private struct Pending {
         let encoded: Data
         let index: Int
@@ -128,6 +132,11 @@ final class WatchLink: NSObject, WCSessionDelegate {
             self.reachable = reachable
             Log.link.info("activated state=\(state.rawValue) reachable=\(reachable)")
         }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        guard message["type"] as? String == "demo.start" else { return }
+        Task { @MainActor in self.onRemoteStart?() }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {

@@ -6,15 +6,18 @@ enum RootTab: String {
 
 struct RootView: View {
     let model: PipelineModel
+    let link: PhoneLink
 
     @State private var ask: AskModel
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
     @State private var tab: RootTab
+    @State private var caption: String?
 
-    init(model: PipelineModel) {
+    init(model: PipelineModel, link: PhoneLink) {
         self.model = model
+        self.link = link
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
         let client = MuseClientFactory.make()
@@ -36,6 +39,14 @@ struct RootView: View {
             }
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) }
         }
+        .overlay(alignment: .bottom) {
+            if let caption {
+                DemoCaption(text: caption)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .id(caption)
+            }
+        }
+        .animation(.smooth(duration: 0.35), value: caption)
         .preferredColorScheme(.dark)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
         // would wrap mid-word, so the scale is capped there.
@@ -50,8 +61,16 @@ struct RootView: View {
             await ledger.reload()
             await digest.load()
             let args = ProcessInfo.processInfo.arguments
-            // Dev hooks for headless verification: `-ask "question"` and `-digest` run once the day has loaded.
-            if let i = args.firstIndex(of: "-ask"), i + 1 < args.count {
+            // Dev hooks for headless verification: `-ask "question"` and `-digest` run once the day has loaded,
+            // and `-demo-script` performs the whole demo in one take (see DemoDriver).
+            if DemoDriver.requested {
+                await warm.value
+                await model.load()
+                await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest,
+                                 startWatch: { link.sendDemoStart() },
+                                 setTab: { tab = $0 },
+                                 setCaption: { caption = $0 }).run()
+            } else if let i = args.firstIndex(of: "-ask"), i + 1 < args.count {
                 await warm.value
                 await model.load()
                 tab = .ask

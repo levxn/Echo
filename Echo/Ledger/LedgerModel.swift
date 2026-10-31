@@ -6,6 +6,8 @@ import Observation
 @Observable
 final class LedgerModel {
     private(set) var entries: [LedgerEntry] = []
+    /// Whether the "How Echo works" sheet is showing. Lives here so the demo driver can open it.
+    var showArchitecture = ProcessInfo.processInfo.arguments.contains("-architecture")
     private let store: ChunkStore
     private static let cloudKey = "echo.cloudEnabled"
 

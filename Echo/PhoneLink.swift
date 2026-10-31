@@ -20,6 +20,14 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         WCSession.default.activate()
     }
 
+    /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.
+    func sendDemoStart() {
+        guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be started from here"); return }
+        WCSession.default.sendMessage(["type": "demo.start"], replyHandler: nil) { error in
+            Log.link.error("couldn't start the watch: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: Handling (main actor)
 
     private func handle(session message: [String: Any]) async -> [String: Any] {

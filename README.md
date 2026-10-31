@@ -29,9 +29,11 @@ Echo turns a day of conversations into something you can ask questions of, **wit
 
 <p align="center">
   <a href="docs/media/echo-demo-preview.mp4"><b>▶ Watch the full-quality preview (MP4)</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, ~2 min (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself, including the kill-switch and the architecture sheet, with the ~70 s sync sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
 
 ## A tour of the screens
 
@@ -161,6 +163,7 @@ The first launch asks for speech-recognition permission on the phone; tap Allow 
 | `Tools/e2e_check.sh` | Replays the day and checks the whole demo against ground truth (PASS/FAIL) |
 | `Tools/muse_smoke.sh` | Checks your API key, model and region with one tiny call |
 | `Tools/check_no_secrets.sh` | Fails if your key appears anywhere it could be published |
+| `Tools/record_demo_take.sh` | Records one continuous, self-driving demo take of both simulators (live Muse if a key is set) |
 | `Tools/make_readme_media.sh` | Regenerates the screenshots, video and GIF in this README |
 
 ```bash

@@ -52,6 +52,8 @@ final class AskModel {
     }
 
     var query = ""
+    /// Opens the "What left your phone" panel on a cloud answer. Set by the demo driver only.
+    var expandSent = false
     private(set) var state: State = .idle
     private(set) var recent: [String] = []
 
@@ -79,6 +81,7 @@ final class AskModel {
         guard !question.isEmpty else { return }
         generation += 1
         let mine = generation
+        expandSent = false
         query = question
         state = .searching(question)
 
