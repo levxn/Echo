@@ -4,8 +4,11 @@ import SwiftUI
 struct TodayView: View {
     let model: PipelineModel
     let digest: DigestModel
+    let player: ChunkPlayer
 
     @State private var episodes: [Episode] = []
+    @State private var promises: [Promise] = []
+    @State private var focusedPromises = false
 
     private var statusText: String {
         switch model.session {
@@ -16,6 +19,7 @@ struct TodayView: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 ScreenHeader(title: "Echo", status: statusText, reachable: model.watchReachable) {
@@ -24,6 +28,11 @@ struct TodayView: View {
                 FunnelCard(model: model)
                 if model.chunks.isEmpty { EmptyDayHint() }
                 if model.isSettled { DigestSection(digest: digest, model: model) }
+                if !promises.isEmpty {
+                    PromisesSection(promises: promises, model: model, player: player)
+                        .id("promises")
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
                 if !episodes.isEmpty {
                     EpisodesSection(episodes: episodes)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -36,8 +45,23 @@ struct TodayView: View {
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
         .onChange(of: model.storedCount, initial: true) {
-            withAnimation(.smooth(duration: 0.5)) { episodes = EpisodeBuilder.build(from: model.chunks) }
+            withAnimation(.smooth(duration: 0.5)) {
+                episodes = EpisodeBuilder.build(from: model.chunks)
+                promises = PromiseExtractor.extract(from: model.chunks)
+            }
             if model.storedCount == 0 { digest.reset() }
+        }
+        // Dev hook: `-today-focus promises` scrolls to the commitments once they exist (screenshots, demo take).
+        .onChange(of: promises.count) {
+            let args = ProcessInfo.processInfo.arguments
+            guard !focusedPromises, !promises.isEmpty,
+                  let i = args.firstIndex(of: "-today-focus"), i + 1 < args.count, args[i + 1] == "promises" else { return }
+            focusedPromises = true
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                withAnimation(.smooth(duration: 0.6)) { proxy.scrollTo("promises", anchor: .top) }
+            }
+        }
         }
     }
 }

@@ -32,7 +32,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest) }
+            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest, player: player) }
             Tab("Pipeline", systemImage: "waveform.path", value: RootTab.pipeline) { PipelineView(model: model) }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0)

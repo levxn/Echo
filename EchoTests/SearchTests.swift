@@ -20,7 +20,7 @@ private struct FixtureChunk: Decodable {
 
 /// A store loaded from the real Day 1 transcripts, plus ground truth from the demo manifest.
 @MainActor
-private struct Harness {
+struct Harness {
     let store: ChunkStore
     let retriever: Retriever
     let manifest: DemoManifest

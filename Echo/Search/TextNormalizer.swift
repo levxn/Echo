@@ -40,6 +40,62 @@ nonisolated enum TextNormalizer {
         return out
     }
 
+    /// A person's name found in raw text, as written ("Priya"), and whether a title came right before it
+    /// ("Dr. Patel": usually someone being talked *about*, not talked *to*).
+    struct NameMention: Equatable {
+        let name: String
+        let titled: Bool
+    }
+
+    private static let titleWords: Set<String> = ["mr", "mister", "dr", "doctor", "mrs", "missus", "ms", "miss"]
+    private static let notNames: Set<String> = [
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january", "february", "march",
+        "april", "may", "june", "july", "august", "september", "october", "november", "december", "okay", "yes",
+        "thanks", "thank", "hello", "right", "great", "sure", "perfect", "good", "excellent", "wonderful", "lovely",
+        "sorry", "also", "the", "and", "but", "now", "that", "this", "what", "where", "when", "who", "why", "how",
+    ]
+    private static let capitalizedWord = try! NSRegularExpression(pattern: #"\b[A-Z][a-z]{2,}\b"#)
+
+    /// People named in raw text, in order of appearance. Best effort, and honest about it: Apple's tagger on short
+    /// ASR fragments misses lone first names ("Priya") and files others under places ("Jordan"), so a capitalized
+    /// word in mid-sentence also counts, unless the tagger says it is a place or organization ("Lisbon", "API").
+    static func personNames(in text: String) -> [NameMention] {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var found: [(range: Range<String.Index>, titled: Bool)] = []
+        var blocked: [Range<String.Index>] = []
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
+                             options: [.omitPunctuation, .omitWhitespace, .joinNames]) { tag, range in
+            switch tag {
+            case .personalName:
+                let first = text[range].split(whereSeparator: { !$0.isLetter }).first.map { $0.lowercased() } ?? ""
+                found.append((range, titleWords.contains(first) || titleBefore(range, in: text)))
+            case .placeName, .organizationName:
+                blocked.append(range)
+            default: break
+            }
+            return true
+        }
+        for match in capitalizedWord.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let range = Range(match.range, in: text) else { continue }
+            let word = text[range].lowercased()
+            if notNames.contains(word) || titleWords.contains(word) { continue }
+            if blocked.contains(where: { $0.overlaps(range) }) || found.contains(where: { $0.range.overlaps(range) }) { continue }
+            // The first word of a sentence is capitalized anyway, so it says nothing.
+            let before = text[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
+            if before.isEmpty || ".?!".contains(before.last!) { continue }
+            found.append((range, titleBefore(range, in: text)))
+        }
+        return found.sorted { $0.range.lowerBound < $1.range.lowerBound }
+            .map { NameMention(name: String(text[$0.range]), titled: $0.titled) }
+    }
+
+    private static func titleBefore(_ range: Range<String.Index>, in text: String) -> Bool {
+        let before = text[..<range.lowerBound].trimmingCharacters(in: CharacterSet(charactersIn: " .").union(.whitespacesAndNewlines))
+        let word = before.split(whereSeparator: { !$0.isLetter }).last.map { $0.lowercased() } ?? ""
+        return titleWords.contains(word)
+    }
+
     static let stopwords: Set<String> = [
         "a", "about", "after", "again", "all", "also", "am", "an", "and", "any", "are", "as", "at", "be", "been",
         "but", "by", "can", "could", "did", "do", "does", "doing", "done", "for", "from", "get", "go", "going",
