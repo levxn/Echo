@@ -25,6 +25,7 @@ struct EchoApp: App {
                 Log.app.info("speech authorized: \(authorized)")
                 // Resume anything a previous launch left unprocessed.
                 model.chunks.filter { $0.status == .received || $0.status == .vad }.forEach { pipeline.enqueue($0) }
+                await pipeline.backfillIndex()
             }
         }
     }

@@ -2,34 +2,77 @@ import Foundation
 import os
 import SQLite3
 
-/// Thin SQLite wrapper. Day 1 only needs the `chunk` table; FTS5 and vectors arrive on Day 2.
+/// Thin SQLite wrapper: the `chunk` table plus an FTS5 index (`chunk_fts`) and an embedding BLOB per chunk.
 actor ChunkStore {
     private var db: OpaquePointer?
     let chunksDirectory: URL
 
-    init() {
-        let base = URL.applicationSupportDirectory.appending(path: "Echo", directoryHint: .isDirectory)
+    /// `directory` lets tests use a temp folder; the app uses Application Support/Echo.
+    init(directory: URL? = nil) {
+        let base = directory ?? URL.applicationSupportDirectory.appending(path: "Echo", directoryHint: .isDirectory)
         chunksDirectory = base.appending(path: "chunks", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: chunksDirectory, withIntermediateDirectories: true)
-        let path = base.appending(path: "echo.sqlite").path
-        if sqlite3_open(path, &db) != SQLITE_OK { Log.app.error("sqlite open failed") }
-        exec("""
-        CREATE TABLE IF NOT EXISTS chunk (
-          id TEXT PRIMARY KEY, idx INTEGER, wall_start REAL, file_offset REAL, duration REAL,
-          peak_db REAL, mean_db REAL, audio_file TEXT, status TEXT,
-          speech_conf REAL, confirmed_seconds REAL, transcript TEXT
-        )
-        """)
+        if sqlite3_open(base.appending(path: "echo.sqlite").path, &db) != SQLITE_OK { Log.app.error("sqlite open failed") }
+        Self.migrate(db)
     }
 
     deinit { sqlite3_close(db) }
 
     func url(for audioFile: String) -> URL { chunksDirectory.appending(path: audioFile) }
 
+    // MARK: Schema
+
+    private static func migrate(_ db: OpaquePointer?) {
+        exec(db, """
+        CREATE TABLE IF NOT EXISTS chunk (
+          id TEXT PRIMARY KEY, idx INTEGER, wall_start REAL, file_offset REAL, duration REAL,
+          peak_db REAL, mean_db REAL, audio_file TEXT, status TEXT,
+          speech_conf REAL, confirmed_seconds REAL, transcript TEXT, embedding BLOB
+        )
+        """)
+        let columns = columnNames(db, table: "chunk")
+        if columns.contains("wav_file") { exec(db, "ALTER TABLE chunk RENAME COLUMN wav_file TO audio_file") }
+        if !columns.contains("embedding") { exec(db, "ALTER TABLE chunk ADD COLUMN embedding BLOB") }
+        exec(db, "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(id UNINDEXED, text, tokenize='porter unicode61')")
+    }
+
+    private static func columnNames(_ db: OpaquePointer?, table: String) -> Set<String> {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var names: Set<String> = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let c = sqlite3_column_text(stmt, 1) { names.insert(String(cString: c)) }
+        }
+        return names
+    }
+
+    @discardableResult
+    private static func exec(_ db: OpaquePointer?, _ sql: String) -> Bool {
+        let ok = sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
+        if !ok { Log.app.error("sqlite exec failed: \(String(cString: sqlite3_errmsg(db)))") }
+        return ok
+    }
+
+    // MARK: Chunks
+
+    /// Inserts or updates a chunk. The embedding column is deliberately untouched on update.
     func upsert(_ c: ChunkRecord) {
         var stmt: OpaquePointer?
-        let sql = "INSERT OR REPLACE INTO chunk VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        let sql = """
+        INSERT INTO chunk (id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
+                           speech_conf, confirmed_seconds, transcript)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(id) DO UPDATE SET idx=excluded.idx, wall_start=excluded.wall_start,
+          file_offset=excluded.file_offset, duration=excluded.duration, peak_db=excluded.peak_db,
+          mean_db=excluded.mean_db, audio_file=excluded.audio_file, status=excluded.status,
+          speech_conf=excluded.speech_conf, confirmed_seconds=excluded.confirmed_seconds,
+          transcript=excluded.transcript
+        """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            Log.app.error("upsert prepare failed: \(String(cString: sqlite3_errmsg(self.db)))")
+            return
+        }
         defer { sqlite3_finalize(stmt) }
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         sqlite3_bind_text(stmt, 1, c.id, -1, transient)
@@ -49,7 +92,11 @@ actor ChunkStore {
 
     func all() -> [ChunkRecord] {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "SELECT * FROM chunk ORDER BY idx", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        let sql = """
+        SELECT id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
+               speech_conf, confirmed_seconds, transcript FROM chunk ORDER BY idx
+        """
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
         var rows: [ChunkRecord] = []
         func text(_ i: Int32) -> String? { sqlite3_column_text(stmt, i).map { String(cString: $0) } }
@@ -67,20 +114,97 @@ actor ChunkStore {
         return rows
     }
 
-    /// Deletes every row and audio file.
+    // MARK: Search index
+
+    /// Stores the normalized text in FTS5 and the embedding on the chunk row.
+    func index(id: String, normalizedText: String, embedding: [Float]?) {
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+
+        if sqlite3_prepare_v2(db, "DELETE FROM chunk_fts WHERE id = ?", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, id, -1, transient)
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+
+        stmt = nil
+        if sqlite3_prepare_v2(db, "INSERT INTO chunk_fts (id, text) VALUES (?, ?)", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, id, -1, transient)
+            sqlite3_bind_text(stmt, 2, normalizedText, -1, transient)
+            if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("fts insert failed") }
+        }
+        sqlite3_finalize(stmt)
+
+        stmt = nil
+        if sqlite3_prepare_v2(db, "UPDATE chunk SET embedding = ? WHERE id = ?", -1, &stmt, nil) == SQLITE_OK {
+            if let embedding {
+                let data = Embedder.serialize(embedding)
+                _ = data.withUnsafeBytes { sqlite3_bind_blob(stmt, 1, $0.baseAddress, Int32(data.count), transient) }
+            } else {
+                sqlite3_bind_null(stmt, 1)
+            }
+            sqlite3_bind_text(stmt, 2, id, -1, transient)
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+    }
+
+    /// BM25-ranked FTS5 matches. `tokens` are OR-joined; higher score is better.
+    func ftsSearch(tokens: [String], limit: Int = 20) -> [(id: String, score: Double)] {
+        guard !tokens.isEmpty else { return [] }
+        let match = tokens.map { "\"\($0.replacingOccurrences(of: "\"", with: ""))\"" }.joined(separator: " OR ")
+        var stmt: OpaquePointer?
+        let sql = "SELECT id, bm25(chunk_fts) FROM chunk_fts WHERE chunk_fts MATCH ? ORDER BY bm25(chunk_fts) LIMIT ?"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            Log.app.error("fts prepare failed: \(String(cString: sqlite3_errmsg(self.db)))")
+            return []
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, match, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_int(stmt, 2, Int32(limit))
+        var out: [(String, Double)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let c = sqlite3_column_text(stmt, 0) else { continue }
+            out.append((String(cString: c), -sqlite3_column_double(stmt, 1)))   // bm25() is lower-is-better and negative
+        }
+        return out
+    }
+
+    func embeddings() -> [String: [Float]] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id, embedding FROM chunk WHERE embedding IS NOT NULL", -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [String: [Float]] = [:]
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let c = sqlite3_column_text(stmt, 0), let blob = sqlite3_column_blob(stmt, 1) else { continue }
+            out[String(cString: c)] = Embedder.deserialize(Data(bytes: blob, count: Int(sqlite3_column_bytes(stmt, 1))))
+        }
+        return out
+    }
+
+    /// Ids that already have an FTS row, used to backfill chunks stored before the index existed.
+    func indexedIDs() -> Set<String> {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id FROM chunk_fts", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var ids: Set<String> = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let c = sqlite3_column_text(stmt, 0) { ids.insert(String(cString: c)) }
+        }
+        return ids
+    }
+
+    // MARK: Housekeeping
+
+    /// Deletes every row, index entry and audio file.
     func reset() {
-        exec("DELETE FROM chunk")
+        Self.exec(db, "DELETE FROM chunk")
+        Self.exec(db, "DELETE FROM chunk_fts")
         let files = (try? FileManager.default.contentsOfDirectory(at: chunksDirectory, includingPropertiesForKeys: nil)) ?? []
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
 
     func write(audio: Data, named file: String) throws {
         try audio.write(to: chunksDirectory.appending(path: file), options: .atomic)
-    }
-
-    private func exec(_ sql: String) {
-        if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
-            Log.app.error("sqlite exec failed: \(String(cString: sqlite3_errmsg(self.db)))")
-        }
     }
 }

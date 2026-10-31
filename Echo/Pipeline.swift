@@ -70,7 +70,23 @@ final class Pipeline {
             return
         }
 
+        // Index for search: normalized text into FTS5, mean word vector onto the chunk row.
+        if let text = chunk.transcript { await index(chunkID: chunk.id, text: text) }
+
         chunk.status = .stored
         model.put(chunk)
+    }
+
+    private func index(chunkID: String, text: String) async {
+        await model.store.index(id: chunkID, normalizedText: TextNormalizer.normalized(text),
+                                embedding: Embedder.vector(for: text))
+    }
+
+    /// Indexes chunks that were stored before the search index existed.
+    func backfillIndex() async {
+        let indexed = await model.store.indexedIDs()
+        for chunk in model.chunks where chunk.status == .stored && !indexed.contains(chunk.id) {
+            if let text = chunk.transcript { await index(chunkID: chunk.id, text: text) }
+        }
     }
 }
