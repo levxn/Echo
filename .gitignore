@@ -3,3 +3,5 @@ DerivedData/
 build/
 .DS_Store
 Secrets.xcconfig
+*.key
+meta_api_key
