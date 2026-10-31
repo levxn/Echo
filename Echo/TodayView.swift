@@ -3,6 +3,7 @@ import SwiftUI
 /// The settled summary of the day. The day timeline is added here.
 struct TodayView: View {
     let model: PipelineModel
+    let digest: DigestModel
 
     @State private var episodes: [Episode] = []
 
@@ -21,6 +22,7 @@ struct TodayView: View {
                     Task { await model.reset() }
                 }
                 FunnelCard(model: model)
+                if model.isSettled { DigestSection(digest: digest, model: model) }
                 if !episodes.isEmpty {
                     EpisodesSection(episodes: episodes)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -34,6 +36,7 @@ struct TodayView: View {
         .background { AuroraBackground() }
         .onChange(of: model.storedCount, initial: true) {
             withAnimation(.smooth(duration: 0.5)) { episodes = EpisodeBuilder.build(from: model.chunks) }
+            if model.storedCount == 0 { digest.reset() }
         }
     }
 }

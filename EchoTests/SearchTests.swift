@@ -407,3 +407,73 @@ struct AskFlowTests {
         #expect(r.ledger.entries.count == 2, "both questions are still logged")
     }
 }
+
+@MainActor
+struct DigestTests {
+    private let digestJSON = """
+    {"day_summary":"A busy day.","conversations":[{"time":"09:05","title":"Stand-up","summary":"Billing."}],
+     "action_items":[{"what":"Send the API spec","to_whom":"Ravi","due":"Wednesday noon","source_time":"09:05"}],"people":["Ravi"]}
+    """
+
+    private func rig(cloudEnabled: Bool = true, configure: (FakeMuse) -> Void = { _ in }) async throws -> (DigestModel, LedgerModel, FakeMuse, Harness, () -> Void) {
+        let h = try await Harness.make()
+        let ledger = LedgerModel(store: h.store)
+        let previous = UserDefaults.standard.object(forKey: "echo.cloudEnabled")
+        ledger.cloudEnabled = cloudEnabled
+        let fake = FakeMuse()
+        fake.result = .success(digestJSON)
+        configure(fake)
+        let digest = DigestModel(store: h.store, ledger: ledger, client: fake, model: "muse-spark-1.3")
+        return (digest, ledger, fake, h, {
+            if let previous { UserDefaults.standard.set(previous, forKey: "echo.cloudEnabled") }
+            else { UserDefaults.standard.removeObject(forKey: "echo.cloudEnabled") }
+            h.cleanup()
+        })
+    }
+
+    @Test func aDigestIsRequestedStructuredSavedAndLogged() async throws {
+        let (digest, ledger, fake, h, done) = try await rig()
+        defer { done() }
+        await digest.generate(chunks: h.chunks)
+        guard case .ready(let ready) = digest.state else { Issue.record("expected a digest, got \(digest.state)"); return }
+        #expect(ready.digest.actionItems.first?.what == "Send the API spec" && !ready.isStub)
+
+        let request = try #require(fake.requests.first)
+        #expect(request.schemaName == EchoSchemas.digestName)
+        #expect(request.user.components(separatedBy: "[Conversation starting").count - 1 == 4, "the whole day, grouped by conversation")
+        #expect(!(String(decoding: try request.bodyData(), as: UTF8.self)).contains("audio"))
+
+        let entry = try #require(ledger.entries.first)
+        #expect(entry.kind == .digest && entry.leftDevice && entry.snippets.count == h.chunks.count)
+
+        // It survives a restart.
+        let reloaded = DigestModel(store: h.store, ledger: ledger, client: fake, model: "muse-spark-1.3")
+        await reloaded.load()
+        if case .ready(let again) = reloaded.state { #expect(again.digest == ready.digest) } else { Issue.record("digest should reload") }
+    }
+
+    @Test func theCloudSwitchBlocksTheDigest() async throws {
+        let (digest, _, fake, h, done) = try await rig(cloudEnabled: false)
+        defer { done() }
+        await digest.generate(chunks: h.chunks)
+        if case .cloudOff = digest.state {} else { Issue.record("expected cloudOff, got \(digest.state)") }
+        #expect(fake.requests.isEmpty)
+    }
+
+    @Test func anUnreadableReplyAndANetworkFailureAreBothReportedNotFaked() async throws {
+        let (bad, _, _, h1, done1) = try await rig { $0.result = .success("not json at all") }
+        defer { done1() }
+        await bad.generate(chunks: h1.chunks)
+        if case .failed = bad.state {} else { Issue.record("an unreadable digest must be a failure, got \(bad.state)") }
+
+        let (offline, ledger, _, h2, done2) = try await rig { $0.result = .failure(.offline) }
+        defer { done2() }
+        await offline.generate(chunks: h2.chunks)
+        if case .failed(let message) = offline.state { #expect(message.contains("internet")) } else { Issue.record("expected failure") }
+        #expect(ledger.entries.first.map { !$0.leftDevice && $0.bodyBytes == 0 } == true)
+        // And nothing was saved, so a relaunch doesn't show a digest that never existed.
+        let fresh = DigestModel(store: h2.store, ledger: ledger, client: FakeMuse(), model: "muse-spark-1.3")
+        await fresh.load()
+        if case .idle = fresh.state {} else { Issue.record("no digest should be saved after a failure") }
+    }
+}

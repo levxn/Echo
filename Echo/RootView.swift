@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum RootTab: String {
-    case today, pipeline, ask
+    case today, pipeline, ask, ledger
 }
 
 struct RootView: View {
@@ -9,6 +9,7 @@ struct RootView: View {
 
     @State private var ask: AskModel
     @State private var ledger: LedgerModel
+    @State private var digest: DigestModel
     @State private var player: ChunkPlayer
     @State private var tab: RootTab
 
@@ -16,7 +17,9 @@ struct RootView: View {
         self.model = model
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
-        _ask = State(initialValue: AskModel(store: model.store, ledger: ledger, client: MuseClientFactory.make()))
+        let client = MuseClientFactory.make()
+        _ask = State(initialValue: AskModel(store: model.store, ledger: ledger, client: client))
+        _digest = State(initialValue: DigestModel(store: model.store, ledger: ledger, client: client))
         _player = State(initialValue: ChunkPlayer(directory: model.store.chunksDirectory))
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
         let args = ProcessInfo.processInfo.arguments
@@ -26,11 +29,12 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model) }
+            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest) }
             Tab("Pipeline", systemImage: "waveform.path", value: RootTab.pipeline) { PipelineView(model: model) }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0)
             }
+            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) }
         }
         .preferredColorScheme(.dark)
         .task {
@@ -41,6 +45,7 @@ struct RootView: View {
                 _ = TextNormalizer.nameTokens(in: "Warm Up")
             }
             await ledger.reload()
+            await digest.load()
             // Dev hook: `-ask "question"` runs a query once the stored day has loaded.
             let args = ProcessInfo.processInfo.arguments
             guard let i = args.firstIndex(of: "-ask"), i + 1 < args.count else { return }
