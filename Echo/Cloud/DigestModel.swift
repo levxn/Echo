@@ -46,6 +46,17 @@ final class DigestModel {
         guard ledger.cloudEnabled else { state = .cloudOff; return }
         let plan = TierTwoPlanner.digestPlan(chunks: chunks, model: modelID)
         guard plan.canCall else { return }
+        if ledger.reviewBeforeSend, !isStub {
+            let approved = await ledger.gate.confirm(plan: plan, query: "Summarize my day with Muse", kind: .digest)
+            if !approved {
+                var entry = LedgerEntry(query: "Summarize my day with Muse", tier: .cloud, reason: "You chose not to send this.")
+                entry.kind = .digest
+                entry.snippets = plan.snippets
+                ledger.record(entry)
+                state = .idle
+                return
+            }
+        }
         state = .working(plan)
         let result = await caller.perform(plan: plan, query: "Summarize my day with Muse", kind: .digest,
                                           reason: "You asked Muse to summarize the whole day.")

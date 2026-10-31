@@ -30,6 +30,13 @@ struct RootView: View {
         _tab = State(initialValue: requested ?? .today)
     }
 
+    private func forgetDay(includeLedger: Bool) {
+        Task {
+            await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
+                                  ledger: ledger, includeLedger: includeLedger)
+        }
+    }
+
     var body: some View {
         TabView(selection: $tab) {
             Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest, player: player) }
@@ -37,7 +44,7 @@ struct RootView: View {
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
             }
-            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) }
+            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) { includeLedger in forgetDay(includeLedger: includeLedger) } }
         }
         .overlay(alignment: .bottom) {
             if let caption {
@@ -47,6 +54,10 @@ struct RootView: View {
             }
         }
         .animation(.smooth(duration: 0.35), value: caption)
+        // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
+        .sheet(item: Binding(get: { ledger.gate.pending }, set: { if $0 == nil { ledger.gate.cancel() } })) { review in
+            ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })
+        }
         .preferredColorScheme(.dark)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
         // would wrap mid-word, so the scale is capped there.

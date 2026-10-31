@@ -300,8 +300,9 @@ struct AskFlowTests {
 
     private func rig(cloudEnabled: Bool = true, configure: (FakeMuse) -> Void = { _ in }) async throws -> Rig {
         let h = try await Harness.make()
-        let ledger = LedgerModel(store: h.store)
-        let previous = UserDefaults.standard.object(forKey: "echo.cloudEnabled")
+        // Isolated defaults: tests run in parallel and must not share (or leak) the cloud and review switches.
+        let ledger = LedgerModel(store: h.store, defaults: UserDefaults(suiteName: "echo-test-\(UUID().uuidString)")!)
+        let previous: Any? = nil
         ledger.cloudEnabled = cloudEnabled
         let fake = FakeMuse()
         configure(fake)
@@ -323,6 +324,69 @@ struct AskFlowTests {
         #expect(r.fake.requests.isEmpty)
         #expect(r.ledger.entries.count == 1 && r.ledger.entries[0].tier == .local)
         #expect(!r.ledger.entries[0].leftDevice && r.ledger.entries[0].bodyBytes == 0)
+    }
+
+    /// Waits (briefly) for the review sheet to be requested.
+    private func waitForReview(_ ledger: LedgerModel) async throws -> ReviewGate.Pending {
+        for _ in 0..<200 {
+            if let pending = ledger.gate.pending { return pending }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("the review was never requested")
+        throw CancellationError()
+    }
+
+    @Test func withReviewOnNothingIsSentUntilTheUserApproves() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        r.ledger.reviewBeforeSend = true
+        let task = Task { await r.ask.ask("What did I promise people today?") }
+        let pending = try await waitForReview(r.ledger)
+        #expect(pending.query == "What did I promise people today?" && pending.kind == .ask && pending.plan.snippets.count >= 8)
+        #expect(r.fake.requests.isEmpty, "the request waits for approval")
+        r.ledger.gate.approve()
+        await task.value
+        guard case .cloudAnswered = r.ask.state else { Issue.record("expected a cloud answer, got \(r.ask.state)"); return }
+        #expect(r.fake.requests.count == 1, "approved once, sent once")
+        #expect(r.ledger.gate.pending == nil)
+    }
+
+    @Test func decliningAtReviewSendsNothingAndIsLoggedAsHeldBack() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        r.ledger.reviewBeforeSend = true
+        let task = Task { await r.ask.ask("What did I promise people today?") }
+        _ = try await waitForReview(r.ledger)
+        r.ledger.gate.cancel()
+        await task.value
+        guard case .answered(let result) = r.ask.state else { Issue.record("expected a held-back answer, got \(r.ask.state)"); return }
+        #expect(result.note == .declined && result.answer != nil, "the closest local moments are still shown")
+        #expect(r.fake.requests.isEmpty)
+        let entry = try #require(r.ledger.entries.first)
+        #expect(!entry.leftDevice && entry.bodyBytes == 0 && entry.reason == "You chose not to send this.")
+        #expect(entry.snippets.count >= 8, "the ledger shows what would have been sent")
+        #expect(LedgerTotals(r.ledger.entries).usedMuse == 0)
+    }
+
+    @Test func aNewQuestionDeclinesAReviewThatIsStillWaiting() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        r.ledger.reviewBeforeSend = true
+        let first = Task { await r.ask.ask("What did I promise people today?") }
+        _ = try await waitForReview(r.ledger)
+        await r.ask.ask("When is the plumber coming?")   // answered locally, so it needs no review
+        await first.value
+        #expect(r.ledger.gate.pending == nil && r.fake.requests.isEmpty)
+        guard case .answered(let result) = r.ask.state else { Issue.record("the newer local answer should win"); return }
+        #expect(result.query == "When is the plumber coming?")
+    }
+
+    @Test func reviewDoesNotApplyToTheOfflineStub() async throws {
+        let r = try await rig { $0.isStub = true }
+        defer { r.restoreSwitch() }
+        r.ledger.reviewBeforeSend = true
+        await r.ask.ask("What did I promise people today?")
+        guard case .cloudAnswered = r.ask.state else { Issue.record("a stub sends nothing, so it is not held for review"); return }
     }
 
     @Test func aCitationInTheReplyFindsItsMomentOnThePhone() async throws {
@@ -434,7 +498,7 @@ struct DigestTests {
 
     private func rig(cloudEnabled: Bool = true, configure: (FakeMuse) -> Void = { _ in }) async throws -> (DigestModel, LedgerModel, FakeMuse, Harness, () -> Void) {
         let h = try await Harness.make()
-        let ledger = LedgerModel(store: h.store)
+        let ledger = LedgerModel(store: h.store, defaults: UserDefaults(suiteName: "echo-test-\(UUID().uuidString)")!)
         let previous = UserDefaults.standard.object(forKey: "echo.cloudEnabled")
         ledger.cloudEnabled = cloudEnabled
         let fake = FakeMuse()

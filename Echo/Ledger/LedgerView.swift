@@ -4,8 +4,12 @@ import SwiftUI
 struct LedgerView: View {
     let ledger: LedgerModel
     let model: PipelineModel
+    /// Wipes the day (and optionally the ledger); owned by RootView because it touches every model.
+    let onForget: (_ includeLedger: Bool) -> Void
 
     @State private var confirmClear = false
+    @State private var confirmForget = false
+    @State private var exportURL: URL?
 
     var body: some View {
         ScrollView {
@@ -22,11 +26,7 @@ struct LedgerView: View {
                 }
                 .buttonStyle(EchoPressStyle())
                 .glassEffect(.regular.interactive(), in: .capsule)
-                if !ledger.entries.isEmpty {
-                    Button("Clear ledger", role: .destructive) { confirmClear = true }
-                        .font(.footnote)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
+                yourData
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.sm)
@@ -35,6 +35,13 @@ struct LedgerView: View {
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
         .sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) }
+        .onChange(of: ledger.entries, initial: true) { refreshExport() }
+        .confirmationDialog("Forget the day?", isPresented: $confirmForget, titleVisibility: .visible) {
+            Button("Forget the day", role: .destructive) { onForget(false) }
+            Button("Forget the day and the ledger", role: .destructive) { onForget(true) }
+        } message: {
+            Text("Deletes every transcript, audio clip, summary and checked-off commitment on this phone. Your API key and settings stay. The ledger stays too, unless you choose to forget it.")
+        }
         .confirmationDialog("Clear the privacy ledger?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Clear ledger", role: .destructive) { Task { await ledger.clear() } }
         } message: {
@@ -53,6 +60,54 @@ struct LedgerView: View {
         }
     }
 
+    private func refreshExport() {
+        guard !ledger.entries.isEmpty else { exportURL = nil; return }
+        exportURL = try? LedgerExport(entries: ledger.entries).write(into: FileManager.default.temporaryDirectory)
+    }
+
+    private var yourData: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Your data")
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .foregroundStyle(Palette.textPrimary)
+            Text("Everything Echo keeps is on this phone. Export the ledger, or erase what you don't want kept.")
+                .font(.footnote)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let exportURL {
+                ShareLink(item: exportURL) {
+                    dataRow("Export the ledger (JSON)", systemImage: "square.and.arrow.up", tint: Palette.textPrimary)
+                }
+                .buttonStyle(EchoPressStyle())
+            }
+            Button { confirmForget = true } label: {
+                dataRow("Forget my day", systemImage: "trash", tint: Palette.rose)
+            }
+            .buttonStyle(EchoPressStyle())
+            if !ledger.entries.isEmpty {
+                Button { confirmClear = true } label: {
+                    dataRow("Clear the ledger", systemImage: "list.bullet.clipboard", tint: Palette.rose)
+                }
+                .buttonStyle(EchoPressStyle())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .echoCard()
+    }
+
+    private func dataRow(_ title: String, systemImage: String, tint: Color) -> some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: systemImage).font(.system(size: 15, weight: .semibold)).frame(width: 22)
+            Text(title).font(.system(.subheadline, design: .rounded, weight: .semibold))
+            Spacer()
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, Spacing.md)
+        .frame(minHeight: 48)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
     private var cloudSwitch: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Toggle(isOn: Bindable(ledger).cloudEnabled) {
@@ -65,6 +120,20 @@ struct LedgerView: View {
             Text(ledger.cloudEnabled
                  ? "Questions that can't be answered by lookup are sent to Muse Spark as text. Audio never is."
                  : "Off: nothing will be sent to the cloud. Those questions show the closest moments on this phone instead.")
+                .font(.footnote)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider().overlay(Color.white.opacity(0.1))
+            Toggle(isOn: Bindable(ledger).reviewBeforeSend) {
+                Label("Review before sending", systemImage: "eye")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .tint(Palette.cloud)
+            .frame(minHeight: 44)
+            Text(ledger.reviewBeforeSend
+                 ? "Each request waits for you. You see the exact text first, then choose Send or Don't send."
+                 : "Off: requests are sent as soon as you ask, and logged here.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

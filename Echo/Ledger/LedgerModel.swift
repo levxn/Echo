@@ -9,16 +9,34 @@ final class LedgerModel {
     /// Whether the "How Echo works" sheet is showing. Lives here so the demo driver can open it.
     var showArchitecture = ProcessInfo.processInfo.arguments.contains("-architecture")
     private let store: ChunkStore
+    private let defaults: UserDefaults
     private static let cloudKey = "echo.cloudEnabled"
+    private static let reviewKey = "echo.reviewBeforeSend"
+
+    /// Holds a cloud call until the user has seen and approved exactly what would be sent.
+    let gate = ReviewGate()
+
+    /// When on, every cloud request waits for the user's approval first.
+    var reviewBeforeSend: Bool {
+        didSet { defaults.set(reviewBeforeSend, forKey: Self.reviewKey) }
+    }
 
     /// Kill switch: when off, no question ever leaves the phone.
     var cloudEnabled: Bool {
-        didSet { UserDefaults.standard.set(cloudEnabled, forKey: Self.cloudKey) }
+        didSet { defaults.set(cloudEnabled, forKey: Self.cloudKey) }
     }
 
-    init(store: ChunkStore) {
+    /// `defaults` is injectable so tests can run in parallel without sharing the user's real switches.
+    init(store: ChunkStore, defaults: UserDefaults = .standard) {
         self.store = store
-        cloudEnabled = UserDefaults.standard.object(forKey: Self.cloudKey) as? Bool ?? true
+        self.defaults = defaults
+        cloudEnabled = defaults.object(forKey: Self.cloudKey) as? Bool ?? true
+        // Dev hook: `-review on|off` sets the preference (screenshots and the demo take).
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-review"), i + 1 < args.count, ["on", "off"].contains(args[i + 1]) {
+            defaults.set(args[i + 1] == "on", forKey: Self.reviewKey)
+        }
+        reviewBeforeSend = defaults.object(forKey: Self.reviewKey) as? Bool ?? false
     }
 
     var totals: LedgerTotals { LedgerTotals(entries) }

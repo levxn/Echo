@@ -8,6 +8,7 @@ struct AskResult {
     enum Note {
         case cloudOff          // the user's kill switch is off
         case nothingMatched    // nothing relevant on the phone, so nothing was sent
+        case declined          // "Review before send" was on and the user chose not to send
     }
 
     let query: String
@@ -79,6 +80,7 @@ final class AskModel {
     func ask(_ text: String) async {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+        ledger.gate.cancel()   // a review for an older question is moot
         generation += 1
         let mine = generation
         expandSent = false
@@ -117,6 +119,19 @@ final class AskModel {
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .nothingMatched))
             Log.pipe.info("ask \"\(question)\" -> nothing to send")
             return
+        }
+
+        if ledger.reviewBeforeSend, !isStub {
+            let approved = await ledger.gate.confirm(plan: plan, query: question, kind: .ask)
+            guard mine == generation else { return }
+            if !approved {
+                var entry = LedgerEntry(query: question, tier: .cloud, reason: "You chose not to send this.")
+                entry.snippets = plan.snippets
+                ledger.record(entry)
+                state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .declined))
+                Log.pipe.info("ask \"\(question)\" -> declined at review, nothing sent")
+                return
+            }
         }
 
         state = .sending(query: question, plan: plan, decision: decision)

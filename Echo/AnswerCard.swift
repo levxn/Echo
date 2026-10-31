@@ -78,6 +78,12 @@ struct AnswerCard: View {
                         .foregroundStyle(Palette.amber)
                     Text("This question needs synthesis, but you've switched the cloud off, so nothing was sent. Here are the closest moments on this phone. Turn the cloud back on in the Privacy Ledger to let Muse answer.")
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
+                case .declined:
+                    Label("Not sent", systemImage: "hand.raised.fill")
+                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.amber)
+                    Text("You chose not to send this to Muse, so nothing left your phone. Here are the closest moments on this phone.")
+                        .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 case .nothingMatched:
                     Label("Nothing matched", systemImage: "magnifyingglass")
                         .font(.system(.footnote, design: .rounded, weight: .semibold))
