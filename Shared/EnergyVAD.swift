@@ -9,7 +9,7 @@ nonisolated struct VADConfig: Sendable {
     var hangoverFrames = 20           // 600 ms of non-voiced frames before closing
     var preRollSeconds = 2.0          // audio prepended from the ring buffer
     var minSegmentSeconds = 0.8
-    var maxSegmentSeconds = 30.0
+    var maxSegmentSeconds = 10.0   // keeps an AAC chunk inside one WatchConnectivity message
     var floorRise = 0.01              // how fast the noise floor follows a rising background
     var floorFall = 0.2               // ... and a falling one
 

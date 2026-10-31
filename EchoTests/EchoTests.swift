@@ -67,8 +67,8 @@ struct VADTests {
 
     @Test func longSpeechIsSplitAtMaxLength() {
         let segs = runVAD(noise(2, seed: 9) + tone(70) + noise(2, seed: 10))
-        #expect(segs.count >= 3)
-        #expect(segs.allSatisfy { $0.duration <= 30.1 })
+        #expect(segs.count >= 6)
+        #expect(segs.allSatisfy { $0.duration <= 10.1 })
     }
 
     @Test func demoFileCoversEveryScriptedLine() throws {
@@ -98,34 +98,47 @@ struct VADTests {
 }
 
 struct TransportTests {
-    @Test func packetsRoundTripOutOfOrderWithDuplicates() throws {
-        let pcm = Data((0..<50_000).map { UInt8($0 % 251) })
-        var packets = Wire.packets(chunkIndex: 7, pcm: pcm)
-        #expect(packets.count == 4)
-        packets.reverse()
-        packets.append(packets[0])
-        var assembler = ChunkAssembler()
-        for p in packets { let ok = assembler.add(p); #expect(ok) }
-        #expect(assembler.isComplete)
-        #expect(assembler.chunkIndex == 7)
-        #expect(assembler.assemble() == pcm)
+    private func meta(_ i: Int) -> ChunkMeta {
+        ChunkMeta(id: "id-\(i)", index: i, wallStart: 32_400 + Double(i), fileOffset: Double(i) * 3, duration: 2.5,
+                  sampleRate: 16_000, peakDb: -20, meanDb: -28, sampleCount: 40_000)
     }
 
-    @Test func assemblerRejectsOtherChunkAndGarbage() {
-        var assembler = ChunkAssembler()
-        let first = assembler.add(Wire.packets(chunkIndex: 1, pcm: Data(count: 10))[0])
-        let other = assembler.add(Wire.packets(chunkIndex: 2, pcm: Data(count: 10))[0])
-        let garbage = assembler.add(Data([1, 2, 3]))
-        #expect(first)
-        #expect(!other)
-        #expect(!garbage)
+    @Test func bundleRoundTripsMultipleChunks() throws {
+        let entries = (0..<3).map { ChunkBundle.Entry(meta: meta($0), audio: Data((0..<(1000 * ($0 + 1))).map { UInt8($0 % 251) })) }
+        let encoded = try entries.map { try #require(ChunkBundle.encodeEntry($0)) }
+        let data = ChunkBundle.bundle(encodedEntries: encoded, recorded: 123.5)
+        let decoded = try #require(ChunkBundle.decode(data))
+        #expect(decoded.entries == entries)
+        #expect(decoded.recorded == 123.5)
     }
 
-    @Test func incompleteChunkDoesNotAssemble() {
-        let packets = Wire.packets(chunkIndex: 3, pcm: Data(count: 40_000))
-        var assembler = ChunkAssembler()
-        assembler.add(packets[0]); assembler.add(packets[2])
-        #expect(assembler.assemble() == nil)
+    @Test func decodeRejectsGarbageAndTruncation() throws {
+        let entry = ChunkBundle.Entry(meta: meta(1), audio: Data(count: 500))
+        let data = ChunkBundle.bundle(encodedEntries: [try #require(ChunkBundle.encodeEntry(entry))], recorded: 1)
+        #expect(ChunkBundle.decode(Data([1, 2, 3])) == nil)
+        #expect(ChunkBundle.decode(data.dropLast(10)) == nil)
+        #expect(ChunkBundle.decode(data + Data([0])) == nil)
+    }
+
+    @Test func aacIsMuchSmallerThanPCMAndKeepsDuration() throws {
+        let samples = tone(5)
+        let aac = try #require(AudioCodec.encodeAAC(samples: samples, sampleRate: 16_000))
+        #expect(aac.count < samples.pcmData.count / 3)
+        let url = FileManager.default.temporaryDirectory.appending(path: "codec-test.m4a")
+        try aac.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let duration = try #require(AudioCodec.duration(of: url))
+        #expect(abs(duration - 5) < 0.2)
+    }
+
+    @Test func longestRealSpeechChunkFitsInOneMessage() throws {
+        let (all, rate) = try WAV.read(resources.appending(path: "demo_day.wav"))
+        let seconds = Int(VADConfig().maxSegmentSeconds)
+        let start = 25 * rate   // inside the first scripted scene
+        let samples = Array(all[start..<start + seconds * rate])
+        let aac = try #require(AudioCodec.encodeAAC(samples: samples, sampleRate: rate))
+        let encoded = try #require(ChunkBundle.encodeEntry(.init(meta: meta(0), audio: aac)))
+        #expect(encoded.count + ChunkBundle.headerSize <= Wire.maxMessage, "encoded \(encoded.count) bytes")
     }
 
     @Test func samplesSurviveDataRoundTrip() {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Metadata the watch sends ahead of a chunk's audio.
+/// Metadata the watch attaches to each chunk of audio.
 nonisolated struct ChunkMeta: Codable, Sendable, Equatable {
     let id: String
     let index: Int
@@ -13,78 +13,82 @@ nonisolated struct ChunkMeta: Codable, Sendable, Equatable {
     let sampleCount: Int
 }
 
-/// Wire format shared by the watch sender and the phone receiver.
-///
-/// Simulator finding (Day 0): `transferFile` never delivers between paired sims, but
-/// `sendMessageData` does (payloads of ~20 KB work, 100 KB fail). Chunks are therefore sent as
-/// `begin` (dictionary) -> N framed data packets -> `end` (dictionary).
 nonisolated enum Wire {
     static let typeKey = "type"
-    static let metaKey = "meta"
-    static let indexKey = "index"
-    static let bytesKey = "bytes"
-    static let packetsKey = "packets"
-    static let begin = "begin"
-    static let end = "end"
+    static let session = "session"       // watch -> phone: replay started / finished
+    static let stateKey = "state"        // "started" | "finished"
+    static let recordedKey = "recorded"  // seconds of audio the watch has processed so far
+    static let totalKey = "total"        // seconds in the whole recording
+    static let okKey = "ok"
 
-    static let magic: UInt8 = 0xEC
-    static let version: UInt8 = 1
-    static let headerSize = 10
-    static let payloadSize = 16_000
-
-    /// Splits PCM bytes into framed packets: magic, version, chunkIndex u32, seq u16, total u16.
-    static func packets(chunkIndex: Int, pcm: Data, payloadSize: Int = Wire.payloadSize) -> [Data] {
-        let total = max(1, (pcm.count + payloadSize - 1) / payloadSize)
-        return (0..<total).map { seq in
-            var packet = Data([magic, version])
-            withUnsafeBytes(of: UInt32(chunkIndex).littleEndian) { packet.append(contentsOf: $0) }
-            withUnsafeBytes(of: UInt16(seq).littleEndian) { packet.append(contentsOf: $0) }
-            withUnsafeBytes(of: UInt16(total).littleEndian) { packet.append(contentsOf: $0) }
-            packet.append(pcm.subdata(in: seq * payloadSize..<min(pcm.count, (seq + 1) * payloadSize)))
-            return packet
-        }
-    }
-
-    struct Header: Equatable {
-        let chunkIndex: Int
-        let seq: Int
-        let total: Int
-    }
-
-    static func parse(_ packet: Data) -> (header: Header, payload: Data)? {
-        guard packet.count >= headerSize, packet[packet.startIndex] == magic,
-              packet[packet.startIndex + 1] == version else { return nil }
-        let b = packet.startIndex
-        func u16(_ at: Int) -> Int { Int(packet[b + at]) | Int(packet[b + at + 1]) << 8 }
-        let index = u16(2) | u16(4) << 16
-        return (Header(chunkIndex: index, seq: u16(6), total: u16(8)), packet.subdata(in: (b + headerSize)..<packet.endIndex))
-    }
+    /// `sendMessageData` accepts 64 KB and rejects 80 KB in the simulator; stay safely under.
+    static let maxMessage = 60_000
 }
 
-/// Reassembles one chunk from framed packets, tolerating reordering and duplicates.
-nonisolated struct ChunkAssembler {
-    private var parts: [Int: Data] = [:]
-    private(set) var total = 0
-    private(set) var chunkIndex: Int?
+/// A message carrying several AAC-encoded chunks.
+///
+/// Layout: magic 0xEC, version 2, count u16, recorded f64, then per chunk
+/// `metaLen u32, meta JSON, audioLen u32, audio (m4a)`.
+///
+/// Simulator findings (Day 0/1): `transferFile` never delivers between paired sims, and every
+/// `sendMessageData` costs ~1 s regardless of size with no gain from concurrency, so chunks are
+/// compressed and bundled to keep the message count low.
+nonisolated enum ChunkBundle {
+    static let magic: UInt8 = 0xEC
+    static let version: UInt8 = 2
+    static let headerSize = 12
 
-    var isComplete: Bool { total > 0 && parts.count == total }
-    var receivedBytes: Int { parts.values.reduce(0) { $0 + $1.count } }
-
-    @discardableResult
-    mutating func add(_ packet: Data) -> Bool {
-        guard let (h, payload) = Wire.parse(packet) else { return false }
-        if let chunkIndex, chunkIndex != h.chunkIndex { return false }
-        chunkIndex = h.chunkIndex
-        total = h.total
-        parts[h.seq] = payload
-        return true
+    struct Entry: Equatable {
+        let meta: ChunkMeta
+        let audio: Data
     }
 
-    func assemble() -> Data? {
-        guard isComplete else { return nil }
+    /// One chunk's wire bytes, ready to be concatenated into a bundle.
+    static func encodeEntry(_ entry: Entry) -> Data? {
+        guard let metaJSON = try? JSONEncoder().encode(entry.meta) else { return nil }
         var out = Data()
-        for seq in 0..<total { out.append(parts[seq]!) }
+        out.append(le32(metaJSON.count)); out.append(metaJSON)
+        out.append(le32(entry.audio.count)); out.append(entry.audio)
         return out
+    }
+
+    static func bundle(encodedEntries: [Data], recorded: Double) -> Data {
+        var out = Data([magic, version])
+        withUnsafeBytes(of: UInt16(encodedEntries.count).littleEndian) { out.append(contentsOf: $0) }
+        withUnsafeBytes(of: recorded.bitPattern.littleEndian) { out.append(contentsOf: $0) }
+        encodedEntries.forEach { out.append($0) }
+        return out
+    }
+
+    static func decode(_ data: Data) -> (entries: [Entry], recorded: Double)? {
+        let d = [UInt8](data)
+        guard d.count >= headerSize, d[0] == magic, d[1] == version else { return nil }
+        let count = Int(d[2]) | Int(d[3]) << 8
+        var bits: UInt64 = 0
+        for i in 0..<8 { bits |= UInt64(d[4 + i]) << UInt64(8 * i) }
+        let recorded = Double(bitPattern: bits)
+
+        var pos = headerSize
+        func readLen() -> Int? {
+            guard pos + 4 <= d.count else { return nil }
+            defer { pos += 4 }
+            return Int(d[pos]) | Int(d[pos + 1]) << 8 | Int(d[pos + 2]) << 16 | Int(d[pos + 3]) << 24
+        }
+        var entries: [Entry] = []
+        for _ in 0..<count {
+            guard let metaLen = readLen(), pos + metaLen <= d.count,
+                  let meta = try? JSONDecoder().decode(ChunkMeta.self, from: Data(d[pos..<pos + metaLen])) else { return nil }
+            pos += metaLen
+            guard let audioLen = readLen(), pos + audioLen <= d.count else { return nil }
+            entries.append(Entry(meta: meta, audio: Data(d[pos..<pos + audioLen])))
+            pos += audioLen
+        }
+        return pos == d.count ? (entries, recorded) : nil
+    }
+
+    private static func le32(_ v: Int) -> Data {
+        var x = UInt32(v).littleEndian
+        return Data(bytes: &x, count: 4)
     }
 }
 

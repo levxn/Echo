@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build both apps, reinstall on the paired simulators, launch phone first then watch.
-# Usage: Tools/run_sims.sh [--no-launch-watch]
+# Usage: Tools/run_sims.sh [--no-launch-watch | --autostart]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PHONE=3BDBF6CE-2235-4CFE-9437-1EB803417569   # iPhone 17 Pro
@@ -16,4 +16,8 @@ xcrun simctl install "$PHONE" "$DD/Build/Products/Debug-iphonesimulator/Echo.app
 xcrun simctl install "$WATCH" "$DD/Build/Products/Debug-watchsimulator/Echo Watch App.app"
 xcrun simctl launch "$PHONE" levtech.Echo
 sleep 3
-[ "${1:-}" = "--no-launch-watch" ] || xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp
+case "${1:-}" in
+  --no-launch-watch) ;;
+  --autostart) xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart ;;
+  *) xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp ;;
+esac
