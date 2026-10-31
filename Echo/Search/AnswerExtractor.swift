@@ -13,7 +13,13 @@ struct Answer {
 /// Extractive answers: no model, just the best sentence from the best-matching moments.
 enum AnswerExtractor {
     static func extract(from outcome: RetrievalOutcome, sourceCount: Int = 3) -> Answer? {
-        let sources = Array(outcome.hits.prefix(sourceCount))
+        // Only list moments that actually contain a query term; semantic-only neighbours are noise in an
+        // answer. Purely time-anchored questions have no terms, so they keep their top moments.
+        var sources = Array(outcome.hits.prefix(sourceCount))
+        if !outcome.knownTerms.isEmpty {
+            let matched = sources.filter { !$0.matchedTerms.isEmpty }
+            sources = matched.isEmpty ? Array(sources.prefix(1)) : matched
+        }
         guard let top = sources.first else { return nil }
         let termLemmas = outcome.knownTerms.map { ($0, Set(TextNormalizer.lemmas($0))) }
 
