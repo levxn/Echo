@@ -77,7 +77,8 @@ final class AskModel {
     /// True when the client is the offline stand-in (no API key).
     var isStub: Bool { caller.client.isStub }
 
-    func ask(_ text: String) async {
+    /// `quiet` skips the phone's haptics, for questions asked from the watch.
+    func ask(_ text: String, quiet: Bool = false) async {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
         ledger.gate.cancel()   // a review for an older question is moot
@@ -97,7 +98,7 @@ final class AskModel {
             ledger.record(LedgerEntry(query: question, tier: .local, reason: decision.reason))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: answer))
-            Haptics.soft()
+            if !quiet { Haptics.soft() }
             Log.pipe.info("ask \"\(question)\" -> local in \(outcome.elapsedMs, format: .fixed(precision: 1)) ms; headline: \(answer?.headline ?? "-")")
             return
         }
@@ -143,12 +144,42 @@ final class AskModel {
         case .success(let response):
             let answer = CloudAnswer.parse(response.content)
             state = .cloudAnswered(CloudResult(query: question, outcome: outcome, decision: decision, plan: plan, answer: answer, response: response))
-            Haptics.success()
+            if !quiet { Haptics.success() }
             Log.pipe.info("ask \"\(question)\" <- \(response.model) in \(response.latencyMs, format: .fixed(precision: 0)) ms, tokens \(response.promptTokens)/\(response.completionTokens), \(answer.items.count) items")
         case .failure(let error):
             state = .cloudFailed(CloudFailure(query: question, outcome: outcome, decision: decision, plan: plan, error: error, localAnswer: localAnswer))
-            Haptics.warning()
+            if !quiet { Haptics.warning() }
             Log.pipe.error("ask \"\(question)\" failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Answers a question from the watch in a sentence or two. Runs the normal Ask flow (so the phone shows the
+    /// question and its answer, and the ledger records it), then boils the result down.
+    func quickAnswer(_ text: String) async -> WatchAnswer {
+        let started = Date()
+        await ask(text, quiet: true)
+        let ms = Int(Date().timeIntervalSince(started) * 1000)
+        return Self.watchAnswer(from: state, question: text.trimmingCharacters(in: .whitespacesAndNewlines), milliseconds: ms)
+    }
+
+    /// The watch's view of a finished question. A newer question (asked on the phone meanwhile) means this one's
+    /// state was overwritten, so the watch is told to try again rather than shown someone else's answer.
+    static func watchAnswer(from state: State, question: String, milliseconds: Int) -> WatchAnswer {
+        func brief(_ s: String) -> String { WatchAnswer.brief(s) }
+        switch state {
+        case .answered(let r) where r.query == question:
+            switch r.note {
+            case nil: return WatchAnswer(text: brief(r.answer?.headline ?? "I didn't find that in today's conversations."), source: .local, milliseconds: milliseconds)
+            case .cloudOff: return WatchAnswer(text: "Cloud is off, so I can't summarize that. Turn it on in the Privacy Ledger.", source: .none, milliseconds: milliseconds)
+            case .declined: return WatchAnswer(text: "Not sent. You declined on your phone.", source: .none, milliseconds: milliseconds)
+            case .nothingMatched: return WatchAnswer(text: "Nothing in today's conversations matches that.", source: .none, milliseconds: milliseconds)
+            }
+        case .cloudAnswered(let r) where r.query == question:
+            return WatchAnswer(text: brief(r.answer.answer), source: r.response.isStub ? .stub : .muse, milliseconds: milliseconds)
+        case .cloudFailed(let f) where f.query == question:
+            return WatchAnswer(text: f.localAnswer.map { brief($0.headline) } ?? "Muse couldn't answer just now.", source: f.localAnswer == nil ? .none : .local, milliseconds: milliseconds)
+        default:
+            return WatchAnswer(text: "Your phone was busy with another question. Try again.", source: .none, milliseconds: milliseconds)
         }
     }
 

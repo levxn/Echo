@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 
 enum RootTab: String {
@@ -68,6 +69,14 @@ struct RootView: View {
                 _ = Embedder.vector(for: "warm up the plumber lease")
                 _ = TextNormalizer.lemmas("warming up")
                 _ = TextNormalizer.nameTokens(in: "Warm Up")
+            }
+            // Questions asked on the watch: answered here, shown here too, and logged like any other.
+            link.onAsk = { question in
+                await warm.value
+                tab = .ask
+                let answer = await ask.quickAnswer(question)
+                Log.link.notice("watch ask: \(answer.source.rawValue) in \(answer.milliseconds) ms")
+                return answer
             }
             await ledger.reload()
             await digest.load()

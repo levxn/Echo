@@ -389,6 +389,69 @@ struct AskFlowTests {
         guard case .cloudAnswered = r.ask.state else { Issue.record("a stub sends nothing, so it is not held for review"); return }
     }
 
+    // MARK: Watch quick-ask
+
+    @Test func aLocalQuestionFromTheWatchGetsAShortLocalAnswerAndSendsNothing() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        let answer = await r.ask.quickAnswer("When is the plumber coming?")
+        #expect(answer.source == .local && answer.text.lowercased().contains("friday"), "got \(answer)")
+        #expect(answer.text.count <= 221)
+        #expect(r.fake.requests.isEmpty)
+        #expect(r.ledger.entries.first?.tier == .local && r.ledger.entries.first?.leftDevice == false)
+    }
+
+    @Test func aBroadQuestionFromTheWatchIsAnsweredByMuseAndLogged() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        let answer = await r.ask.quickAnswer("What did I promise people today?")
+        #expect(answer.source == .muse && answer.text == "You made several promises.")
+        #expect(r.fake.requests.count == 1)
+        #expect(r.ledger.entries.first?.leftDevice == true, "a watch question is logged like any other")
+    }
+
+    @Test func aBroadQuestionFromTheWatchWithTheCloudOffSaysSoAndSendsNothing() async throws {
+        let r = try await rig(cloudEnabled: false)
+        defer { r.restoreSwitch() }
+        let answer = await r.ask.quickAnswer("Summarize my day")
+        #expect(answer.source == .none && answer.text.lowercased().contains("cloud is off"))
+        #expect(r.fake.requests.isEmpty)
+    }
+
+    @Test func aFailedMuseCallFallsBackToTheClosestLocalMoment() async throws {
+        let r = try await rig { $0.result = .failure(.offline) }
+        defer { r.restoreSwitch() }
+        let answer = await r.ask.quickAnswer("What did I promise people today?")
+        #expect(answer.source == .local || answer.source == .none)
+        #expect(!answer.text.isEmpty)
+    }
+
+    @Test func theStubIsLabeledOnTheWatchToo() async throws {
+        let r = try await rig { $0.isStub = true }
+        defer { r.restoreSwitch() }
+        #expect(await r.ask.quickAnswer("Summarize my day").source == .stub)
+    }
+
+    @Test func aWatchQuestionDeclinedAtReviewIsReportedAsNotSent() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        r.ledger.reviewBeforeSend = true
+        let task = Task { await r.ask.quickAnswer("What did I promise people today?") }
+        _ = try await waitForReview(r.ledger)
+        r.ledger.gate.cancel()
+        let answer = await task.value
+        #expect(answer.source == .none && answer.text.contains("Not sent"))
+        #expect(r.fake.requests.isEmpty)
+    }
+
+    @Test func aStateFromAnotherQuestionIsNeverPassedOffAsTheAnswer() async throws {
+        let r = try await rig()
+        defer { r.restoreSwitch() }
+        await r.ask.ask("Where is Priya going in March?")
+        let answer = AskModel.watchAnswer(from: r.ask.state, question: "When is the plumber coming?", milliseconds: 5)
+        #expect(answer.source == .none && answer.text.contains("busy"))
+    }
+
     @Test func aCitationInTheReplyFindsItsMomentOnThePhone() async throws {
         let r = try await rig { $0.result = .success(#"{"answer":"One promise.","items":[{"title":"Second moment","detail":"d","when":"","source":"S2","source_time":"00:00"}],"follow_ups":["Next?"]}"#) }
         defer { r.restoreSwitch() }

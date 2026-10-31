@@ -3,6 +3,18 @@ import Observation
 import os
 import WatchConnectivity
 
+/// Lets exactly one of several racing callbacks (reply, error, timeout) resume a continuation.
+private final class Once: @unchecked Sendable {
+    private let lock = NSLock()
+    private var used = false
+    func first() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if used { return false }
+        used = true
+        return true
+    }
+}
+
 /// Streams speech chunks to the phone. Chunks are AAC-encoded and bundled into messages of at most
 /// `Wire.maxMessage` bytes; the queue drains one message at a time and retries while the phone is
 /// unreachable.
@@ -20,6 +32,9 @@ final class WatchLink: NSObject, WCSessionDelegate {
     /// Called when the phone asks the watch to start the replay (the demo driver does this; it is the same
     /// as tapping Start day).
     var onRemoteStart: (() -> Void)?
+
+    /// Called when the phone asks the watch to run quick-ask preset N (the demo driver does this).
+    var onRemoteQuickAsk: ((Int) -> Void)?
 
     private struct Pending {
         let encoded: Data
@@ -110,6 +125,23 @@ final class WatchLink: NSObject, WCSessionDelegate {
         }
     }
 
+    /// Asks the phone a question and waits for its short answer. Gives up (nil) if the phone isn't reachable, the
+    /// send fails, or nothing comes back within `timeout` (a live Muse answer takes about 7 s).
+    nonisolated func ask(_ question: String, timeout: TimeInterval = 40) async -> WatchAnswer? {
+        guard WCSession.default.isReachable else { return nil }
+        return await withCheckedContinuation { (continuation: CheckedContinuation<WatchAnswer?, Never>) in
+            let once = Once()
+            WCSession.default.sendMessage([Wire.typeKey: Wire.ask, Wire.questionKey: question], replyHandler: { reply in
+                if once.first() { continuation.resume(returning: WatchAnswer(dictionary: reply)) }
+            }, errorHandler: { _ in
+                if once.first() { continuation.resume(returning: nil) }
+            })
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
+                if once.first() { continuation.resume(returning: nil) }
+            }
+        }
+    }
+
     private nonisolated func message(_ payload: [String: Any]) async throws -> [String: Any] {
         try await withCheckedThrowingContinuation { cont in
             WCSession.default.sendMessage(payload, replyHandler: { cont.resume(returning: $0) },
@@ -135,8 +167,14 @@ final class WatchLink: NSObject, WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        guard message["type"] as? String == "demo.start" else { return }
-        Task { @MainActor in self.onRemoteStart?() }
+        switch message[Wire.typeKey] as? String {
+        case Wire.demoStart:
+            Task { @MainActor in self.onRemoteStart?() }
+        case Wire.demoQuickAsk:
+            let index = message[Wire.presetKey] as? Int ?? 0
+            Task { @MainActor in self.onRemoteQuickAsk?(index) }
+        default: break
+        }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {

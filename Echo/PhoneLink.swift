@@ -12,6 +12,9 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// Called after a chunk is stored as `.received`.
     var onChunkReceived: ((ChunkRecord) -> Void)?
 
+    /// Answers a question the watch asked (quick-ask).
+    var onAsk: ((String) async -> WatchAnswer)?
+
     init(model: PipelineModel) {
         self.model = model
         super.init()
@@ -23,15 +26,32 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.
     func sendDemoStart() {
         guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be started from here"); return }
-        WCSession.default.sendMessage(["type": "demo.start"], replyHandler: nil) { error in
+        WCSession.default.sendMessage([Wire.typeKey: Wire.demoStart], replyHandler: nil) { error in
             Log.link.error("couldn't start the watch: \(error.localizedDescription)")
+        }
+    }
+
+    /// Asks the watch to run quick-ask preset `index`, as if tapped (the demo driver uses this).
+    func sendDemoQuickAsk(_ index: Int) {
+        guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be asked from here"); return }
+        WCSession.default.sendMessage([Wire.typeKey: Wire.demoQuickAsk, Wire.presetKey: index], replyHandler: nil) { error in
+            Log.link.error("couldn't reach the watch: \(error.localizedDescription)")
         }
     }
 
     // MARK: Handling (main actor)
 
+    private func handle(message: [String: Any]) async -> [String: Any] {
+        switch message[Wire.typeKey] as? String {
+        case Wire.session: return await handle(session: message)
+        case Wire.ask:
+            guard let question = message[Wire.questionKey] as? String, let onAsk else { return [Wire.okKey: false] }
+            return await onAsk(question).dictionary
+        default: return [Wire.okKey: false]
+        }
+    }
+
     private func handle(session message: [String: Any]) async -> [String: Any] {
-        guard message[Wire.typeKey] as? String == Wire.session else { return [Wire.okKey: false] }
         let recorded = message[Wire.recordedKey] as? Double ?? 0
         let total = message[Wire.totalKey] as? Double ?? 0
         if message[Wire.stateKey] as? String == "started" {
@@ -91,7 +111,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
                              replyHandler: @escaping ([String: Any]) -> Void) {
         nonisolated(unsafe) let msg = message
         nonisolated(unsafe) let reply = replyHandler
-        Task { @MainActor in reply(await self.handle(session: msg)) }
+        Task { @MainActor in reply(await self.handle(message: msg)) }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessageData messageData: Data,
