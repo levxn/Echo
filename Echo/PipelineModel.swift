@@ -19,8 +19,16 @@ final class PipelineModel {
 
     var watchKeptSeconds: Double { chunks.reduce(0) { $0 + $1.duration } }
     var phoneConfirmedSeconds: Double { chunks.reduce(0) { $0 + $1.confirmedSeconds } }
-    var droppedCount: Int { chunks.filter { $0.status == .dropped }.count }
+    var arrivedCount: Int { chunks.count }
+    var checkedCount: Int { chunks.filter { $0.status != .received }.count }
+    var transcribedCount: Int { chunks.filter { $0.status == .asr || $0.status == .stored }.count }
     var storedCount: Int { chunks.filter { $0.status == .stored }.count }
+    var droppedCount: Int { chunks.filter { $0.status == .dropped }.count }
+    /// Chunks still moving through the pipeline.
+    var pendingCount: Int { chunks.filter { $0.status == .received || $0.status == .vad }.count }
+    /// True once the watch has finished and everything it sent has been processed.
+    var isSettled: Bool { session == .finished && pendingCount == 0 }
+    var sessionFraction: Double { totalSeconds > 0 ? min(1, recordedSeconds / totalSeconds) : 0 }
     var savedFraction: Double {
         recordedSeconds > 0 ? max(0, 1 - phoneConfirmedSeconds / recordedSeconds) : 0
     }
