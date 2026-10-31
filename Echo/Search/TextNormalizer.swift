@@ -90,6 +90,20 @@ nonisolated enum TextNormalizer {
             .map { NameMention(name: String(text[$0.range]), titled: $0.titled) }
     }
 
+    /// Single capitalized words the tagger files as places ("Lisbon", and wrongly "Jordan").
+    static func placeWords(in text: String) -> [String] {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var out: [String] = []
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
+                             options: [.omitPunctuation, .omitWhitespace]) { tag, range in
+            let word = String(text[range])
+            if tag == .placeName, word.first?.isUppercase == true, word.allSatisfy({ $0.isLetter }) { out.append(word) }
+            return true
+        }
+        return out
+    }
+
     private static func titleBefore(_ range: Range<String.Index>, in text: String) -> Bool {
         let before = text[..<range.lowerBound].trimmingCharacters(in: CharacterSet(charactersIn: " .").union(.whitespacesAndNewlines))
         let word = before.split(whereSeparator: { !$0.isLetter }).last.map { $0.lowercased() } ?? ""

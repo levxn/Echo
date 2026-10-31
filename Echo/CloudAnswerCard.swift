@@ -184,6 +184,13 @@ struct SentDisclosure: View {
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    if !plan.masking.isEmpty {
+                        Label("\(plan.maskedCount) names replaced on this phone (\(plan.masking.entries.prefix(3).map { "\($0.original) → \($0.token)" }.joined(separator: ", "))\(plan.maskedCount > 3 ? "…" : "")). The mapping never leaves it.",
+                              systemImage: "theatermasks")
+                            .font(.caption)
+                            .foregroundStyle(Palette.teal)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     ForEach(plan.snippets) { snippet in
                         HStack(alignment: .top, spacing: Spacing.sm) {
                             Text(snippet.time)

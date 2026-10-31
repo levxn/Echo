@@ -19,6 +19,8 @@ struct LedgerExport: Codable, Equatable {
         let promptTokens: Int
         let completionTokens: Int
         let latencyMs: Double
+        /// People's names replaced with placeholders before sending; `snippets` is the masked text that left.
+        let maskedNames: Int
         /// Exactly the text that was (or, when `leftDevice` is false, would have been) sent.
         let snippets: [Snippet]
     }
@@ -36,7 +38,7 @@ struct LedgerExport: Codable, Equatable {
             Entry(id: $0.id, timestamp: $0.timestamp, kind: $0.kind.rawValue, query: $0.query, tier: $0.tier.rawValue,
                   reason: $0.reason, leftDevice: $0.leftDevice, model: $0.model, isStub: $0.isStub, bodyBytes: $0.bodyBytes,
                   status: $0.status.rawValue, error: $0.error, promptTokens: $0.promptTokens,
-                  completionTokens: $0.completionTokens, latencyMs: $0.latencyMs, snippets: $0.snippets)
+                  completionTokens: $0.completionTokens, latencyMs: $0.latencyMs, maskedNames: $0.maskedNames, snippets: $0.snippets)
         }
     }
 

@@ -27,7 +27,7 @@ struct ReviewSheet: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Palette.textSecondary)
                         .textCase(.uppercase)
-                    Text(review.query)
+                    Text(plan.masking.mask(review.query))
                         .font(.system(.body, design: .rounded, weight: .medium))
                         .foregroundStyle(Palette.textPrimary)
                 }
@@ -49,6 +49,11 @@ struct ReviewSheet: View {
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    if !plan.masking.isEmpty {
+                        Label("\(plan.maskedCount) names are replaced with placeholders. Only the placeholders go to Muse.", systemImage: "theatermasks")
+                            .font(.footnote)
+                            .foregroundStyle(Palette.teal)
+                    }
                     ForEach(plan.snippets) { snippet in
                         HStack(alignment: .top, spacing: Spacing.sm) {
                             Text(snippet.time)

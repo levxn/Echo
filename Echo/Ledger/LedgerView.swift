@@ -137,6 +137,20 @@ struct LedgerView: View {
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            Divider().overlay(Color.white.opacity(0.1))
+            Toggle(isOn: Bindable(ledger).maskNames) {
+                Label("Mask names before sending", systemImage: "theatermasks")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .tint(Palette.cloud)
+            .frame(minHeight: 44)
+            Text(ledger.maskNames
+                 ? "People's names become placeholders like [PERSON_1] on this phone, and return in the answer. Best effort: a name the phone can't recognize is sent as spoken."
+                 : "Off: names are sent as they were said.")
+                .font(.footnote)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .echoCard()
     }
@@ -255,6 +269,7 @@ private struct EntryRow: View {
                         .multilineTextAlignment(.leading)
                     Text(entry.leftDevice && entry.bodyBytes > 0
                          ? "\(entry.snippets.count) snippets · \(ByteFormat.short(entry.bodyBytes)) sent · no audio"
+                           + (entry.maskedNames > 0 ? " · \(entry.maskedNames) names masked" : "")
                          : "Nothing sent")
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
@@ -279,6 +294,10 @@ private struct EntryRow: View {
             if !entry.snippets.isEmpty {
                 Text(entry.leftDevice ? "Exactly what was sent" : "What would have been sent")
                     .font(.caption.weight(.semibold)).foregroundStyle(Palette.textSecondary).textCase(.uppercase)
+                if entry.maskedNames > 0 {
+                    Label("\(entry.maskedNames) names were replaced with placeholders on this phone first.", systemImage: "theatermasks")
+                        .font(.caption).foregroundStyle(Palette.teal)
+                }
                 ForEach(entry.snippets) { s in
                     HStack(alignment: .top, spacing: Spacing.sm) {
                         Text(s.time).font(.system(.caption, design: .rounded, weight: .semibold)).monospacedDigit()

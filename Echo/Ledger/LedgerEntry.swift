@@ -24,6 +24,8 @@ struct LedgerEntry: Identifiable, Equatable {
     var promptTokens = 0
     var completionTokens = 0
     var latencyMs = 0.0
+    /// People's names replaced with placeholders before sending (`snippets` shows the masked text that left).
+    var maskedNames = 0
     var status: Status = .ok
     var error = ""
 }

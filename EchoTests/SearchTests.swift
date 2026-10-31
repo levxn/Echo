@@ -543,7 +543,9 @@ struct AskFlowTests {
         let r = try await rig { $0.delay = .milliseconds(400) }
         defer { r.restoreSwitch() }
         let slow = Task { await r.ask.ask("Summarize my day") }
-        try await Task.sleep(for: .milliseconds(100))
+        // Wait until the slow question has really gone out (a question superseded before it is sent is never sent or logged).
+        for _ in 0..<300 where r.fake.requests.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(r.fake.requests.count == 1)
         await r.ask.ask("Where is Priya going in March?")
         await slow.value
         guard case .answered(let result) = r.ask.state else { Issue.record("the newer local answer should win, got \(r.ask.state)"); return }

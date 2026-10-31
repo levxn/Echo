@@ -85,6 +85,15 @@ struct CloudAnswer: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey { case answer, items, followUps = "follow_ups" }
 
+    /// The reply with placeholders turned back into the names they stood for (on this phone only).
+    func restored(_ masking: Masking) -> CloudAnswer {
+        guard !masking.isEmpty else { return self }
+        return CloudAnswer(answer: masking.restore(answer),
+                           items: items.map { CloudItem(title: masking.restore($0.title), detail: masking.restore($0.detail),
+                                                        when: masking.restore($0.when), sourceTime: $0.sourceTime, source: $0.source) },
+                           followUps: followUps.map(masking.restore))
+    }
+
     /// Parses Muse's structured reply, tolerating a code fence or surrounding prose; if no JSON object can be
     /// read, shows the raw text rather than failing.
     static func parse(_ content: String) -> CloudAnswer {
@@ -135,6 +144,15 @@ struct DayDigest: Codable, Equatable {
     let people: [String]
     enum CodingKeys: String, CodingKey {
         case daySummary = "day_summary", conversations, actionItems = "action_items", people
+    }
+
+    func restored(_ masking: Masking) -> DayDigest {
+        guard !masking.isEmpty else { return self }
+        return DayDigest(daySummary: masking.restore(daySummary),
+                         conversations: conversations.map { DigestConversation(time: $0.time, title: masking.restore($0.title), summary: masking.restore($0.summary)) },
+                         actionItems: actionItems.map { DigestAction(what: masking.restore($0.what), toWhom: masking.restore($0.toWhom), due: masking.restore($0.due),
+                                                                     sourceTime: $0.sourceTime, source: $0.source) },
+                         people: people.map(masking.restore))
     }
 
     static func parse(_ content: String) -> DayDigest? {

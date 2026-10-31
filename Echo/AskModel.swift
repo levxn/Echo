@@ -104,7 +104,8 @@ final class AskModel {
         }
 
         let chunks = await store.all()
-        let plan = TierTwoPlanner.plan(query: question, decision: decision, outcome: outcome, chunks: chunks, model: modelID)
+        let plan = TierTwoPlanner.plan(query: question, decision: decision, outcome: outcome, chunks: chunks, model: modelID,
+                                       maskNames: ledger.maskNames)
         let localAnswer = AnswerExtractor.extract(from: outcome)
 
         guard ledger.cloudEnabled else {
@@ -135,6 +136,7 @@ final class AskModel {
             }
         }
 
+        guard mine == generation else { return }   // a newer question took over while the plan was being built
         state = .sending(query: question, plan: plan, decision: decision)
         Log.pipe.info("ask \"\(question)\" -> cloud: \(plan.snippets.count) snippets, \(plan.bodyBytes) bytes, stub=\(self.isStub)")
         let result = await caller.perform(plan: plan, query: question, kind: .ask, reason: decision.reason)
@@ -142,7 +144,7 @@ final class AskModel {
 
         switch result {
         case .success(let response):
-            let answer = CloudAnswer.parse(response.content)
+            let answer = CloudAnswer.parse(response.content).restored(plan.masking)
             state = .cloudAnswered(CloudResult(query: question, outcome: outcome, decision: decision, plan: plan, answer: answer, response: response))
             if !quiet { Haptics.success() }
             Log.pipe.info("ask \"\(question)\" <- \(response.model) in \(response.latencyMs, format: .fixed(precision: 0)) ms, tokens \(response.promptTokens)/\(response.completionTokens), \(answer.items.count) items")

@@ -12,6 +12,17 @@ final class LedgerModel {
     private let defaults: UserDefaults
     private static let cloudKey = "echo.cloudEnabled"
     private static let reviewKey = "echo.reviewBeforeSend"
+    private static let maskKey = "echo.maskNames"
+    /// Off by default. Checked live against Muse Spark: no name reached the request and the restored answers read well,
+    /// but a word the recognizer misheard as a name ("leave" heard as "Lee") is masked too, so Muse can no longer
+    /// reconcile that slip and lists it as a person. Private by choice, not by default.
+    static let maskNamesDefault = false
+
+    /// When on, people's names are replaced with placeholders before text leaves the phone, and restored in the
+    /// answer. Best effort: it can only mask names the on-device tagger finds.
+    var maskNames: Bool {
+        didSet { defaults.set(maskNames, forKey: Self.maskKey) }
+    }
 
     /// Holds a cloud call until the user has seen and approved exactly what would be sent.
     let gate = ReviewGate()
@@ -37,6 +48,11 @@ final class LedgerModel {
             defaults.set(args[i + 1] == "on", forKey: Self.reviewKey)
         }
         reviewBeforeSend = defaults.object(forKey: Self.reviewKey) as? Bool ?? false
+        // Dev hook: `-mask on|off`.
+        if let i = args.firstIndex(of: "-mask"), i + 1 < args.count, ["on", "off"].contains(args[i + 1]) {
+            defaults.set(args[i + 1] == "on", forKey: Self.maskKey)
+        }
+        maskNames = defaults.object(forKey: Self.maskKey) as? Bool ?? Self.maskNamesDefault
     }
 
     var totals: LedgerTotals { LedgerTotals(entries) }

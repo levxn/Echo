@@ -44,7 +44,7 @@ final class DigestModel {
 
     func generate(chunks: [ChunkRecord]) async {
         guard ledger.cloudEnabled else { state = .cloudOff; return }
-        let plan = TierTwoPlanner.digestPlan(chunks: chunks, model: modelID)
+        let plan = TierTwoPlanner.digestPlan(chunks: chunks, model: modelID, maskNames: ledger.maskNames)
         guard plan.canCall else { return }
         if ledger.reviewBeforeSend, !isStub {
             let approved = await ledger.gate.confirm(plan: plan, query: "Summarize my day with Muse", kind: .digest)
@@ -62,11 +62,15 @@ final class DigestModel {
                                           reason: "You asked Muse to summarize the whole day.")
         switch result {
         case .success(let response):
-            guard let digest = DayDigest.parse(response.content) else {
+            guard let parsed = DayDigest.parse(response.content) else {
                 state = .failed("Muse's digest couldn't be read. Try again.")
                 return
             }
-            await store.saveDigest(json: response.content, model: response.model, isStub: response.isStub)
+            // Names come back before anything is shown or saved, so a reload after a relaunch needs no mapping.
+            let digest = parsed.restored(plan.masking)
+            let json = plan.masking.isEmpty ? response.content
+                : ((try? String(data: JSONEncoder().encode(digest), encoding: .utf8)) ?? response.content)
+            await store.saveDigest(json: json, model: response.model, isStub: response.isStub)
             state = .ready(Ready(digest: digest, model: response.model, isStub: response.isStub))
         case .failure(let error):
             state = .failed(error.localizedDescription)

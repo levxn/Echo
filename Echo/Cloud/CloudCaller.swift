@@ -19,6 +19,7 @@ final class CloudCaller {
         entry.isStub = client.isStub
         entry.model = client.isStub ? "stub" : plan.request.model
         entry.snippets = plan.snippets
+        entry.maskedNames = plan.maskedCount
         entry.leftDevice = !client.isStub
         entry.bodyBytes = client.isStub ? 0 : plan.bodyBytes
         entry.status = .pending

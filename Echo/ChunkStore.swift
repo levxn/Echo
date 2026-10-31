@@ -41,6 +41,7 @@ actor ChunkStore {
           prompt_tokens INTEGER, completion_tokens INTEGER, latency_ms REAL, status TEXT, error TEXT
         )
         """)
+        if !columnNames(db, table: "ledger").contains("masked_names") { exec(db, "ALTER TABLE ledger ADD COLUMN masked_names INTEGER DEFAULT 0") }
         exec(db, "CREATE TABLE IF NOT EXISTS day_digest (id INTEGER PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
     }
 
@@ -223,8 +224,8 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         INSERT OR REPLACE INTO ledger (id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json,
-          body_bytes, response, prompt_tokens, completion_tokens, latency_ms, status, error)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          body_bytes, response, prompt_tokens, completion_tokens, latency_ms, status, error, masked_names)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
@@ -247,6 +248,7 @@ actor ChunkStore {
         sqlite3_bind_double(stmt, 15, e.latencyMs)
         sqlite3_bind_text(stmt, 16, e.status.rawValue, -1, t)
         sqlite3_bind_text(stmt, 17, e.error, -1, t)
+        sqlite3_bind_int(stmt, 18, Int32(e.maskedNames))
         if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("ledger upsert failed") }
     }
 
@@ -255,7 +257,7 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         SELECT id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json, body_bytes, response,
-               prompt_tokens, completion_tokens, latency_ms, status, error FROM ledger ORDER BY ts DESC
+               prompt_tokens, completion_tokens, latency_ms, status, error, masked_names FROM ledger ORDER BY ts DESC
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
@@ -278,6 +280,7 @@ actor ChunkStore {
             e.latencyMs = sqlite3_column_double(stmt, 14)
             e.status = LedgerEntry.Status(rawValue: text(15)) ?? .ok
             e.error = text(16)
+            e.maskedNames = Int(sqlite3_column_int(stmt, 17))
             out.append(e)
         }
         return out
