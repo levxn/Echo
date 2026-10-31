@@ -37,6 +37,9 @@ struct RootView: View {
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) }
         }
         .preferredColorScheme(.dark)
+        // Large text is fully supported up to the first accessibility size; beyond it these dense cards
+        // would wrap mid-word, so the scale is capped there.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .task {
             // The language models load lazily; touching them now keeps the first question fast.
             let warm = Task.detached(priority: .utility) {
@@ -46,13 +49,18 @@ struct RootView: View {
             }
             await ledger.reload()
             await digest.load()
-            // Dev hook: `-ask "question"` runs a query once the stored day has loaded.
             let args = ProcessInfo.processInfo.arguments
-            guard let i = args.firstIndex(of: "-ask"), i + 1 < args.count else { return }
-            await warm.value
-            await model.load()
-            tab = .ask
-            await ask.ask(args[i + 1])
+            // Dev hooks for headless verification: `-ask "question"` and `-digest` run once the day has loaded.
+            if let i = args.firstIndex(of: "-ask"), i + 1 < args.count {
+                await warm.value
+                await model.load()
+                tab = .ask
+                await ask.ask(args[i + 1])
+            } else if args.contains("-digest") {
+                await model.load()
+                tab = .today
+                await digest.generate(chunks: model.chunks)
+            }
         }
     }
 }

@@ -46,7 +46,7 @@ struct LedgerView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Privacy ledger")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(Palette.textPrimary)
             Text("Every question, and exactly what left this phone.")
                 .font(.subheadline)
@@ -132,7 +132,7 @@ private struct SummaryCard: View {
     private func stat(_ value: String, _ label: String, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(.title, design: .rounded, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(tint)
                 .contentTransition(.numericText())

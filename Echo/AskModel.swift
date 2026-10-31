@@ -92,6 +92,7 @@ final class AskModel {
             ledger.record(LedgerEntry(query: question, tier: .local, reason: decision.reason))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: answer))
+            Haptics.soft()
             Log.pipe.info("ask \"\(question)\" -> local in \(outcome.elapsedMs, format: .fixed(precision: 1)) ms; headline: \(answer?.headline ?? "-")")
             return
         }
@@ -124,9 +125,11 @@ final class AskModel {
         case .success(let response):
             let answer = CloudAnswer.parse(response.content)
             state = .cloudAnswered(CloudResult(query: question, outcome: outcome, decision: decision, plan: plan, answer: answer, response: response))
+            Haptics.success()
             Log.pipe.info("ask \"\(question)\" <- \(response.model) in \(response.latencyMs, format: .fixed(precision: 0)) ms, tokens \(response.promptTokens)/\(response.completionTokens), \(answer.items.count) items")
         case .failure(let error):
             state = .cloudFailed(CloudFailure(query: question, outcome: outcome, decision: decision, plan: plan, error: error, localAnswer: localAnswer))
+            Haptics.warning()
             Log.pipe.error("ask \"\(question)\" failed: \(error.localizedDescription)")
         }
     }

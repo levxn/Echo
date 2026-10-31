@@ -63,7 +63,7 @@ struct ArchitectureView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("How Echo works")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(.title, design: .rounded, weight: .bold))
                     .foregroundStyle(Palette.textPrimary)
                 Text("From a wrist to an answer, and what never leaves the phone.")
                     .font(.subheadline)

@@ -22,6 +22,7 @@ struct TodayView: View {
                     Task { await model.reset() }
                 }
                 FunnelCard(model: model)
+                if model.chunks.isEmpty { EmptyDayHint() }
                 if model.isSettled { DigestSection(digest: digest, model: model) }
                 if !episodes.isEmpty {
                     EpisodesSection(episodes: episodes)
@@ -51,7 +52,7 @@ struct ScreenHeader: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Palette.textPrimary)
                 HStack(spacing: 6) {
                     Circle()
@@ -77,5 +78,25 @@ struct ScreenHeader: View {
                 .accessibilityLabel("Clear today's memory")
             }
         }
+    }
+}
+
+/// Shown before anything has been captured.
+private struct EmptyDayHint: View {
+    var body: some View {
+        VStack(spacing: Spacing.sm) {
+            Image(systemName: "applewatch.radiowaves.left.and.right")
+                .font(.system(size: 28))
+                .foregroundStyle(Palette.blue)
+            Text("Your day starts on the watch")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Palette.textPrimary)
+            Text("Tap Start day on the watch. Conversations are checked, transcribed and stored on this phone, then summarized here as a timeline.")
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Palette.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .echoCard(padding: Spacing.xl)
     }
 }

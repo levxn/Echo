@@ -5,6 +5,7 @@ import SwiftUI
 /// recorded -> kept by the watch -> confirmed on the phone, with the share that never gets stored.
 struct FunnelCard: View {
     let model: PipelineModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Never smaller than what the watch kept, so the bars stay proportional even if the session totals are missing.
     private var recorded: Double { max(model.recordedSeconds, model.watchKeptSeconds, 0.0001) }
@@ -24,7 +25,7 @@ struct FunnelCard: View {
                     Label("Processing", systemImage: "waveform")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Palette.blue)
-                        .symbolEffect(.variableColor.iterative)
+                        .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
                 }
             }
 
@@ -38,7 +39,7 @@ struct FunnelCard: View {
             if model.isSettled && model.recordedSeconds > 0 {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                     Text("\(Int((model.savedFraction * 100).rounded()))%")
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(Palette.accentGradient)
                     Text("of the day was never stored")
@@ -192,6 +193,7 @@ struct ChunkRow: View {
 /// Four stages as dots: received, speech check, transcribed, stored. The next stage pulses while work is pending.
 private struct StageDots: View {
     let status: ChunkStatus
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var reached: Int {
         switch status {
@@ -215,8 +217,12 @@ private struct StageDots: View {
                     .frame(width: 8, height: 8)
                     .overlay {
                         if inFlight && i == reached {
-                            Circle().stroke(Palette.blue, lineWidth: 1.5)
-                                .phaseAnimator([0.6, 1.0]) { c, p in c.opacity(p) } animation: { _ in .easeInOut(duration: 0.7) }
+                            if reduceMotion {
+                                Circle().stroke(Palette.blue, lineWidth: 1.5)
+                            } else {
+                                Circle().stroke(Palette.blue, lineWidth: 1.5)
+                                    .phaseAnimator([0.6, 1.0]) { c, p in c.opacity(p) } animation: { _ in .easeInOut(duration: 0.7) }
+                            }
                         }
                     }
             }

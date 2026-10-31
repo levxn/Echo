@@ -35,7 +35,7 @@ struct AskView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Ask your day")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(Palette.textPrimary)
             Text("Answers come from this phone first. Only questions that need synthesis ever reach the cloud.")
                 .font(.subheadline)
