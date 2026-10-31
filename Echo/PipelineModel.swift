@@ -15,6 +15,13 @@ final class PipelineModel {
 
     let store = ChunkStore()
 
+    /// The replay's totals survive app restarts, so the funnel still reads correctly afterwards.
+    private enum Key {
+        static let recorded = "echo.recordedSeconds"
+        static let total = "echo.totalSeconds"
+        static let finished = "echo.sessionFinished"
+    }
+
     // MARK: Funnel (recorded -> watch kept -> phone confirmed)
 
     var watchKeptSeconds: Double { chunks.reduce(0) { $0 + $1.duration } }
@@ -33,7 +40,22 @@ final class PipelineModel {
         recordedSeconds > 0 ? max(0, 1 - phoneConfirmedSeconds / recordedSeconds) : 0
     }
 
-    func load() async { chunks = await store.all() }
+    func load() async {
+        chunks = await store.all()
+        let d = UserDefaults.standard
+        recordedSeconds = d.double(forKey: Key.recorded)
+        totalSeconds = d.double(forKey: Key.total)
+        if !chunks.isEmpty { session = d.bool(forKey: Key.finished) ? .finished : (recordedSeconds > 0 ? .running : .waiting) }
+    }
+
+    /// Writes the current session state. The watch's "finished" message can arrive while its last chunks are
+    /// still draining, so later bundles must not overwrite it.
+    private func persistSession() {
+        let d = UserDefaults.standard
+        d.set(recordedSeconds, forKey: Key.recorded)
+        d.set(totalSeconds, forKey: Key.total)
+        d.set(session == .finished, forKey: Key.finished)
+    }
 
     func setReachable(_ value: Bool) { watchReachable = value }
 
@@ -43,16 +65,19 @@ final class PipelineModel {
         recordedSeconds = 0
         totalSeconds = total
         session = .running
+        persistSession()
     }
 
     func sessionFinished(recorded: Double) {
         recordedSeconds = recorded
         session = .finished
+        persistSession()
     }
 
     func updateRecorded(_ seconds: Double) {
         recordedSeconds = max(recordedSeconds, seconds)
         if session == .waiting { session = .running }
+        persistSession()
     }
 
     func reset() async {
@@ -61,6 +86,7 @@ final class PipelineModel {
         recordedSeconds = 0
         totalSeconds = 0
         session = .waiting
+        persistSession()
     }
 
     /// Inserts or replaces a record and persists it.

@@ -163,4 +163,17 @@ struct SearchTests {
 
         #expect(QueryParser.parse("When is the plumber coming?").timeWindow == nil)
     }
+
+    @Test func episodesGroupTheDayIntoItsFourConversations() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let episodes = EpisodeBuilder.build(from: h.chunks)
+        let report = episodes.map { "\($0.startLabel)–\($0.endLabel) \($0.title) [\($0.chunks.count) moments] \($0.keywords) :: \($0.gist)" }.joined(separator: "\n")
+        try? report.write(toFile: "/tmp/echo_episodes_report.txt", atomically: true, encoding: .utf8)
+
+        #expect(episodes.map(\.startLabel) == ["09:05", "12:30", "15:10", "18:40"], "\(report)")
+        #expect(episodes.map(\.title) == ["Morning conversation", "Midday conversation", "Afternoon conversation", "Evening conversation"])
+        #expect(episodes.reduce(0) { $0 + $1.chunks.count } == h.chunks.count, "every stored moment belongs to a conversation")
+        #expect(episodes.allSatisfy { $0.keywords.count == 3 && !$0.gist.isEmpty }, "\(report)")
+    }
 }

@@ -6,7 +6,8 @@ import SwiftUI
 struct FunnelCard: View {
     let model: PipelineModel
 
-    private var recorded: Double { max(model.recordedSeconds, 0.0001) }
+    /// Never smaller than what the watch kept, so the bars stay proportional even if the session totals are missing.
+    private var recorded: Double { max(model.recordedSeconds, model.watchKeptSeconds, 0.0001) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -27,8 +28,8 @@ struct FunnelCard: View {
                 }
             }
 
-            FunnelRow(label: "Recorded on watch", seconds: model.recordedSeconds,
-                      fraction: model.recordedSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
+            FunnelRow(label: "Recorded on watch", seconds: recorded,
+                      fraction: model.recordedSeconds > 0 || model.watchKeptSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
             FunnelRow(label: "Kept by watch", seconds: model.watchKeptSeconds,
                       fraction: model.watchKeptSeconds / recorded, tint: Palette.blue)
             FunnelRow(label: "Confirmed on phone", seconds: model.phoneConfirmedSeconds,

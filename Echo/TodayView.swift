@@ -4,6 +4,8 @@ import SwiftUI
 struct TodayView: View {
     let model: PipelineModel
 
+    @State private var episodes: [Episode] = []
+
     private var statusText: String {
         switch model.session {
         case .waiting: model.watchReachable ? "Watch connected" : "Waiting for your watch"
@@ -19,6 +21,10 @@ struct TodayView: View {
                     Task { await model.reset() }
                 }
                 FunnelCard(model: model)
+                if !episodes.isEmpty {
+                    EpisodesSection(episodes: episodes)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.sm)
@@ -26,6 +32,9 @@ struct TodayView: View {
         }
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
+        .onChange(of: model.storedCount, initial: true) {
+            withAnimation(.smooth(duration: 0.5)) { episodes = EpisodeBuilder.build(from: model.chunks) }
+        }
     }
 }
 
