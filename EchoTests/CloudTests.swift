@@ -166,6 +166,19 @@ struct CloudModelTests {
         #expect(raw.answer == "Plain text, not JSON." && raw.items.isEmpty)
     }
 
+    @Test func parsersTolerateCodeFencesAndSurroundingProse() {
+        let json = #"{"answer":"Fenced.","items":[{"title":"A","detail":"b","when":"","source_time":"09:05"}]}"#
+        #expect(CloudAnswer.parse("```json\n\(json)\n```").answer == "Fenced.")
+        #expect(CloudAnswer.parse("Here you go:\n\(json)\nHope that helps.").items.count == 1)
+        // Truncated JSON can't be read, so the raw text is shown instead of nothing.
+        let truncated = CloudAnswer.parse(#"{"answer":"cut off"#)
+        #expect(truncated.items.isEmpty && truncated.answer.contains("cut off"))
+
+        let digest = #"{"day_summary":"x","conversations":[],"action_items":[],"people":[]}"#
+        #expect(DayDigest.parse("```json\n\(digest)\n```")?.daySummary == "x")
+        #expect(DayDigest.parse("not json") == nil)
+    }
+
     @Test func stubIsAlwaysLabeledAndParsesIntoRealModels() async throws {
         let client = StubMuseClient()
         #expect(client.isStub)

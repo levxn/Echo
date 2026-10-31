@@ -30,6 +30,15 @@ enum EchoSchemas {
     """
 }
 
+/// Models sometimes wrap structured output in a code fence or a sentence of prose. This pulls out the JSON object.
+enum JSONExtract {
+    static func object(in text: String) -> String? {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let start = t.firstIndex(of: "{"), let end = t.lastIndex(of: "}"), start < end else { return nil }
+        return String(t[start...end])
+    }
+}
+
 struct CloudItem: Codable, Identifiable, Equatable {
     let title: String
     let detail: String
@@ -66,10 +75,13 @@ struct CloudAnswer: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey { case answer, items }
 
-    /// Parses Muse's structured reply; if it isn't valid JSON, shows the raw text rather than failing.
+    /// Parses Muse's structured reply, tolerating a code fence or surrounding prose; if no JSON object can be
+    /// read, shows the raw text rather than failing.
     static func parse(_ content: String) -> CloudAnswer {
-        if let data = content.data(using: .utf8), let parsed = try? JSONDecoder().decode(CloudAnswer.self, from: data) {
-            return parsed
+        for candidate in [content, JSONExtract.object(in: content)].compactMap({ $0 }) {
+            if let data = candidate.data(using: .utf8), let parsed = try? JSONDecoder().decode(CloudAnswer.self, from: data) {
+                return parsed
+            }
         }
         return CloudAnswer(answer: content.trimmingCharacters(in: .whitespacesAndNewlines))
     }
@@ -101,6 +113,11 @@ struct DayDigest: Codable, Equatable {
     }
 
     static func parse(_ content: String) -> DayDigest? {
-        content.data(using: .utf8).flatMap { try? JSONDecoder().decode(DayDigest.self, from: $0) }
+        for candidate in [content, JSONExtract.object(in: content)].compactMap({ $0 }) {
+            if let digest = candidate.data(using: .utf8).flatMap({ try? JSONDecoder().decode(DayDigest.self, from: $0) }) {
+                return digest
+            }
+        }
+        return nil
     }
 }

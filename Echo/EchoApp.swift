@@ -8,6 +8,8 @@ struct EchoApp: App {
     @State private var pipeline: Pipeline
 
     init() {
+        // Dev hook: `-reset-demo <token>` wipes the day (not the API key) before anything opens the database.
+        DemoReset.runIfNeeded(token: DemoReset.requestedToken())
         let model = PipelineModel()
         _model = State(initialValue: model)
         let pipeline = Pipeline(model: model)

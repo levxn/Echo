@@ -112,3 +112,54 @@ struct LedgerTests {
         #expect(LedgerModel(store: store).cloudEnabled == false)
     }
 }
+
+struct DemoResetTests {
+    private func makeDir() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "echo-reset-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: dir.appending(path: "chunks"), withIntermediateDirectories: true)
+        try Data("db".utf8).write(to: dir.appending(path: "echo.sqlite"))
+        try Data("audio".utf8).write(to: dir.appending(path: "chunks/a.m4a"))
+        try Data("secret".utf8).write(to: dir.appending(path: "meta_api_key"))
+        return dir
+    }
+
+    private func makeDefaults() -> UserDefaults {
+        let d = UserDefaults(suiteName: "echo-reset-test-\(UUID().uuidString)")!
+        d.set(427.0, forKey: "echo.recordedSeconds")
+        d.set(true, forKey: "echo.sessionFinished")
+        d.set(false, forKey: "echo.cloudEnabled")
+        d.set("unrelated", forKey: "someOtherKey")
+        return d
+    }
+
+    @Test func wipeClearsTheDayButKeepsTheApiKey() throws {
+        let dir = try makeDir(); let defaults = makeDefaults()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        DemoReset.wipe(directory: dir, defaults: defaults)
+
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted()
+        #expect(remaining == ["meta_api_key"], "only the key survives: \(remaining)")
+        #expect(try String(contentsOf: dir.appending(path: "meta_api_key"), encoding: .utf8) == "secret")
+        #expect(defaults.object(forKey: "echo.recordedSeconds") == nil && defaults.object(forKey: "echo.sessionFinished") == nil)
+        #expect(defaults.bool(forKey: "echo.cloudEnabled"), "the demo starts with the cloud switch on")
+        #expect(defaults.string(forKey: "someOtherKey") == "unrelated", "only Echo's own keys are cleared")
+    }
+
+    @Test func aTokenOnlyWipesOnce() throws {
+        let dir = try makeDir(); let defaults = makeDefaults()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        #expect(DemoReset.runIfNeeded(token: "t1", directory: dir, defaults: defaults))
+        // The system relaunching the app with the same argument must not wipe a demo in progress.
+        try Data("new data".utf8).write(to: dir.appending(path: "echo.sqlite"))
+        #expect(!DemoReset.runIfNeeded(token: "t1", directory: dir, defaults: defaults))
+        #expect(FileManager.default.fileExists(atPath: dir.appending(path: "echo.sqlite").path))
+        #expect(DemoReset.runIfNeeded(token: "t2", directory: dir, defaults: defaults), "a new token wipes again")
+        #expect(!DemoReset.runIfNeeded(token: nil, directory: dir, defaults: defaults), "no token, no wipe")
+    }
+
+    @Test func theLaunchArgumentIsParsed() {
+        #expect(DemoReset.requestedToken(arguments: ["Echo", "-reset-demo", "123"]) == "123")
+        #expect(DemoReset.requestedToken(arguments: ["Echo", "-reset-demo"]) == nil)
+        #expect(DemoReset.requestedToken(arguments: ["Echo"]) == nil)
+    }
+}
