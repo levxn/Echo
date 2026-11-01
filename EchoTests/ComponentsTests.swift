@@ -44,3 +44,27 @@ struct ComponentsTests {
         #expect(Format.spoken(-5) == "0 seconds")
     }
 }
+
+struct TodaySectionTests {
+    @Test func labelsCarryCountsOnlyWhenThereIsSomethingToCount() {
+        #expect(TodaySection.summary.title(commitments: 15, conversations: 4) == "Summary")
+        #expect(TodaySection.commitments.title(commitments: 15, conversations: 4) == "Commitments 15")
+        #expect(TodaySection.day.title(commitments: 15, conversations: 4) == "Day 4")
+        #expect(TodaySection.commitments.title(commitments: 0, conversations: 0) == "Commitments")
+        #expect(TodaySection.day.title(commitments: 0, conversations: 0) == "Day")
+    }
+
+    @Test func launchArgumentsPickTheOpeningSection() {
+        #expect(TodaySection.initial(arguments: []) == .summary)
+        #expect(TodaySection.initial(arguments: ["-today-section", "day"]) == .day)
+        #expect(TodaySection.initial(arguments: ["-today-section", "commitments"]) == .commitments)
+        #expect(TodaySection.initial(arguments: ["-today-focus", "promises"]) == .commitments, "the older hook still opens Commitments")
+        #expect(TodaySection.initial(arguments: ["-today-section", "nonsense"]) == .summary)
+        #expect(TodaySection.initial(arguments: ["-today-section"]) == .summary, "a missing value is ignored")
+        #expect(TodaySection.initial(arguments: ["-today-section", "day", "-today-focus", "promises"]) == .day, "the explicit section wins")
+    }
+
+    @Test func everySectionHasADistinctID() {
+        #expect(Set(TodaySection.allCases.map(\.id)).count == TodaySection.allCases.count)
+    }
+}
