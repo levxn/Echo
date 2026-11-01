@@ -98,6 +98,6 @@ final class CaptureEngine {
         link.recordedSoFar = totalSeconds
         phase = .finished
         Log.vad.info("replay finished: \(self.captured) segments, kept \(self.keptSeconds, format: .fixed(precision: 1))s of \(self.totalSeconds, format: .fixed(precision: 1))s")
-        await link.sendSession(state: "finished", recorded: totalSeconds, total: totalSeconds)
+        await link.sendSession(state: "finished", recorded: totalSeconds, total: totalSeconds, count: link.enqueuedTotal)
     }
 }

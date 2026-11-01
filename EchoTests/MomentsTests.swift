@@ -7,9 +7,10 @@ struct MomentsTests {
     // MARK: Status banner
 
     private func status(_ phase: CaptureStatus.Phase = .waiting, reachable: Bool = false, arrived: Int = 0, pending: Int = 0,
-                        stored: Int = 0, ignored: Int = 0, conversations: Int = 0, kept: Double = 0, fraction: Double = 0) -> CaptureStatus {
+                        stored: Int = 0, ignored: Int = 0, conversations: Int = 0, kept: Double = 0, fraction: Double = 0,
+                        expected: Int = 0) -> CaptureStatus {
         CaptureStatus.make(phase: phase, reachable: reachable, arrived: arrived, pending: pending, stored: stored, ignored: ignored,
-                           conversations: conversations, keptSeconds: kept, fraction: fraction)
+                           conversations: conversations, keptSeconds: kept, fraction: fraction, expected: expected)
     }
 
     @Test func beforeAnythingHappensItSaysWhetherTheWatchIsThere() {
@@ -30,6 +31,15 @@ struct MomentsTests {
         let s = status(.finished, reachable: true, arrived: 56, pending: 14)
         #expect(s.kind == .catchingUp && s.detail == "Understanding 42 of 56")
         #expect(abs((s.progress ?? 0) - 0.75) < 0.0001)
+    }
+
+    @Test func ifTheWatchFinishedButSnippetsAreStillOnTheWayItIsNotCaughtUp() {
+        let s = status(.finished, reachable: true, arrived: 12, pending: 0, stored: 12, conversations: 1, kept: 60, expected: 56)
+        #expect(s.kind == .catchingUp && s.detail == "Understanding 12 of 56", "44 are still on the watch")
+        #expect(abs((s.progress ?? 0) - 12.0 / 56.0) < 0.0001)
+        #expect(status(.finished, arrived: 56, stored: 45, ignored: 11, conversations: 4, kept: 233, expected: 56).kind == .caughtUp)
+        #expect(status(.finished, arrived: 56, stored: 45, ignored: 11, conversations: 4, kept: 233, expected: 0).kind == .caughtUp,
+                "an older watch that sends no count behaves as before")
     }
 
     @Test func whenSettledItSummarizesTheDayInPlainWords() {
@@ -206,5 +216,61 @@ struct TabNamingTests {
         #expect(RootTab.from(argument: "moments") == .moments)
         #expect(RootTab.from(argument: "today") == .today && RootTab.from(argument: "ask") == .ask && RootTab.from(argument: "ledger") == .ledger)
         #expect(RootTab.from(argument: "nonsense") == nil)
+    }
+}
+
+@MainActor
+struct SettlingTests {
+    @Test func theDayIsNotSettledUntilEverythingTheWatchSentHasArrived() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let model = PipelineModel(store: h.store, defaults: UserDefaults(suiteName: "echo-settle-\(UUID().uuidString)")!)
+        await model.sessionStarted(total: 375)
+        for chunk in h.chunks.prefix(10) { model.put(chunk) }
+        // The watch says it is finished, and that it sent all 45 — but only 10 have arrived.
+        model.sessionFinished(recorded: 375, expectedChunks: h.chunks.count)
+        #expect(model.pendingCount == 0 && model.session == .finished)
+        #expect(model.missingCount == h.chunks.count - 10)
+        #expect(!model.isSettled, "most of the day is still on its way")
+
+        for chunk in h.chunks.dropFirst(10) { model.put(chunk) }
+        #expect(model.missingCount == 0 && model.isSettled)
+    }
+
+    @Test func aWatchThatSendsNoCountSettlesAsBefore() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let model = PipelineModel(store: h.store, defaults: UserDefaults(suiteName: "echo-settle-\(UUID().uuidString)")!)
+        await model.sessionStarted(total: 375)
+        for chunk in h.chunks.prefix(10) { model.put(chunk) }
+        model.sessionFinished(recorded: 375)   // no expected count
+        #expect(model.expectedChunks == 0 && model.missingCount == 0 && model.isSettled)
+    }
+
+    @Test func aNewSessionForgetsTheOldExpectation() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let model = PipelineModel(store: h.store, defaults: UserDefaults(suiteName: "echo-settle-\(UUID().uuidString)")!)
+        model.sessionFinished(recorded: 1, expectedChunks: 99)
+        #expect(model.expectedChunks == 99)
+        await model.sessionStarted(total: 375)
+        #expect(model.expectedChunks == 0)
+        model.sessionFinished(recorded: 1, expectedChunks: 5)
+        await model.reset()
+        #expect(model.expectedChunks == 0 && model.missingCount == 0)
+    }
+
+    @Test func theCountSurvivesARelaunch() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let defaults = UserDefaults(suiteName: "echo-settle-\(UUID().uuidString)")!
+        let model = PipelineModel(store: h.store, defaults: defaults)
+        await model.sessionStarted(total: 375)
+        for chunk in h.chunks.prefix(5) { model.put(chunk) }
+        model.sessionFinished(recorded: 375, expectedChunks: 56)
+        try await Task.sleep(for: .milliseconds(200))   // put() saves in the background
+        let reopened = PipelineModel(store: h.store, defaults: defaults)
+        await reopened.load()
+        #expect(reopened.expectedChunks == 56 && reopened.session == .finished && !reopened.isSettled)
     }
 }

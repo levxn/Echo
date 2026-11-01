@@ -70,7 +70,6 @@ struct MomentsView: View {
                 SectionHeader("Just arrived", style: .overline)
                 ForEach(layout.working.prefix(3)) { item in
                     MomentRowView(item: item, isPlaying: false, onPlay: {}, onDelete: {})
-                        .transition(.opacity)
                 }
                 if layout.working.count > 3 {
                     Text("and \(layout.working.count - 3) more being understood")
@@ -81,13 +80,12 @@ struct MomentsView: View {
             SectionHeader("Moments", meta: "\(layout.groups.map(\.count).reduce(0, +))")
             ForEach(layout.groups.reversed()) { group in
                 MomentGroupView(group: group, isOpen: overrides[group.id] ?? defaults.contains(group.id), playingID: player.playingID,
-                                onToggle: { overrides[group.id] = !(overrides[group.id] ?? defaults.contains(group.id)) },
+                                onToggle: { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { overrides[group.id] = !(overrides[group.id] ?? defaults.contains(group.id)) } },
                                 onPlay: { item in if let chunk = model.record(id: item.id) { player.toggle(chunk) } },
                                 onDelete: { pendingDelete = $0 })
                     .id(group.id)
             }
         }
-        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: layout.working.count)
     }
 
     private func lines(_ layout: MomentsLayout) -> [String] {

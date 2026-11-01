@@ -177,12 +177,12 @@ struct MomentGroupView: View {
                     ForEach(group.items) { item in
                         MomentRowView(item: item, isPlaying: playingID == item.id,
                                       onPlay: { onPlay(item) }, onDelete: { onDelete(item) })
-                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }
         }
-        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: isOpen)
+        // No animation here on purpose: while the day arrives, groups open and close by themselves, and animating
+        // that made old and new text overlap. A tap animates (see MomentsView).
     }
 
     private var title: some View {

@@ -4,6 +4,7 @@ extension Wire {
     static let demoStart = "demo.start"      // phone -> watch: start the replay (demo driver)
     static let demoQuickAsk = "demo.quickask" // phone -> watch: run preset N (demo driver)
     static let presetKey = "i"
+    static let countKey = "count"            // watch -> phone, with "finished": how many snippets it sent in all
     static let ask = "ask"                   // watch -> phone: answer this question
     static let questionKey = "q"
     static let answerKey = "a"

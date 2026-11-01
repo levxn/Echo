@@ -57,7 +57,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         if message[Wire.stateKey] as? String == "started" {
             await model.sessionStarted(total: total)
         } else {
-            model.sessionFinished(recorded: recorded)
+            model.sessionFinished(recorded: recorded, expectedChunks: message[Wire.countKey] as? Int ?? 0)
         }
         return [Wire.okKey: true]
     }

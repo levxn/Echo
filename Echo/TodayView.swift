@@ -51,7 +51,7 @@ struct TodayView: View {
         switch model.session {
         case .waiting: model.watchReachable ? "Watch connected" : "Waiting for your watch"
         case .running: "Listening · \(Int(model.sessionFraction * 100))% of the day"
-        case .finished: model.isSettled ? "Day synced and processed" : "Processing \(model.pendingCount) left"
+        case .finished: model.isSettled ? "Day synced and processed" : "Processing \(model.pendingCount + model.missingCount) left"
         }
     }
 

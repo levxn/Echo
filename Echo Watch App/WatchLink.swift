@@ -25,6 +25,8 @@ final class WatchLink: NSObject, WCSessionDelegate {
     private(set) var queued = 0
     private(set) var synced = 0
     private(set) var syncedBytes = 0
+    /// Snippets handed to the queue so far. Sent with "finished" so the phone knows how many to wait for.
+    private(set) var enqueuedTotal = 0
 
     /// Seconds of the recording processed so far; sent with each message so the phone can show the funnel.
     var recordedSoFar = 0.0
@@ -66,6 +68,7 @@ final class WatchLink: NSObject, WCSessionDelegate {
             return
         }
         queue.append(Pending(encoded: encoded, index: meta.index))
+        enqueuedTotal += 1
         queued = queue.count
         Task { await drain() }
     }
@@ -75,14 +78,15 @@ final class WatchLink: NSObject, WCSessionDelegate {
         queued = 0
         synced = 0
         syncedBytes = 0
+        enqueuedTotal = 0
     }
 
     /// Best-effort notice that the replay started or finished.
-    func sendSession(state: String, recorded: Double, total: Double) async {
+    func sendSession(state: String, recorded: Double, total: Double, count: Int = 0) async {
         for _ in 0..<20 where !WCSession.default.isReachable { try? await Task.sleep(for: .milliseconds(250)) }
         _ = try? await message([
             Wire.typeKey: Wire.session, Wire.stateKey: state,
-            Wire.recordedKey: recorded, Wire.totalKey: total,
+            Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count,
         ])
     }
 

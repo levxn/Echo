@@ -32,7 +32,7 @@ struct CaptureStatus: Equatable {
     var symbol: String
 
     static func make(phase: Phase, reachable: Bool, arrived: Int, pending: Int, stored: Int, ignored: Int,
-                     conversations: Int, keptSeconds: Double, fraction: Double) -> CaptureStatus {
+                     conversations: Int, keptSeconds: Double, fraction: Double, expected: Int = 0) -> CaptureStatus {
         if arrived == 0 && phase == .waiting {
             return reachable
                 ? CaptureStatus(kind: .watchReady, title: "Watch connected", detail: "Tap Start day on your watch and Echo starts listening.",
@@ -47,12 +47,14 @@ struct CaptureStatus: Equatable {
                                  detail: "\(plural(heard, "moment")) so far",
                                  footnote: "Only speech is kept. It stays on this phone.", progress: fraction, symbol: "waveform")
         case .finished:
-            if pending > 0 {
+            // The watch can finish before its last snippets have arrived, so count those still on the way too.
+            let total = max(arrived, expected)
+            if pending > 0 || arrived < expected {
                 let done = max(0, arrived - pending)
                 return CaptureStatus(kind: .catchingUp, title: "Catching up",
-                                     detail: "Understanding \(done) of \(arrived)",
+                                     detail: "Understanding \(done) of \(total)",
                                      footnote: "Checked and transcribed on this phone.",
-                                     progress: arrived > 0 ? Double(done) / Double(arrived) : nil, symbol: "arrow.triangle.2.circlepath")
+                                     progress: total > 0 ? Double(done) / Double(total) : nil, symbol: "arrow.triangle.2.circlepath")
             }
             return CaptureStatus(kind: .caughtUp, title: "Caught up",
                                  detail: "\(plural(stored, "moment")) from \(plural(conversations, "conversation")) · \(Format.minutesSeconds(keptSeconds)) kept",
@@ -68,7 +70,7 @@ extension PipelineModel {
             phase: { switch session { case .waiting: .waiting; case .running: .running; case .finished: .finished } }(),
             reachable: watchReachable, arrived: arrivedCount, pending: chunks.filter { [.received, .vad, .asr].contains($0.status) }.count,
             stored: storedCount, ignored: droppedCount, conversations: conversations,
-            keptSeconds: phoneConfirmedSeconds, fraction: sessionFraction)
+            keptSeconds: phoneConfirmedSeconds, fraction: sessionFraction, expected: expectedChunks)
     }
 }
 
