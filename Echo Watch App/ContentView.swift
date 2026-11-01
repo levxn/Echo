@@ -28,7 +28,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             AuroraBackground(calm: true, fps: 12)
-            VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 // Left-aligned so it never collides with the system clock at the top right.
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(title)
@@ -38,7 +38,7 @@ struct ContentView: View {
                         Circle()
                             .fill(link.reachable ? Palette.teal : Palette.rose)
                             .frame(width: 6, height: 6)
-                        Text(link.reachable ? "Phone linked · demo audio" : "No phone · demo audio")
+                        Text(link.reachable ? "Linked · simulated mic" : "No phone · simulated mic")
                             .font(.caption2)
                             .foregroundStyle(Palette.textSecondary)
                             .lineLimit(1)
@@ -49,7 +49,7 @@ struct ContentView: View {
                 HStack(spacing: Spacing.sm) {
                     MicRing(progress: engine.progress, level: engine.level, tint: ringTint,
                             active: engine.phase == .running, reduceMotion: reduceMotion)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 64, height: 64)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Counter(value: engine.captured, label: "heard")
@@ -66,6 +66,11 @@ struct ContentView: View {
                 .buttonStyle(EchoPressStyle())
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .accessibilityLabel(buttonLabel)
+
+                Text("A real watch listens in the background.")
+                    .font(.caption2)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, Spacing.sm)
         }

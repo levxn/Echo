@@ -38,6 +38,9 @@ final class WatchLink: NSObject, WCSessionDelegate {
     /// Called when the phone asks the watch to run quick-ask preset N (the demo driver does this).
     var onRemoteQuickAsk: ((Int) -> Void)?
 
+    /// Called when the phone asks the watch to ask recorded question N by voice (the demo driver does this).
+    var onRemoteVoiceAsk: ((Int) -> Void)?
+
     private struct Pending {
         let encoded: Data
         let index: Int
@@ -197,6 +200,9 @@ final class WatchLink: NSObject, WCSessionDelegate {
         case Wire.demoQuickAsk:
             let index = message[Wire.presetKey] as? Int ?? 0
             Task { @MainActor in self.onRemoteQuickAsk?(index) }
+        case Wire.demoVoiceAsk:
+            let index = message[Wire.presetKey] as? Int ?? 1
+            Task { @MainActor in self.onRemoteVoiceAsk?(index) }
         default: break
         }
     }

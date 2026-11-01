@@ -12,6 +12,7 @@ struct EchoWatchApp: App {
         let quickAsk = WatchAsk(link: link)
         link.onRemoteStart = { engine.start() }
         link.onRemoteQuickAsk = { quickAsk.run(preset: $0) }
+        link.onRemoteVoiceAsk = { quickAsk.run(voice: $0) }
         _link = State(initialValue: link)
         _engine = State(initialValue: engine)
         _quickAsk = State(initialValue: quickAsk)
@@ -46,6 +47,15 @@ struct EchoWatchApp: App {
                         UserDefaults.standard.set(token, forKey: "quickToken")
                         for _ in 0..<60 where !link.reachable { try? await Task.sleep(for: .milliseconds(500)) }
                         quickAsk.run(preset: n)
+                    }
+                }
+                // `-voice N <token>` asks recorded question N (1...5) by voice, through the real recorder, the phone and Muse.
+                if let i = args.firstIndex(of: "-voice"), i + 2 < args.count, let n = Int(args[i + 1]) {
+                    let token = args[i + 2]
+                    if UserDefaults.standard.string(forKey: "voiceToken") != token {
+                        UserDefaults.standard.set(token, forKey: "voiceToken")
+                        for _ in 0..<60 where !link.reachable { try? await Task.sleep(for: .milliseconds(500)) }
+                        quickAsk.run(voice: n)
                     }
                 }
             }
