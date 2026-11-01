@@ -30,13 +30,14 @@ struct CloudAnswerCard: View {
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // The privacy proof comes first, right under the answer, so it is on screen without scrolling.
+            SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")
+
             if !result.answer.items.isEmpty {
                 VStack(spacing: Spacing.sm) {
                     ForEach(result.answer.items) { ItemRow(item: $0, chunk: chunkFor($0), player: player) }
                 }
             }
-
-            SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")
 
             Text(footer)
                 .font(.caption)
@@ -88,6 +89,7 @@ private struct ItemRow: View {
     let chunk: ChunkRecord?
     let player: ChunkPlayer
     @State private var showQuote = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -102,8 +104,14 @@ private struct ItemRow: View {
         }
         .echoRow()
         .contentShape(Rectangle())
-        .onTapGesture { if chunk != nil { withAnimation(.smooth(duration: 0.25)) { showQuote.toggle() } } }
+        .onTapGesture { toggleQuote() }
         .accessibilityElement(children: .contain)
+        .accessibilityAction(named: chunk == nil ? "" : (showQuote ? "Hide what was said" : "Show what was said")) { toggleQuote() }
+    }
+
+    private func toggleQuote() {
+        guard chunk != nil else { return }
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { showQuote.toggle() }
     }
 
     private var content: some View {
@@ -132,27 +140,36 @@ struct SentDisclosure: View {
     /// Lets the demo driver open the panel from outside; a tap toggles it as usual.
     var expand = false
     @State private var expanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Button {
-                withAnimation(.smooth(duration: 0.25)) { expanded.toggle() }
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { expanded.toggle() }
             } label: {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: isStub ? "eye" : "paperplane")
-                        .font(.footnote.weight(.semibold))
-                    Text(isStub ? "What would be sent" : "What left your phone")
-                        .font(.footnote.weight(.semibold))
-                    Spacer()
-                    Text("\(plan.snippets.count) snippets · \(ByteFormat.short(plan.bodyBytes)) · no audio")
-                        .font(.caption)
-                        .foregroundStyle(Palette.textSecondary)
+                HStack(spacing: Spacing.md) {
+                    Image(systemName: isStub ? "eye" : "paperplane.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.teal)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(isStub ? "What would be sent" : "What left your phone")
+                            .font(.echoLabel)
+                            .foregroundStyle(Palette.textPrimary)
+                        Text("\(plan.snippets.count) snippets · \(ByteFormat.short(plan.bodyBytes)) · 0 bytes of audio"
+                             + (plan.maskedCount > 0 ? " · \(plan.maskedCount) names masked" : ""))
+                            .font(.caption)
+                            .foregroundStyle(Palette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: Spacing.sm)
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.textSecondary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                 }
-                .foregroundStyle(Palette.textPrimary)
                 .frame(minHeight: 44)
+                .echoRow(vertical: Spacing.sm, fill: Palette.teal.opacity(0.10))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -193,7 +210,7 @@ struct SentDisclosure: View {
                 .transition(.opacity)
             }
         }
-        .onChange(of: expand) { _, open in withAnimation(.smooth(duration: 0.25)) { expanded = open } }
+        .onChange(of: expand) { _, open in withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { expanded = open } }
     }
 }
 

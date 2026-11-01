@@ -8,6 +8,7 @@ struct AskView: View {
     let chunks: [ChunkRecord]
 
     @FocusState private var focused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let suggestions = [
         "When is the plumber coming?",
@@ -21,7 +22,8 @@ struct AskView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    header.id("askTop")
+                    ScreenTitle(title: "Ask your day", subtitle: "Answers come from this phone first. Only synthesis questions reach the cloud.")
+                        .id("askTop")
                     field
                     suggestions
                     result
@@ -36,19 +38,8 @@ struct AskView: View {
             .background { AuroraBackground() }
             // The demo driver opens the "What left your phone" panel, which sits below the answer's items.
             .onChange(of: ask.expandSent) { _, open in
-                withAnimation(.smooth(duration: 0.8)) { proxy.scrollTo(open ? "sentPanel" : "askTop", anchor: open ? .center : .top) }
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.8)) { proxy.scrollTo(open ? "sentPanel" : "askTop", anchor: open ? .center : .top) }
             }
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Ask your day")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(Palette.textPrimary)
-            Text("Answers come from this phone first. Only questions that need synthesis ever reach the cloud.")
-                .font(.subheadline)
-                .foregroundStyle(Palette.textSecondary)
         }
     }
 
@@ -63,7 +54,7 @@ struct AskView: View {
                 .onSubmit { submit(ask.query) }
             Button { submit(ask.query) } label: {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(Palette.background)
                     .frame(width: 32, height: 32)
                     .background(Palette.accentGradient, in: Circle())
@@ -104,21 +95,11 @@ struct AskView: View {
     private var result: some View {
         switch ask.state {
         case .idle:
-            VStack(spacing: Spacing.sm) {
-                Image(systemName: hasMemory ? "sparkles" : "applewatch.radiowaves.left.and.right")
-                    .font(.system(size: 28))
-                    .foregroundStyle(hasMemory ? Palette.blue : Palette.amber)
-                Text(hasMemory ? "Try a question above" : "Nothing to search yet")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Palette.textPrimary)
-                Text(hasMemory ? "Echo searches transcripts stored on this phone: keywords and meaning together."
-                               : "Start the day on your watch. Conversations appear here once they have been transcribed.")
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Palette.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .echoCard(padding: Spacing.xl)
+            EmptyState(icon: hasMemory ? "sparkles" : "applewatch.radiowaves.left.and.right",
+                       tint: hasMemory ? Palette.blue : Palette.amber,
+                       title: hasMemory ? "Try a question above" : "Nothing to search yet",
+                       message: hasMemory ? "Tap a suggestion, or type your own."
+                                          : "Start the day on your watch. Conversations appear here once they have been transcribed.")
         case .searching(let q):
             HStack(spacing: Spacing.md) {
                 ProgressView().tint(Palette.teal)
@@ -130,7 +111,7 @@ struct AskView: View {
             .echoCard()
         case .answered(let r):
             AnswerCard(result: r, player: player)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(.echoRise(reduceMotion: reduceMotion))
         case .sending(_, let plan, _):
             SendingCard(plan: plan, isStub: ask.isStub)
                 .transition(.opacity)
@@ -139,7 +120,7 @@ struct AskView: View {
                 CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail + " " + item.title,
                                          snippets: r.plan.snippets, chunks: chunks)
             }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(.echoRise(reduceMotion: reduceMotion))
         case .cloudFailed(let f):
             CloudFailureCard(failure: f, player: player) { Task { await ask.retry() } }
                 .transition(.opacity)
@@ -165,16 +146,14 @@ struct AskView: View {
         let next = followUps
         if !next.questions.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(next.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Palette.textSecondary)
-                    .textCase(.uppercase)
+                SectionHeader(next.title, style: .overline)
                 ForEach(next.questions, id: \.self) { question in
                     Button { submit(question) } label: {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "arrow.turn.down.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.teal)
+                                .accessibilityHidden(true)
                             Text(question)
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(Palette.textPrimary)
@@ -195,7 +174,6 @@ struct AskView: View {
     private func submit(_ text: String) {
         focused = false
         player.stop()
-        withAnimation(.spring(duration: 0.4, bounce: 0.1)) { }
         Task { await ask.ask(text) }
     }
 }

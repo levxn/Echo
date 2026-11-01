@@ -102,6 +102,13 @@ struct AuroraBackground: View {
     }
 }
 
+extension AnyTransition {
+    /// Rises while fading in; only fades when Reduce Motion is on.
+    static func echoRise(reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom))
+    }
+}
+
 extension View {
     /// Frosted Liquid Glass card.
     func echoCard(radius: CGFloat = Radius.card, padding: CGFloat = Spacing.lg) -> some View {

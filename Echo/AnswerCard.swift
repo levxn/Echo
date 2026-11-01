@@ -4,15 +4,33 @@ import SwiftUI
 struct RouteStrip: View {
     enum Active { case local, cloud, none }
     let active: Active
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// With very large text only the tier that answered is shown (all three when none did), so the answer stays on screen.
+    private func showsPill(_ tier: Active?) -> Bool {
+        guard typeSize.isAccessibilitySize, active != .none else { return true }
+        return tier == active
+    }
+
+    /// Three pills side by side do not fit once text is very large, so they stack.
+    private var layout: AnyLayout {
+        typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: Spacing.sm)) : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    }
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            TierPill(symbol: "iphone", title: "This phone", detail: "Tier 0", tint: Palette.local,
-                     state: active == .local ? .active : .idle)
-            TierPill(symbol: "cpu", title: "Muse Glimmer", detail: "Tier 1 · design only", tint: Palette.textTertiary,
-                     state: .designOnly)
-            TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Tier 2 · Meta API", tint: Palette.cloud,
-                     state: active == .cloud ? .active : .idle)
+        layout {
+            if showsPill(.local) {
+                TierPill(symbol: "iphone", title: "This phone", detail: "Tier 0", tint: Palette.local,
+                         state: active == .local ? .active : .idle)
+            }
+            if showsPill(nil) {
+                TierPill(symbol: "cpu", title: "Muse Glimmer", detail: "Tier 1 · design only", tint: Palette.textTertiary,
+                         state: .designOnly)
+            }
+            if showsPill(.cloud) {
+                TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Tier 2 · Meta API", tint: Palette.cloud,
+                         state: active == .cloud ? .active : .idle)
+            }
         }
         .accessibilityElement(children: .contain)
     }

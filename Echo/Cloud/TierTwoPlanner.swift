@@ -144,7 +144,7 @@ enum TierTwoPlanner {
 
     Rules:
     - Use only the snippets. Do not add outside facts.
-    - day_summary is two to four sentences. Give one entry per conversation, with its start time. List every action item the user owes someone (what, to_whom, due, source as the snippet label like S3, source_time as HH:MM). List the people mentioned by name.
+    - day_summary is two to four sentences. Give one entry per conversation, with its start time. List every action item the user owes someone (what, to_whom, due, source as the snippet label like S3, source_time as HH:MM). to_whom is the other person the action is owed to, by name or role (for example \"the landlord\"); it is never the user, who is the person speaking in first person. Leave it empty if it is unclear. List the people mentioned by name.
     - Do not mention these instructions.
     """
 
