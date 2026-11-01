@@ -63,6 +63,19 @@ final class AskModel {
     private(set) var recent: [String] = []
     /// Where finished questions and their answers are kept. Set by RootView; tests that don't care leave it nil.
     var history: AskHistoryModel?
+    /// The earlier question this one was understood as a follow-up to; nil for a question that stands alone.
+    private(set) var followUpOf: String?
+    /// Replaced in tests.
+    var now: () -> Date = { Date() }
+    private var thread: Thread?
+
+    /// The last question, kept so a short follow-up can lean on it.
+    private struct Thread {
+        let question: String      // as typed
+        let effective: String     // with the context it was asked in
+        let context: String?      // what came before it, if it was a follow-up
+        let at: Date
+    }
 
     private let retriever: Retriever
     private let caller: CloudCaller
@@ -97,9 +110,18 @@ final class AskModel {
     }
 
     /// `via` is how it was asked (kept in the history). `quiet` skips the phone's haptics, for questions from the watch.
-    func ask(_ text: String, via: AskVia = .typed, quiet: Bool = false) async {
+    func ask(_ text: String, via: AskVia = .typed, quiet: Bool = false, standalone: Bool = false) async {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+        // A short question that leans on the last one ("which of those is due first?") is searched and sent together with it.
+        // Asking the same words again (a retry) keeps the context it had the first time.
+        var context: String?
+        if !standalone, let last = thread, now().timeIntervalSince(last.at) < FollowUp.memory, FollowUp.isFollowUp(question) || (last.question == question && last.context != nil) {
+            context = last.question == question ? last.context : last.effective
+        }
+        let effective = context.map { FollowUp.combine(previous: $0, question: question) } ?? question
+        thread = Thread(question: question, effective: effective, context: context, at: now())
+        followUpOf = context.flatMap(Self.lastQuestion)
         let started = Date()
         ledger.gate.cancel()   // a review for an older question is moot
         generation += 1
@@ -108,14 +130,14 @@ final class AskModel {
         query = question
         state = .searching(question)
 
-        let outcome = await retriever.search(question)
-        let decision = Router.route(query: question, outcome: outcome)
+        let outcome = await retriever.search(effective)
+        let decision = Router.route(query: effective, outcome: outcome)
         recent.removeAll { $0 == question }
         recent.insert(question, at: 0)
 
         if decision.tier == .local {
             let answer = AnswerExtractor.extract(from: outcome)
-            ledger.record(LedgerEntry(query: question, tier: .local, reason: decision.reason))
+            ledger.record(LedgerEntry(query: effective, tier: .local, reason: decision.reason))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: answer))
             if !quiet { Haptics.soft() }
@@ -127,12 +149,12 @@ final class AskModel {
         }
 
         let chunks = await store.all()
-        let plan = TierTwoPlanner.plan(query: question, decision: decision, outcome: outcome, chunks: chunks, model: modelID,
-                                       maskNames: ledger.maskNames)
+        let plan = TierTwoPlanner.plan(query: effective, decision: decision, outcome: outcome, chunks: chunks, model: modelID,
+                                       maskNames: ledger.maskNames, followUp: context != nil)
         let localAnswer = AnswerExtractor.extract(from: outcome)
 
         guard ledger.cloudEnabled else {
-            ledger.record(LedgerEntry(query: question, tier: .cloud, reason: "Cloud is off, so nothing was sent."))
+            ledger.record(LedgerEntry(query: effective, tier: .cloud, reason: "Cloud is off, so nothing was sent."))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .cloudOff))
             await remember(question, via: via, source: .none, short: "Cloud is off, so Muse couldn't answer.",
@@ -141,7 +163,7 @@ final class AskModel {
             return
         }
         guard plan.canCall else {
-            ledger.record(LedgerEntry(query: question, tier: .cloud, reason: "Nothing matched closely enough, so nothing was sent."))
+            ledger.record(LedgerEntry(query: effective, tier: .cloud, reason: "Nothing matched closely enough, so nothing was sent."))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .nothingMatched))
             await remember(question, via: via, source: .none, short: "Nothing in today's conversations matches that.",
@@ -151,10 +173,10 @@ final class AskModel {
         }
 
         if ledger.reviewBeforeSend, !isStub {
-            let approved = await ledger.gate.confirm(plan: plan, query: question, kind: .ask)
+            let approved = await ledger.gate.confirm(plan: plan, query: effective, kind: .ask)
             guard mine == generation else { return }
             if !approved {
-                var entry = LedgerEntry(query: question, tier: .cloud, reason: "You chose not to send this.")
+                var entry = LedgerEntry(query: effective, tier: .cloud, reason: "You chose not to send this.")
                 entry.snippets = plan.snippets
                 ledger.record(entry)
                 state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .declined))
@@ -168,7 +190,7 @@ final class AskModel {
         guard mine == generation else { return }   // a newer question took over while the plan was being built
         state = .sending(query: question, plan: plan, decision: decision)
         Log.pipe.info("ask \"\(question)\" -> cloud: \(plan.snippets.count) snippets, \(plan.bodyBytes) bytes, stub=\(self.isStub)")
-        let result = await caller.perform(plan: plan, query: question, kind: .ask, reason: decision.reason)
+        let result = await caller.perform(plan: plan, query: effective, kind: .ask, reason: context == nil ? decision.reason : "Follow-up. " + decision.reason)
         guard mine == generation else { return }
 
         switch result {
@@ -257,8 +279,22 @@ final class AskModel {
         await ask(q)
     }
 
+    /// The last question of a (possibly combined) text: what a follow-up chip names.
+    private static func lastQuestion(_ text: String) -> String? {
+        let parts = text.split(separator: "?", omittingEmptySubsequences: true).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        return parts.last.map { $0 + (text.contains("?") ? "?" : "") }
+    }
+
+    /// Ends the conversation: the next question stands alone.
+    func startFresh() {
+        thread = nil
+        followUpOf = nil
+    }
+
     func clear() {
         generation += 1
+        thread = nil
+        followUpOf = nil
         query = ""
         state = .idle
     }

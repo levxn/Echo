@@ -171,6 +171,8 @@ struct RootView: View {
                 await model.load()
                 tab = .ask
                 await ask.ask(args[i + 1])
+                // `-then "follow-up"` asks a second question straight after, to see a follow-up.
+                if let j = args.firstIndex(of: "-then"), j + 1 < args.count { await ask.ask(args[j + 1]) }
             } else if args.contains("-digest") {
                 await model.load()
                 tab = .today

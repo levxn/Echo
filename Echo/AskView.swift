@@ -32,6 +32,7 @@ struct AskView: View {
                     field
                     VoiceCard(voice: voice, onStop: micTapped, onRetry: micTapped)
                     suggestions
+                    followUpNote
                     result
                     followUpChips
                     HistorySection(history: history, onOpen: { sheet = HistoryRequest(open: .id($0.id)) },
@@ -128,6 +129,36 @@ struct AskView: View {
         }
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
+    }
+
+    /// Says when a short question was understood as a follow-up, and lets the person undo that.
+    @ViewBuilder
+    private var followUpNote: some View {
+        if let earlier = ask.followUpOf, !isIdle {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "arrow.turn.down.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.teal)
+                    .accessibilityHidden(true)
+                Text("Following up on “\(earlier)”")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button("Ask on its own") { Task { await ask.ask(ask.query, standalone: true) } }
+                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.teal)
+                    .frame(minHeight: 44)
+                    .accessibilityHint("Searches without the earlier question")
+            }
+            .padding(.horizontal, Spacing.md)
+            .transition(.opacity)
+        }
+    }
+
+    private var isIdle: Bool {
+        if case .idle = ask.state { return true }
+        return false
     }
 
     @ViewBuilder

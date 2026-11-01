@@ -55,7 +55,7 @@ enum TierTwoPlanner {
     }
 
     static func plan(query: String, decision: RouteDecision, outcome: RetrievalOutcome, chunks: [ChunkRecord], model: String,
-                     maskNames: Bool = false) -> TierTwoPlan {
+                     maskNames: Bool = false, followUp: Bool = false) -> TierTwoPlan {
         let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }.sorted { $0.wallStart < $1.wallStart }
         let selected: [ChunkRecord]
         let reason: String
@@ -89,7 +89,7 @@ enum TierTwoPlanner {
 
         let (sent, sentQuery, masking) = masked(selected, query: query, day: stored, enabled: maskNames)
         let snippets = sent.map { Snippet(time: DemoClock.format($0.wallStart), text: $0.transcript ?? "", chunkID: $0.id) }
-        let request = MuseRequest(model: model, developer: answerRules + maskingNote(masking),
+        let request = MuseRequest(model: model, developer: answerRules + (followUp ? FollowUp.note : "") + maskingNote(masking),
                                   user: userMessage(query: sentQuery, selected: sent, grouped: decision.intent == .summary),
                                   schemaName: EchoSchemas.answerName, schemaJSON: EchoSchemas.answer)
         return TierTwoPlan(intent: decision.intent, snippets: snippets, selectionReason: reason, request: request, masking: masking)
