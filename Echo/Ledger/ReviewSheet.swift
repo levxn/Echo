@@ -13,10 +13,11 @@ struct ReviewSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.tight) {
                     Text("Review before sending")
-                        .font(.system(.title, design: .rounded, weight: .bold))
+                        .font(.echoSheetTitle)
                         .foregroundStyle(Palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                     Text("This is exactly what will go to Muse Spark. Audio never does.")
                         .font(.subheadline)
                         .foregroundStyle(Palette.textSecondary)
@@ -35,16 +36,16 @@ struct ReviewSheet: View {
                 .echoCard()
 
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    HStack {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
                         Text("\(plan.snippets.count) snippets of text")
-                            .font(.system(.headline, design: .rounded, weight: .semibold))
-                        Spacer()
+                            .font(.echoSection)
+                            .foregroundStyle(Palette.textPrimary)
+                            .accessibilityAddTraits(.isHeader)
                         Text("\(ByteFormat.short(plan.bodyBytes)) · about \(plan.bodyBytes / 4) tokens")
                             .font(.caption)
                             .monospacedDigit()
                             .foregroundStyle(Palette.textSecondary)
                     }
-                    .foregroundStyle(Palette.textPrimary)
                     Text("Chosen because: \(plan.selectionReason).")
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
@@ -94,21 +95,8 @@ struct ReviewSheet: View {
         .background { AuroraBackground() }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: Spacing.sm) {
-                Button(action: onSend) {
-                    Label("Send to Muse", systemImage: "paperplane.fill")
-                        .font(.system(.body, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                }
-                .buttonStyle(EchoPressStyle())
-                .glassEffect(.regular.tint(Palette.cloud.opacity(0.45)).interactive(), in: .capsule)
-                Button(action: onCancel) {
-                    Text("Don't send")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Palette.textSecondary)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(EchoPressStyle())
+                EchoButton(title: "Send to Muse", systemImage: "paperplane.fill", style: .prominent, action: onSend)
+                EchoButton(title: "Don't send", style: .quiet, action: onCancel)
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.vertical, Spacing.md)
@@ -127,8 +115,7 @@ struct ReviewSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
         }
-        .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .echoRow()
     }
 }

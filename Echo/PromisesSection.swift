@@ -13,7 +13,7 @@ struct PromisesSection: View {
 
     private static let collapsedCount = 5
     private var done: Set<String> { Set(doneRaw.split(separator: "\n").map(String.init)) }
-    private var visible: [Promise] { showAll ? promises : Array(promises.prefix(Self.collapsedCount)) }
+    private var visible: [Promise] { Capped.visible(promises, limit: Self.collapsedCount, showAll: showAll) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -33,15 +33,7 @@ struct PromisesSection: View {
                                onPlay: { if let chunk = model.record(id: promise.chunkID) { player.toggle(chunk) } })
                 }
             }
-            if promises.count > Self.collapsedCount {
-                Button { withAnimation(.smooth(duration: 0.3)) { showAll.toggle() } } label: {
-                    Text(showAll ? "Show fewer" : "Show all \(promises.count)")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Palette.teal)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(EchoPressStyle())
-            }
+            ShowMoreButton(total: promises.count, limit: Self.collapsedCount, isExpanded: $showAll)
         }
     }
 

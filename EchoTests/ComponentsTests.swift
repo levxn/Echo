@@ -68,3 +68,21 @@ struct TodaySectionTests {
         #expect(Set(TodaySection.allCases.map(\.id)).count == TodaySection.allCases.count)
     }
 }
+
+struct CappedListTests {
+    @Test func aLongListShowsTheFirstFewUntilExpanded() {
+        let items = Array(1...9)
+        #expect(Capped.visible(items, limit: 5, showAll: false) == [1, 2, 3, 4, 5])
+        #expect(Capped.visible(items, limit: 5, showAll: true) == items)
+    }
+
+    @Test func aShortListIsNeverCutOrPadded() {
+        #expect(Capped.visible([1, 2, 3], limit: 5, showAll: false) == [1, 2, 3])
+        #expect(Capped.visible([Int](), limit: 5, showAll: false).isEmpty)
+        #expect(Capped.visible([1, 2, 3, 4, 5], limit: 5, showAll: false).count == 5, "exactly the limit needs no Show all")
+    }
+
+    @Test func theLedgerShowsFiveEntriesByDefault() {
+        #expect(LedgerView.activityLimit == 5)
+    }
+}

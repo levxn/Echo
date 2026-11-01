@@ -37,3 +37,10 @@ struct EmptyState: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+/// Long lists show a few rows and a "Show all N" control.
+enum Capped {
+    nonisolated static func visible<T>(_ items: [T], limit: Int, showAll: Bool) -> [T] {
+        showAll || items.count <= limit ? items : Array(items.prefix(limit))
+    }
+}

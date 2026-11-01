@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// What stayed on the phone, what left it, and the switch that controls the cloud.
+/// What stayed on the phone, what left it, and the switches that control the cloud.
 struct LedgerView: View {
     let ledger: LedgerModel
     let model: PipelineModel
@@ -9,23 +9,20 @@ struct LedgerView: View {
 
     @State private var confirmClear = false
     @State private var confirmForget = false
+    @State private var showAllActivity = false
     @State private var exportURL: URL?
+
+    /// Activity shows this many entries until "Show all" is tapped.
+    static let activityLimit = 5
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                header
+                ScreenTitle(title: "Privacy ledger", subtitle: "Every question, and exactly what left this phone.")
                 SummaryCard(totals: ledger.totals)
-                cloudSwitch
-                entries
-                Button { ledger.showArchitecture = true } label: {
-                    Label("How Echo works", systemImage: "square.stack.3d.up.fill")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
-                .buttonStyle(EchoPressStyle())
-                .glassEffect(.regular.interactive(), in: .capsule)
+                settings
+                activity
+                EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
                 yourData
             }
             .padding(.horizontal, Spacing.xl)
@@ -49,27 +46,60 @@ struct LedgerView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Privacy ledger")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(Palette.textPrimary)
-            Text("Every question, and exactly what left this phone.")
-                .font(.subheadline)
-                .foregroundStyle(Palette.textSecondary)
-        }
-    }
-
     private func refreshExport() {
         guard !ledger.entries.isEmpty else { exportURL = nil; return }
         exportURL = try? LedgerExport(entries: ledger.entries).write(into: FileManager.default.temporaryDirectory)
     }
 
+    // MARK: Settings
+
+    private var settings: some View {
+        VStack(spacing: Spacing.md) {
+            ToggleRow(title: "Allow Muse for broad questions", systemImage: "cloud.fill",
+                      caption: ledger.cloudEnabled ? "Broad questions go to Muse Spark as text. Audio never does."
+                                                   : "Off: nothing is sent. Broad questions show the closest moments here.",
+                      isOn: Bindable(ledger).cloudEnabled)
+            Divider().overlay(Palette.stroke)
+            ToggleRow(title: "Review before sending", systemImage: "eye",
+                      caption: ledger.reviewBeforeSend ? "You see the exact text first, then choose Send or Don't send."
+                                                       : "Off: sent as soon as you ask, and logged here.",
+                      isOn: Bindable(ledger).reviewBeforeSend)
+            Divider().overlay(Palette.stroke)
+            ToggleRow(title: "Mask names before sending", systemImage: "theatermasks",
+                      caption: ledger.maskNames ? "Names become [PERSON_1] on this phone and return in the answer. Best effort."
+                                                : "Off: names are sent as spoken.",
+                      isOn: Bindable(ledger).maskNames)
+        }
+        .echoCard()
+    }
+
+    // MARK: Activity
+
+    @ViewBuilder
+    private var activity: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title: "Activity") {
+                if !ledger.entries.isEmpty {
+                    Text("\(ledger.entries.count)").font(.footnote).monospacedDigit().foregroundStyle(Palette.textSecondary)
+                }
+            }
+            if ledger.entries.isEmpty {
+                EmptyState(icon: "lock.shield", tint: Palette.teal, title: "Nothing recorded yet",
+                           message: "Ask a question and it appears here, along with whether anything left your phone.")
+            } else {
+                LazyVStack(spacing: Spacing.sm) {
+                    ForEach(Capped.visible(ledger.entries, limit: Self.activityLimit, showAll: showAllActivity)) { EntryRow(entry: $0) }
+                }
+                ShowMoreButton(total: ledger.entries.count, limit: Self.activityLimit, isExpanded: $showAllActivity)
+            }
+        }
+    }
+
+    // MARK: Your data
+
     private var yourData: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Your data")
-                .font(.system(.headline, design: .rounded, weight: .semibold))
-                .foregroundStyle(Palette.textPrimary)
+            SectionHeader("Your data")
             Text("Everything Echo keeps is on this phone. Export the ledger, or erase what you don't want kept.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
@@ -97,92 +127,14 @@ struct LedgerView: View {
 
     private func dataRow(_ title: String, systemImage: String, tint: Color) -> some View {
         HStack(spacing: Spacing.md) {
-            Image(systemName: systemImage).font(.system(size: 15, weight: .semibold)).frame(width: 22)
+            Image(systemName: systemImage).font(.subheadline.weight(.semibold)).frame(width: 22)
             Text(title).font(.system(.subheadline, design: .rounded, weight: .semibold))
             Spacer()
         }
         .foregroundStyle(tint)
-        .padding(.horizontal, Spacing.md)
         .frame(minHeight: 48)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .echoRow(vertical: 0, fill: Palette.fillStrong)
         .contentShape(Rectangle())
-    }
-
-    private var cloudSwitch: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Toggle(isOn: Bindable(ledger).cloudEnabled) {
-                Label("Allow Muse for synthesis questions", systemImage: "cloud.fill")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-            }
-            .tint(Palette.cloud)
-            .frame(minHeight: 44)
-            Text(ledger.cloudEnabled
-                 ? "Questions that can't be answered by lookup are sent to Muse Spark as text. Audio never is."
-                 : "Off: nothing will be sent to the cloud. Those questions show the closest moments on this phone instead.")
-                .font(.footnote)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Divider().overlay(Color.white.opacity(0.1))
-            Toggle(isOn: Bindable(ledger).reviewBeforeSend) {
-                Label("Review before sending", systemImage: "eye")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-            }
-            .tint(Palette.cloud)
-            .frame(minHeight: 44)
-            Text(ledger.reviewBeforeSend
-                 ? "Each request waits for you. You see the exact text first, then choose Send or Don't send."
-                 : "Off: requests are sent as soon as you ask, and logged here.")
-                .font(.footnote)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Divider().overlay(Color.white.opacity(0.1))
-            Toggle(isOn: Bindable(ledger).maskNames) {
-                Label("Mask names before sending", systemImage: "theatermasks")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-            }
-            .tint(Palette.cloud)
-            .frame(minHeight: 44)
-            Text(ledger.maskNames
-                 ? "People's names become placeholders like [PERSON_1] on this phone, and return in the answer. Best effort: a name the phone can't recognize is sent as spoken."
-                 : "Off: names are sent as they were said.")
-                .font(.footnote)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .echoCard()
-    }
-
-    @ViewBuilder
-    private var entries: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Activity")
-                .font(.system(.headline, design: .rounded, weight: .semibold))
-                .foregroundStyle(Palette.textPrimary)
-            if ledger.entries.isEmpty {
-                VStack(spacing: Spacing.sm) {
-                    Image(systemName: "lock.shield")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Palette.teal)
-                    Text("Nothing recorded yet")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.textPrimary)
-                    Text("Ask a question and it appears here, along with whether anything left your phone.")
-                        .font(.footnote)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Palette.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .echoCard(padding: Spacing.xl)
-            } else {
-                LazyVStack(spacing: Spacing.sm) {
-                    ForEach(ledger.entries) { EntryRow(entry: $0) }
-                }
-                .animation(.spring(duration: 0.4, bounce: 0.15), value: ledger.entries.count)
-            }
-        }
     }
 }
 
@@ -192,19 +144,20 @@ private struct SummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             HStack(alignment: .top, spacing: Spacing.lg) {
-                stat("\(totals.stayedOnPhone)", "stayed on this phone", Palette.teal)
-                stat("\(totals.usedMuse)", "used Muse Spark", Palette.cloud)
-                stat(ByteFormat.short(totals.bytesSent), "of text sent", Palette.textPrimary)
+                stat("\(totals.stayedOnPhone)", "kept on phone", Palette.teal)
+                stat("\(totals.usedMuse)", "via Muse", Palette.cloud)
+                stat(ByteFormat.short(totals.bytesSent), "text sent", Palette.textPrimary)
             }
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill").foregroundStyle(Palette.teal)
+            Label {
                 Text("0 bytes of audio ever leave this phone")
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
+            } icon: {
+                Image(systemName: "checkmark.seal.fill").foregroundStyle(Palette.teal)
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: 36)
-            .background(Palette.teal.opacity(0.14), in: Capsule())
+                .font(.echoLabel)
+                .foregroundStyle(Palette.textPrimary)
+                .padding(.horizontal, Spacing.md)
+                .frame(minHeight: 36)
+                .background(Palette.teal.opacity(0.14), in: Capsule())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()
@@ -212,7 +165,7 @@ private struct SummaryCard: View {
     }
 
     private func stat(_ value: String, _ label: String, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(value)
                 .font(.system(.title, design: .rounded, weight: .bold))
                 .monospacedDigit()
@@ -282,8 +235,7 @@ private struct EntryRow: View {
 
             if expanded { details.transition(.opacity) }
         }
-        .padding(Spacing.md)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .echoRow()
     }
 
     private var details: some View {

@@ -136,3 +136,26 @@ struct EchoSegmented<Value: Hashable>: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: selection)
     }
 }
+
+/// "Show all 15" / "Show fewer" under a capped list. Draws nothing when everything is already visible.
+struct ShowMoreButton: View {
+    let total: Int
+    let limit: Int
+    @Binding var isExpanded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if total > limit {
+            Button {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { isExpanded.toggle() }
+            } label: {
+                Text(isExpanded ? "Show fewer" : "Show all \(total)")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.teal)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(EchoPressStyle())
+        }
+    }
+}
