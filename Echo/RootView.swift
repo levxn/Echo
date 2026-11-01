@@ -25,6 +25,7 @@ struct RootView: View {
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
     @State private var voice = VoiceAskModel()
+    @State private var speaker = Speaker()
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
@@ -47,7 +48,8 @@ struct RootView: View {
         _history = State(initialValue: history)
         _ask = State(initialValue: askModel)
         _digest = State(initialValue: DigestModel(store: model.store, ledger: ledger, client: client))
-        _player = State(initialValue: ChunkPlayer(directory: model.store.chunksDirectory))
+        let player = ChunkPlayer(directory: model.store.chunksDirectory)
+        _player = State(initialValue: player)
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
         let args = ProcessInfo.processInfo.arguments
         let requested = args.firstIndex(of: "-tab").flatMap { $0 + 1 < args.count ? RootTab.from(argument: args[$0 + 1]) : nil }
@@ -111,6 +113,7 @@ struct RootView: View {
         }
         // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
         .onChange(of: model.session) { Task { await history.reload() } }
+        .environment(speaker)
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
@@ -133,7 +136,14 @@ struct RootView: View {
                     Log.link.notice("watch ask: \(answer.source.rawValue) in \(answer.milliseconds) ms (\(via.rawValue))")
                     return answer
                 },
-                history: { history.recentForWatch() })
+                history: { history.recentForWatch() },
+                speakVoiceAnswers: { profile.speakVoiceAnswers })
+            // Spoken answers and recorded moments take turns, and a voice question's answer is read back if the person wants.
+            speaker.willSpeak = { player.stop() }
+            player.willPlay = { speaker.stop() }
+            voice.afterAnswer = { ask in
+                if profile.speakVoiceAnswers, let text = ask.spokenAnswer { speaker.speak(text) }
+            }
             await history.reload()
             await ledger.reload()
             await digest.load()

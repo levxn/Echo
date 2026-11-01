@@ -39,6 +39,7 @@ enum ProfileLogic {
 final class ProfileStore {
     static let nameKey = "echo.profileName"
     static let colorKey = "echo.profileColor"
+    static let speakKey = "echo.speakVoiceAnswers"
 
     private let defaults: UserDefaults
 
@@ -47,6 +48,10 @@ final class ProfileStore {
     }
     var colorIndex: Int {
         didSet { defaults.set(colorIndex, forKey: Self.colorKey) }
+    }
+    /// Read answers aloud when the question was spoken. On unless turned off.
+    var speakVoiceAnswers: Bool {
+        didSet { defaults.set(speakVoiceAnswers, forKey: Self.speakKey) }
     }
 
     /// Dev hooks for screenshots and the demo take: `-profile-name Jordan`, `-profile-color 2`.
@@ -58,6 +63,7 @@ final class ProfileStore {
         name = defaults.string(forKey: Self.nameKey) ?? ""
         let stored = defaults.object(forKey: Self.colorKey) as? Int ?? 0
         colorIndex = ((stored % ProfileLogic.colorCount) + ProfileLogic.colorCount) % ProfileLogic.colorCount
+        speakVoiceAnswers = defaults.object(forKey: Self.speakKey) as? Bool ?? true
     }
 
     var initials: String { ProfileLogic.initials(from: name) }

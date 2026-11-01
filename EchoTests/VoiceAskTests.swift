@@ -46,6 +46,22 @@ struct VoiceAskTests {
         #expect(first.source == .local)
     }
 
+    @Test func aSpokenQuestionsAnswerIsHandedOverForReadingAloudAndAFailedOneIsNot() async throws {
+        let ok = try await rig(.heard("When is the plumber coming?"))
+        defer { ok.harness.cleanup() }
+        var spoken: [String] = []
+        ok.voice.afterAnswer = { ask in spoken.append(ask.spokenAnswer ?? "") }
+        await ok.voice.listen(ask: ok.ask)
+        #expect(spoken.count == 1 && !spoken[0].isEmpty && spoken[0] == ok.ask.spokenAnswer)
+
+        let bad = try await rig(.nothingHeard)
+        defer { bad.harness.cleanup() }
+        var called = false
+        bad.voice.afterAnswer = { _ in called = true }
+        await bad.voice.listen(ask: bad.ask)
+        #expect(!called)
+    }
+
     @Test func anEmptyRecordingExplainsItselfAndAsksNothing() async throws {
         let r = try await rig(.nothingHeard)
         defer { r.harness.cleanup() }

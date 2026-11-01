@@ -41,6 +41,7 @@ final class WatchAsk {
     /// The last few questions, newest first. The phone's list wins whenever it can be reached.
     private(set) var recent: [HistoryItem]
     let recorder = QuestionRecorder()
+    let speaker = Speaker()
     private let link: WatchLink
     private let cache: HistoryCache
     private var generation = 0
@@ -79,6 +80,7 @@ final class WatchAsk {
     /// Shows an earlier answer straight away, with no new request.
     func open(_ item: HistoryItem) {
         generation += 1
+        speaker.stop()
         let asked = Asked(question: item.question, usesCloud: item.source == .muse || item.source == .stub, via: item.via, when: item.timestamp)
         state = .answered(asked, WatchAnswer(text: item.answer, source: item.source))
     }
@@ -86,6 +88,7 @@ final class WatchAsk {
     func reset() {
         generation += 1
         recorder.stop()
+        speaker.stop()
         state = .idle
     }
 
@@ -97,10 +100,13 @@ final class WatchAsk {
             guard let self, mine == self.generation, case .asking = self.state else { return }
             self.waitingLong = true
         }
+        speaker.stop()
         let answer = await link.ask(asked.question, via: asked.via)
         guard mine == generation else { return }
         if let answer {
             state = .answered(asked, answer)
+            // The phone says whether answers to spoken questions should be read aloud (a setting there).
+            if answer.speak { speaker.speak(answer.text) }
             WKInterfaceDevice.current().play(answer.source == .none ? .failure : .success)
             AccessibilityNotification.Announcement("Answer: \(answer.text)").post()
             // Show it in Recent now; the phone's own list replaces this a moment later.
@@ -376,6 +382,12 @@ struct AskWatchView: View {
                 Text(footer(asked, answer))
                     .font(.caption2)
                     .foregroundStyle(Palette.textSecondary)
+                if answer.source != .none {
+                    WatchButton(title: ask.speaker.isSpeaking("answer") ? "Stop" : "Read aloud",
+                                systemImage: ask.speaker.isSpeaking("answer") ? "stop.fill" : "speaker.wave.2.fill", quiet: true) {
+                        ask.speaker.toggle(answer.text)
+                    }
+                }
                 if asked.when == nil {
                     WatchButton(title: "Ask another", systemImage: "mic.fill") { ask.reset() }
                     WatchButton(title: "Ask again", systemImage: "arrow.clockwise", quiet: true) { Task { await ask.ask(asked) } }

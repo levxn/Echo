@@ -304,6 +304,10 @@ struct HistoryDetail: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if record.detail.kind != .note {
+                ReadAloudButton(text: record.detail.headline.isEmpty ? record.shortAnswer : record.detail.headline, id: record.id)
+            }
+
             if !record.detail.items.isEmpty {
                 VStack(spacing: Spacing.sm) {
                     ForEach(record.detail.items) { item in

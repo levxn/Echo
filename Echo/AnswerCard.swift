@@ -185,6 +185,8 @@ struct AnswerCard: View {
             .font(.echoAnswer)
             .fixedSize(horizontal: false, vertical: true)
 
+        ReadAloudButton(text: answer.headline)
+
         if !result.outcome.unknownTerms.isEmpty {
             Label("Never heard “\(result.outcome.unknownTerms.joined(separator: ", "))” today, so matched on the rest.",
                   systemImage: "info.circle")

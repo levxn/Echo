@@ -22,6 +22,8 @@ final class VoiceAskModel {
     }
 
     private(set) var state = State.idle
+    /// Called once a spoken question has been answered; the app reads the answer aloud here if the person wants that.
+    var afterAnswer: ((AskModel) -> Void)?
     let recorder: QuestionRecorder
     private let transcriber: any QuestionTranscribing
     private let source: (Int) -> QuestionRecorder.Source
@@ -77,6 +79,7 @@ final class VoiceAskModel {
             state = .idle
             AccessibilityNotification.Announcement("Heard: \(text)").post()
             await ask.ask(text, via: .voice)
+            afterAnswer?(ask)
             return text
         }
     }

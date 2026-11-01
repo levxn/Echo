@@ -31,6 +31,16 @@ struct ProfileTests {
 
     private func defaults() -> UserDefaults { UserDefaults(suiteName: "echo-profile-\(UUID().uuidString)")! }
 
+    @Test func spokenAnswersAreOnByDefaultAndTheChoiceIsRemembered() {
+        let d = defaults()
+        let first = ProfileStore(defaults: d, arguments: [])
+        #expect(first.speakVoiceAnswers, "on until turned off")
+        first.speakVoiceAnswers = false
+        #expect(!ProfileStore(defaults: d, arguments: []).speakVoiceAnswers)
+        first.speakVoiceAnswers = true
+        #expect(ProfileStore(defaults: d, arguments: []).speakVoiceAnswers)
+    }
+
     @Test func theProfileIsSavedAndReloaded() {
         let d = defaults()
         let a = ProfileStore(defaults: d, arguments: [])

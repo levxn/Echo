@@ -20,6 +20,7 @@ extension Wire {
     static let reasonKey = "reason"
     static let viaKey = "via"
     static let itemsKey = "items"
+    static let speakKey = "speak"
 }
 
 /// A question the watch can ask without a keyboard.
@@ -53,10 +54,13 @@ nonisolated struct WatchAnswer: Equatable, Sendable {
     var milliseconds: Int
     /// What the phone understood from a spoken question, when there was one.
     var heard: String?
+    /// The phone's advice for a spoken question: read this answer aloud (the person's setting says so).
+    var speak = false
 
     var dictionary: [String: Any] {
         var d: [String: Any] = [Wire.okKey: true, Wire.answerKey: text, Wire.tierKey: source.rawValue, Wire.millisecondsKey: milliseconds]
         if let heard { d[Wire.heardKey] = heard }
+        if speak { d[Wire.speakKey] = true }
         return d
     }
 
@@ -80,13 +84,14 @@ nonisolated struct WatchAnswer: Equatable, Sendable {
         return words.joined(separator: " ") + "…"
     }
 
-    init(text: String, source: Source, milliseconds: Int = 0, heard: String? = nil) {
-        self.text = text; self.source = source; self.milliseconds = milliseconds; self.heard = heard
+    init(text: String, source: Source, milliseconds: Int = 0, heard: String? = nil, speak: Bool = false) {
+        self.text = text; self.source = source; self.milliseconds = milliseconds; self.heard = heard; self.speak = speak
     }
 
     init?(dictionary: [String: Any]) {
         guard dictionary[Wire.okKey] as? Bool == true, let text = dictionary[Wire.answerKey] as? String else { return nil }
         self.init(text: text, source: (dictionary[Wire.tierKey] as? String).flatMap(Source.init) ?? .none,
-                  milliseconds: dictionary[Wire.millisecondsKey] as? Int ?? 0, heard: dictionary[Wire.heardKey] as? String)
+                  milliseconds: dictionary[Wire.millisecondsKey] as? Int ?? 0, heard: dictionary[Wire.heardKey] as? String,
+                  speak: dictionary[Wire.speakKey] as? Bool ?? false)
     }
 }

@@ -16,11 +16,11 @@ private final class Asked {
 @MainActor
 struct WatchRequestsTests {
     private func requests(_ result: QuestionTranscription = .heard("What did I promise people today?"), asked: Asked? = nil,
-                          history: [HistoryItem] = []) -> WatchRequests {
+                          history: [HistoryItem] = [], speak: Bool = false) -> WatchRequests {
         let asked = asked ?? Asked()
         return WatchRequests(transcriber: StubTranscriber(result: result),
                       answer: { q, via in asked.calls.append((q, via)); return WatchAnswer(text: "An answer.", source: .muse, milliseconds: 5) },
-                      history: { history })
+                      history: { history }, speakVoiceAnswers: { speak })
     }
 
     private let audio = Data(repeating: 7, count: 2_000)
@@ -68,6 +68,16 @@ struct WatchRequestsTests {
         _ = await r.handle([Wire.typeKey: Wire.ask, Wire.questionKey: "Odd", Wire.viaKey: "telepathy"])
         #expect(asked.calls.map(\.0) == ["When is the plumber coming?", "By voice", "Odd"], "tidied")
         #expect(asked.calls.map(\.1) == [.watch, .watchVoice, .watch], "unknown ways of asking are treated as the plain watch")
+    }
+
+    @Test func aSpokenQuestionsAnswerIsMarkedForReadingAloudOnlyWhenThePersonWantsThat() async throws {
+        func speak(_ via: AskVia, switchOn: Bool) async throws -> Bool {
+            let reply = try #require(await requests(speak: switchOn).handle([Wire.typeKey: Wire.ask, Wire.questionKey: "Summarize my day", Wire.viaKey: via.rawValue]))
+            return try #require(WatchAnswer(dictionary: reply)).speak
+        }
+        #expect(try await speak(.watchVoice, switchOn: true))
+        #expect(try await !speak(.watchVoice, switchOn: false), "the phone's setting wins")
+        #expect(try await !speak(.watch, switchOn: true), "a tapped suggestion is not read aloud on its own")
     }
 
     @Test func aBlankQuestionIsRefusedWithoutAsking() async throws {

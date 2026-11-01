@@ -222,6 +222,22 @@ final class AskModel {
         }
     }
 
+    /// The answer on screen as plain text to read aloud, or nil while there isn't one yet.
+    var spokenAnswer: String? {
+        switch state {
+        case .idle, .searching, .sending: return nil
+        case .answered(let r):
+            switch r.note {
+            case nil: return r.answer?.headline ?? "I didn't find that in today's conversations."
+            case .cloudOff: return "Cloud is off, so I can't summarize that. Turn it on in the Privacy tab."
+            case .declined: return "Not sent. You chose not to send that to Muse."
+            case .nothingMatched: return "Nothing in today's conversations matches that."
+            }
+        case .cloudAnswered(let r): return r.answer.answer
+        case .cloudFailed(let f): return f.localAnswer?.headline ?? "Muse couldn't answer just now."
+        }
+    }
+
     func retry() async {
         let q: String
         switch state {
@@ -243,6 +259,8 @@ final class AskModel {
 @Observable
 final class ChunkPlayer {
     private(set) var playingID: String?
+    /// Called just before a moment starts playing, so a spoken answer can stop.
+    var willPlay: (() -> Void)?
     private var player: AVAudioPlayer?
     private let directory: URL
 
@@ -251,6 +269,7 @@ final class ChunkPlayer {
     func toggle(_ chunk: ChunkRecord) {
         if playingID == chunk.id { stop(); return }
         stop()
+        willPlay?()
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback)
             try AVAudioSession.sharedInstance().setActive(true)

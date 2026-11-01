@@ -8,6 +8,8 @@ struct WatchRequests {
     /// Answers a question (the phone also shows it and logs it).
     var answer: (String, AskVia) async -> WatchAnswer
     var history: () -> [HistoryItem]
+    /// Whether answers to spoken questions should be read aloud (the person's setting on this phone).
+    var speakVoiceAnswers: () -> Bool = { false }
 
     /// Nil when the message isn't one of these, so the caller can try something else.
     func handle(_ message: [String: Any]) async -> [String: Any]? {
@@ -17,7 +19,9 @@ struct WatchRequests {
                 return [Wire.okKey: false, Wire.reasonKey: "no-question"]
             }
             let via = (message[Wire.viaKey] as? String).flatMap(AskVia.init) ?? .watch
-            return await answer(question, via).dictionary
+            var reply = await answer(question, via)
+            if via.isVoice && speakVoiceAnswers() { reply.speak = true }
+            return reply.dictionary
 
         case Wire.transcribe:
             guard let audio = message[Wire.audioKey] as? Data, !audio.isEmpty else { return [Wire.okKey: false, Wire.reasonKey: "nothing-heard"] }

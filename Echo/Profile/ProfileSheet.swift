@@ -44,6 +44,15 @@ struct ProfileSheet: View {
                 .echoCard()
 
                 VStack(alignment: .leading, spacing: Spacing.md) {
+                    SectionHeader("Voice")
+                    ToggleRow(title: "Speak answers to voice questions", systemImage: "speaker.wave.2.fill",
+                              caption: "When you ask out loud, the answer is read back to you. Every answer also has a Read aloud button.",
+                              isOn: $profile.speakVoiceAnswers, tint: Palette.teal)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .echoCard()
+
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     SectionHeader("Where your data lives")
                     fact("lock.fill", Palette.teal, "On this phone", "Transcripts, audio and search never leave it. Audio is never sent anywhere.")
                     fact("cloud.fill", Palette.cloud, "Only when you ask a broad question",

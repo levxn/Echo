@@ -13,6 +13,7 @@ struct AskView: View {
 
     @FocusState private var focused: Bool
     @State private var sheet: HistoryRequest?
+    @Environment(Speaker.self) private var speaker
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let suggestions = [
@@ -211,6 +212,7 @@ struct AskView: View {
     private func submit(_ text: String, via: AskVia = .typed) {
         focused = false
         player.stop()
+        speaker.stop()
         Task { await ask.ask(text, via: via) }
     }
 
@@ -218,6 +220,7 @@ struct AskView: View {
     private func micTapped() {
         focused = false
         player.stop()
+        speaker.stop()
         Task { await voice.listen(ask: ask) }
     }
 }
