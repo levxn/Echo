@@ -68,19 +68,19 @@ struct RootView: View {
         TabView(selection: $tab) {
             Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) {
                 TodayView(model: model, digest: digest, player: player, state: today, profile: profile)
-                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.today) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.today) }
             }
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
                 MomentsView(model: model, player: player) { ledger.showArchitecture = true }
-                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.moments) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
-                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.ask) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
             }
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) {
                 LedgerView(ledger: ledger, model: model) { includeLedger in forgetDay(includeLedger: includeLedger) }
-                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.ledger) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.ledger) }
             }
         }
         .overlay(alignment: .bottom) {
