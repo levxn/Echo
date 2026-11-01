@@ -39,7 +39,6 @@ struct LedgerView: View {
             try? await Task.sleep(for: .milliseconds(500))
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
         }
-        .sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) }
         .onChange(of: ledger.entries, initial: true) { refreshExport() }
         .confirmationDialog("Forget the day?", isPresented: $confirmForget, titleVisibility: .visible) {
             Button("Forget the day", role: .destructive) { onForget(false) }

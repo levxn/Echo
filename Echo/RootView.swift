@@ -2,7 +2,10 @@ import os
 import SwiftUI
 
 enum RootTab: String {
-    case today, pipeline, ask, ledger
+    case today, moments, ask, ledger
+
+    /// Launch-argument values for `-tab`. The old name `pipeline` still opens Moments, so older scripts keep working.
+    static func from(argument: String) -> RootTab? { argument == "pipeline" ? .moments : RootTab(rawValue: argument) }
 }
 
 struct RootView: View {
@@ -29,7 +32,7 @@ struct RootView: View {
         _player = State(initialValue: ChunkPlayer(directory: model.store.chunksDirectory))
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
         let args = ProcessInfo.processInfo.arguments
-        let requested = args.firstIndex(of: "-tab").flatMap { $0 + 1 < args.count ? RootTab(rawValue: args[$0 + 1]) : nil }
+        let requested = args.firstIndex(of: "-tab").flatMap { $0 + 1 < args.count ? RootTab.from(argument: args[$0 + 1]) : nil }
         _tab = State(initialValue: requested ?? .today)
     }
 
@@ -43,7 +46,9 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest, player: player, state: today) }
-            Tab("Pipeline", systemImage: "waveform.path", value: RootTab.pipeline) { PipelineView(model: model) }
+            Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
+                MomentsView(model: model, player: player) { ledger.showArchitecture = true }
+            }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
             }
@@ -57,6 +62,8 @@ struct RootView: View {
             }
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: caption)
+        // "How Echo works" can be opened from Moments and from the Ledger, so the sheet lives here.
+        .background { Color.clear.sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) } }
         // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
         .sheet(item: Binding(get: { ledger.gate.pending }, set: { if $0 == nil { ledger.gate.cancel() } })) { review in
             ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })

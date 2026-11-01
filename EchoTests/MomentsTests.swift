@@ -90,6 +90,8 @@ struct MomentsTests {
         #expect(layout.working.count == 3)
         #expect(layout.working.filter(\.isWorking).count == 2, "received and checked moments have no text yet")
         #expect(layout.working.first { !$0.isWorking }?.text == "hello there")
+        #expect(layout.working.allSatisfy { $0.inFlight }, "none of them can be played or deleted yet")
+        #expect(layout.groups.flatMap(\.items).allSatisfy { !$0.inFlight })
         #expect(layout.ignored == 1 && layout.failed == 1)
         #expect(layout.groups.map(\.count).reduce(0, +) == chunks.count - 5, "none of those five is in a conversation")
     }
@@ -195,5 +197,14 @@ struct DeleteMomentTests {
         #expect(!outcome.hits.contains { $0.chunk.id == target.id }, "Ask can no longer find it")
         await model.load()
         #expect(model.record(id: target.id) == nil, "and it stays gone after a reload")
+    }
+}
+
+struct TabNamingTests {
+    @Test func theOldPipelineNameStillOpensMoments() {
+        #expect(RootTab.from(argument: "pipeline") == .moments, "older scripts and docs say pipeline")
+        #expect(RootTab.from(argument: "moments") == .moments)
+        #expect(RootTab.from(argument: "today") == .today && RootTab.from(argument: "ask") == .ask && RootTab.from(argument: "ledger") == .ledger)
+        #expect(RootTab.from(argument: "nonsense") == nil)
     }
 }

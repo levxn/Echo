@@ -86,11 +86,3 @@ struct CappedListTests {
         #expect(LedgerView.activityLimit == 5)
     }
 }
-
-struct PipelineFeedTests {
-    @Test func theFeedShowsTheTwelveNewestChunks() {
-        #expect(PipelineView.feedLimit == 12)
-        let newestFirst = Array((1...56).reversed())
-        #expect(Capped.visible(newestFirst, limit: PipelineView.feedLimit, showAll: false) == Array((45...56).reversed()))
-    }
-}

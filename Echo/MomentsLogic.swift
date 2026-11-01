@@ -79,6 +79,9 @@ struct MomentItem: Identifiable, Equatable {
     let id: String             // the moment's id
     let timeLabel: String
     let text: String?          // nil while it is still being understood
+    var duration: Double = 0   // seconds of speech, for the ribbon
+    /// Still moving through the phone: it can't be played or deleted yet.
+    var inFlight = false
     var isWorking: Bool { text == nil }
 }
 
@@ -101,12 +104,13 @@ struct MomentsLayout: Equatable {
     static func make(from chunks: [ChunkRecord]) -> MomentsLayout {
         let groups = EpisodeBuilder.build(from: chunks).map { episode in
             MomentGroup(id: Int(episode.start), title: episode.title, startLabel: episode.startLabel,
-                        items: episode.chunks.map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.transcript) })
+                        items: episode.chunks.map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.transcript, duration: $0.duration) })
         }
         let working = chunks
             .filter { [.received, .vad, .asr].contains($0.status) }
             .sorted { $0.wallStart < $1.wallStart }
-            .map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.status == .asr ? $0.transcript : nil) }
+            .map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.status == .asr ? $0.transcript : nil,
+                              duration: $0.duration, inFlight: true) }
         return MomentsLayout(groups: groups, working: working,
                              ignored: chunks.filter { $0.status == .dropped }.count,
                              failed: chunks.filter { $0.status == .failed }.count)

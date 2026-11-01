@@ -116,7 +116,7 @@ struct DemoDriver {
         setCaption("Echo: a private memory for your day")
         await pause(3.5)
 
-        setTab(.pipeline)
+        setTab(.moments)
         setCaption("The watch keeps only speech and streams it to the phone")
         await pause(1)
         mark("sync-begin")
