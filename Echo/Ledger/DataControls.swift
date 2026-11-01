@@ -72,8 +72,9 @@ enum DayWiper {
         player.stop()
         ask.clear()
         digest.reset()
-        await resetDay()   // transcripts, search index, audio files, the saved digest, and the replay session
+        await resetDay()   // transcripts, search index, audio files, the saved digest, the ask history, and the replay session
+        await ask.history?.clear()
         defaults.removeObject(forKey: promiseDoneKey)
-        if includeLedger { await ledger.clear() }
+        if includeLedger { await ledger.clear() } else { await ledger.redactResponses() }
     }
 }

@@ -59,6 +59,8 @@ final class AskModel {
     var scrollTarget: String?
     private(set) var state: State = .idle
     private(set) var recent: [String] = []
+    /// Where finished questions and their answers are kept. Set by RootView; tests that don't care leave it nil.
+    var history: AskHistoryModel?
 
     private let retriever: Retriever
     private let caller: CloudCaller
@@ -79,10 +81,24 @@ final class AskModel {
     /// True when the client is the offline stand-in (no API key).
     var isStub: Bool { caller.client.isStub }
 
-    /// `quiet` skips the phone's haptics, for questions asked from the watch.
-    func ask(_ text: String, quiet: Bool = false) async {
+    /// Saves a finished question to the history, if there is one.
+    private func remember(_ question: String, via: AskVia, source: WatchAnswer.Source, short: String, detail: AskDetail, since started: Date) async {
+        guard let history else { return }
+        await history.record(AskRecord(question: question, shortAnswer: WatchAnswer.brief(short), source: source, via: via, detail: detail,
+                                       milliseconds: Int(Date().timeIntervalSince(started) * 1000)))
+    }
+
+    /// A history detail for an answer that is not an answer: why nothing came back, plus the closest local moment if any.
+    private func noteDetail(_ note: String, local: Answer?) -> AskDetail {
+        AskDetail(kind: .note, headline: local?.headline ?? "", sourceChunkIDs: local?.sources.map { $0.chunk.id } ?? [],
+                  terms: local?.highlightTerms ?? [], note: note)
+    }
+
+    /// `via` is how it was asked (kept in the history). `quiet` skips the phone's haptics, for questions from the watch.
+    func ask(_ text: String, via: AskVia = .typed, quiet: Bool = false) async {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+        let started = Date()
         ledger.gate.cancel()   // a review for an older question is moot
         generation += 1
         let mine = generation
@@ -101,6 +117,9 @@ final class AskModel {
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: answer))
             if !quiet { Haptics.soft() }
+            await remember(question, via: via, source: .local, short: answer?.headline ?? "I didn't find that in today's conversations.",
+                           detail: AskDetail(kind: .local, headline: answer?.headline ?? "", sourceChunkIDs: answer?.sources.map { $0.chunk.id } ?? [],
+                                             terms: answer?.highlightTerms ?? []), since: started)
             Log.pipe.info("ask \"\(question)\" -> local in \(outcome.elapsedMs, format: .fixed(precision: 1)) ms; headline: \(answer?.headline ?? "-")")
             return
         }
@@ -114,6 +133,8 @@ final class AskModel {
             ledger.record(LedgerEntry(query: question, tier: .cloud, reason: "Cloud is off, so nothing was sent."))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .cloudOff))
+            await remember(question, via: via, source: .none, short: "Cloud is off, so Muse couldn't answer.",
+                           detail: noteDetail("Cloud is off, so nothing was sent.", local: localAnswer), since: started)
             Log.pipe.info("ask \"\(question)\" -> cloud needed but switched off")
             return
         }
@@ -121,6 +142,8 @@ final class AskModel {
             ledger.record(LedgerEntry(query: question, tier: .cloud, reason: "Nothing matched closely enough, so nothing was sent."))
             guard mine == generation else { return }
             state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .nothingMatched))
+            await remember(question, via: via, source: .none, short: "Nothing in today's conversations matches that.",
+                           detail: noteDetail("Nothing matched closely enough, so nothing was sent.", local: localAnswer), since: started)
             Log.pipe.info("ask \"\(question)\" -> nothing to send")
             return
         }
@@ -133,6 +156,8 @@ final class AskModel {
                 entry.snippets = plan.snippets
                 ledger.record(entry)
                 state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .declined))
+                await remember(question, via: via, source: .none, short: "You chose not to send this to Muse.",
+                               detail: noteDetail("You chose not to send this.", local: localAnswer), since: started)
                 Log.pipe.info("ask \"\(question)\" -> declined at review, nothing sent")
                 return
             }
@@ -149,19 +174,29 @@ final class AskModel {
             let answer = CloudAnswer.parse(response.content).restored(plan.masking)
             state = .cloudAnswered(CloudResult(query: question, outcome: outcome, decision: decision, plan: plan, answer: answer, response: response))
             if !quiet { Haptics.success() }
+            let items = answer.items.map { item in
+                AskDetail.Item(title: item.title, detail: item.detail, when: item.when, sourceTime: item.sourceTime,
+                               chunkID: CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail + " " + item.title,
+                                                                 snippets: plan.snippets, chunks: chunks)?.id)
+            }
+            await remember(question, via: via, source: response.isStub ? .stub : .muse, short: answer.answer,
+                           detail: AskDetail(kind: .cloud, headline: answer.answer, items: items), since: started)
             Log.pipe.info("ask \"\(question)\" <- \(response.model) in \(response.latencyMs, format: .fixed(precision: 0)) ms, tokens \(response.promptTokens)/\(response.completionTokens), \(answer.items.count) items")
         case .failure(let error):
             state = .cloudFailed(CloudFailure(query: question, outcome: outcome, decision: decision, plan: plan, error: error, localAnswer: localAnswer))
             if !quiet { Haptics.warning() }
+            await remember(question, via: via, source: localAnswer == nil ? .none : .local,
+                           short: localAnswer?.headline ?? "Muse couldn't answer just now.",
+                           detail: noteDetail("Muse couldn't answer: \(error.localizedDescription)", local: localAnswer), since: started)
             Log.pipe.error("ask \"\(question)\" failed: \(error.localizedDescription)")
         }
     }
 
     /// Answers a question from the watch in a sentence or two. Runs the normal Ask flow (so the phone shows the
     /// question and its answer, and the ledger records it), then boils the result down.
-    func quickAnswer(_ text: String) async -> WatchAnswer {
+    func quickAnswer(_ text: String, via: AskVia = .watch) async -> WatchAnswer {
         let started = Date()
-        await ask(text, quiet: true)
+        await ask(text, via: via, quiet: true)
         let ms = Int(Date().timeIntervalSince(started) * 1000)
         return Self.watchAnswer(from: state, question: text.trimmingCharacters(in: .whitespacesAndNewlines), milliseconds: ms)
     }

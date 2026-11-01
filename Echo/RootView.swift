@@ -23,6 +23,7 @@ struct RootView: View {
     let link: PhoneLink
 
     @State private var ask: AskModel
+    @State private var history: AskHistoryModel
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
@@ -39,7 +40,11 @@ struct RootView: View {
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
         let client = MuseClientFactory.make()
-        _ask = State(initialValue: AskModel(store: model.store, ledger: ledger, client: client))
+        let askModel = AskModel(store: model.store, ledger: ledger, client: client)
+        let history = AskHistoryModel(store: model.store)
+        askModel.history = history
+        _history = State(initialValue: history)
+        _ask = State(initialValue: askModel)
         _digest = State(initialValue: DigestModel(store: model.store, ledger: ledger, client: client))
         _player = State(initialValue: ChunkPlayer(directory: model.store.chunksDirectory))
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
@@ -102,6 +107,8 @@ struct RootView: View {
         .sheet(item: Binding(get: { ledger.gate.pending }, set: { if $0 == nil { ledger.gate.cancel() } })) { review in
             ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })
         }
+        // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
+        .onChange(of: model.session) { Task { await history.reload() } }
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
@@ -122,6 +129,7 @@ struct RootView: View {
                 Log.link.notice("watch ask: \(answer.source.rawValue) in \(answer.milliseconds) ms")
                 return answer
             }
+            await history.reload()
             await ledger.reload()
             await digest.load()
             let args = ProcessInfo.processInfo.arguments

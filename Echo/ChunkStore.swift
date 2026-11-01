@@ -41,6 +41,11 @@ actor ChunkStore {
           prompt_tokens INTEGER, completion_tokens INTEGER, latency_ms REAL, status TEXT, error TEXT
         )
         """)
+        exec(db, """
+        CREATE TABLE IF NOT EXISTS ask_history (
+          id TEXT PRIMARY KEY, ts REAL, question TEXT, short_answer TEXT, source TEXT, via TEXT, detail_json TEXT, ms INTEGER
+        )
+        """)
         if !columnNames(db, table: "ledger").contains("masked_names") { exec(db, "ALTER TABLE ledger ADD COLUMN masked_names INTEGER DEFAULT 0") }
         exec(db, "CREATE TABLE IF NOT EXISTS day_digest (id INTEGER PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
     }
@@ -210,6 +215,7 @@ actor ChunkStore {
         Self.exec(db, "DELETE FROM chunk")
         Self.exec(db, "DELETE FROM chunk_fts")
         Self.exec(db, "DELETE FROM day_digest")   // the digest summarizes the chunks; the ledger is an audit trail and stays
+        Self.exec(db, "DELETE FROM ask_history")  // the questions and answers are about this day too
         let files = (try? FileManager.default.contentsOfDirectory(at: chunksDirectory, includingPropertiesForKeys: nil)) ?? []
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
@@ -308,6 +314,60 @@ actor ChunkStore {
     }
 
     func clearLedger() { Self.exec(db, "DELETE FROM ledger") }
+
+    /// Blanks what Muse replied on every ledger row. The ledger keeps what was asked and exactly what was sent, but not
+    /// the answers about the user's day.
+    func redactLedgerResponses() { Self.exec(db, "UPDATE ledger SET response = ''") }
+
+    // MARK: Ask history
+
+    func upsertHistory(_ r: AskRecord) {
+        var stmt: OpaquePointer?
+        let sql = "INSERT OR REPLACE INTO ask_history (id, ts, question, short_answer, source, via, detail_json, ms) VALUES (?,?,?,?,?,?,?,?)"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        let detail = (try? String(data: JSONEncoder().encode(r.detail), encoding: .utf8)) ?? "{}"
+        sqlite3_bind_text(stmt, 1, r.id, -1, t)
+        sqlite3_bind_double(stmt, 2, r.timestamp.timeIntervalSince1970)
+        sqlite3_bind_text(stmt, 3, r.question, -1, t)
+        sqlite3_bind_text(stmt, 4, r.shortAnswer, -1, t)
+        sqlite3_bind_text(stmt, 5, r.source.rawValue, -1, t)
+        sqlite3_bind_text(stmt, 6, r.via.rawValue, -1, t)
+        sqlite3_bind_text(stmt, 7, detail, -1, t)
+        sqlite3_bind_int(stmt, 8, Int32(r.milliseconds))
+        if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("history upsert failed") }
+        // Keep only the newest `AskHistoryModel.capacity`.
+        Self.exec(db, "DELETE FROM ask_history WHERE id NOT IN (SELECT id FROM ask_history ORDER BY ts DESC LIMIT \(AskHistoryModel.capacity))")
+    }
+
+    /// Newest first.
+    func history(limit: Int = 200) -> [AskRecord] {
+        var stmt: OpaquePointer?
+        let sql = "SELECT id, ts, question, short_answer, source, via, detail_json, ms FROM ask_history ORDER BY ts DESC LIMIT ?"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(limit))
+        func text(_ i: Int32) -> String { sqlite3_column_text(stmt, i).map { String(cString: $0) } ?? "" }
+        var out: [AskRecord] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let detail = (try? JSONDecoder().decode(AskDetail.self, from: Data(text(6).utf8))) ?? AskDetail(kind: .note, headline: "")
+            out.append(AskRecord(id: text(0), timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 1)), question: text(2),
+                                 shortAnswer: text(3), source: WatchAnswer.Source(rawValue: text(4)) ?? .none,
+                                 via: AskVia(rawValue: text(5)) ?? .typed, detail: detail, milliseconds: Int(sqlite3_column_int(stmt, 7))))
+        }
+        return out
+    }
+
+    func deleteHistory(id: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM ask_history WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
+
+    func clearHistory() { Self.exec(db, "DELETE FROM ask_history") }
 
     // MARK: Day digest
 

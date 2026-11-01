@@ -77,4 +77,10 @@ final class LedgerModel {
         await store.clearLedger()
         entries = []
     }
+
+    /// Keeps the record of what was asked and sent, but removes Muse's replies about the day.
+    func redactResponses() async {
+        await store.redactLedgerResponses()
+        for i in entries.indices { entries[i].response = "" }
+    }
 }
