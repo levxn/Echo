@@ -78,6 +78,15 @@ private struct DigestCard: View {
                       systemImage: ready.isStub ? "testtube.2" : "sparkles")
                     .font(.echoLabel)
                 Spacer()
+                ShareLink(item: ShareText.digest(summary: ready.digest.daySummary,
+                                                 actions: ready.digest.actionItems.map { ($0.what, $0.toWhom, $0.due, $0.sourceTime) },
+                                                 people: ready.digest.people)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.footnote.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(EchoPressStyle())
+                .accessibilityLabel("Share the summary")
                 Button(action: onRerun) {
                     Image(systemName: "arrow.clockwise")
                         .font(.footnote.weight(.semibold))

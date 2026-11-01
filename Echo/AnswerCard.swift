@@ -185,7 +185,9 @@ struct AnswerCard: View {
             .font(.echoAnswer)
             .fixedSize(horizontal: false, vertical: true)
 
-        ReadAloudButton(text: answer.headline)
+        AnswerActions(speak: answer.headline,
+                      share: ShareText.answer(question: result.query, answer: answer.headline,
+                                              lines: answer.sources.prefix(3).map { "• At \($0.chunk.wallLabel): “\($0.chunk.transcript ?? "")”" }))
 
         if !result.outcome.unknownTerms.isEmpty {
             Label("Never heard “\(result.outcome.unknownTerms.joined(separator: ", "))” today, so matched on the rest.",

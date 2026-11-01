@@ -30,7 +30,9 @@ struct CloudAnswerCard: View {
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ReadAloudButton(text: result.answer.answer)
+            AnswerActions(speak: result.answer.answer,
+                          share: ShareText.answer(question: result.query, answer: result.answer.answer,
+                                                  lines: result.answer.items.map { ShareText.item(title: $0.title, detail: $0.detail, when: $0.when, time: $0.sourceTime) }))
 
             // The privacy proof comes first, right under the answer, so it is on screen without scrolling.
             SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")

@@ -305,7 +305,11 @@ struct HistoryDetail: View {
             }
 
             if record.detail.kind != .note {
-                ReadAloudButton(text: record.detail.headline.isEmpty ? record.shortAnswer : record.detail.headline, id: record.id)
+                let spoken = record.detail.headline.isEmpty ? record.shortAnswer : record.detail.headline
+                AnswerActions(speak: spoken,
+                              share: ShareText.answer(question: record.question, answer: spoken,
+                                                      lines: record.detail.items.map { ShareText.item(title: $0.title, detail: $0.detail, when: $0.when, time: $0.sourceTime) }),
+                              id: record.id)
             }
 
             if !record.detail.items.isEmpty {
