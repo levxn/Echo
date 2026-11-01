@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-152%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-184%20passing-34D399)
 ![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
@@ -56,11 +56,18 @@ The watch is mostly a silent sensor, so its first screen is a proof of life: a r
 
 ### iPhone
 
+A slim bar sits at the top of every tab: your profile on the left, where you are in the middle, and three indicators on the right (is the watch there, is the cloud allowed, and a lock that says everything stays on this phone). The profile is just a name and a colour, stored only on the phone: there is no account and no login.
+
 <table align="center">
   <tr>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-empty.jpg" width="250" alt="Today, before anything is captured"><br><sub><b>First launch</b><br>A clean slate</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-pipeline-live.jpg" width="250" alt="Pipeline, chunks arriving"><br><sub><b>Pipeline, live</b><br>Each chunk is checked, transcribed and stored</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-pipeline.jpg" width="250" alt="Pipeline, settled"><br><sub><b>Pipeline, settled</b><br>Speech kept, noise dropped</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-live.jpg" width="250" alt="Moments, while the watch is listening"><br><sub><b>Moments, live</b><br>Listening: the ribbon grows and new moments appear</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments.jpg" width="250" alt="Moments, caught up"><br><sub><b>Moments, caught up</b><br>45 moments from 4 conversations, all on this phone</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-open.jpg" width="250" alt="Moments, a conversation opened"><br><sub><b>Moments, a conversation</b><br>Play any moment, or delete it</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-behind.jpg" width="250" alt="Behind the scenes"><br><sub><b>Behind the scenes</b><br>The technical story, in plain words</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-profile.jpg" width="250" alt="Profile"><br><sub><b>Profile</b><br>A name and a colour, kept on this phone only</sub></td>
   </tr>
   <tr>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-today.jpg" width="250" alt="Today, the day timeline"><br><sub><b>Today · Day</b><br>The funnel, then the day as conversations</sub></td>
@@ -87,7 +94,7 @@ The watch is mostly a silent sensor, so its first screen is a proof of life: a r
 ## What it does
 
 1. **Watch.** Listens, keeps only speech (a lenient voice detector with a 2-second pre-roll so the first word is never clipped), compresses it and streams it to the phone.
-2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity).
+2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity). The **Moments** tab shows what it heard in plain language (is it listening, has it caught up, the moments grouped by conversation); you can play any moment or delete it.
 3. **Ask your day.** A rules-based router decides where each question is answered:
    - **Lookups** ("When is the plumber coming?") are answered on the phone in about 30 ms, with the matching words highlighted and the original audio one tap away.
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
@@ -138,7 +145,7 @@ flowchart LR
 | Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 152 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate and the watch quick-ask; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 184 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate and the watch quick-ask; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
 
 ## The privacy model
 
@@ -170,7 +177,7 @@ xcrun simctl pair <WATCH_UDID> <PHONE_UDID>
 Tools/run_sims.sh --autostart      # the watch starts replaying the day immediately
 ```
 
-The first launch asks for speech-recognition permission on the phone; tap Allow once. Then open **Today**, **Pipeline**, **Ask** and **Ledger**.
+The first launch asks for speech-recognition permission on the phone; tap Allow once. Then open **Today**, **Moments**, **Ask** and **Ledger**.
 
 | Script | What it does |
 |---|---|
@@ -192,7 +199,8 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | Path | What's there |
 |---|---|
 | `Echo Watch App/` | Watch app: replay engine, uploader, status screen, the demo audio |
-| `Echo/` | Phone app: receiver, pipeline, screens |
+| `Echo/` | Phone app: receiver, processing pipeline, screens |
+| `Echo/Moments/` | The Moments tab: status banner, ribbon, grouped moments, Behind the scenes |
 | `Echo/Search/` | Normalizer, embeddings, hybrid retriever, router, answer extraction, commitments, citations |
 | `Echo/Components/` | The shared UI parts: section headers, chips with wrapping layout, buttons, rows, segmented control |
 | `Echo/Cloud/` | Muse client, planner and prompts, labeled stub, key handling |
