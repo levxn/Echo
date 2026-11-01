@@ -186,6 +186,7 @@ private struct SummaryCard: View {
 private struct EntryRow: View {
     let entry: LedgerEntry
     @State private var expanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var badge: (text: String, symbol: String, tint: Color) {
         if entry.tier == .local { return ("On this phone", "iphone", Palette.local) }
@@ -200,7 +201,7 @@ private struct EntryRow: View {
         let badge = badge
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Button {
-                withAnimation(.smooth(duration: 0.25)) { expanded.toggle() }
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { expanded.toggle() }
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -212,7 +213,7 @@ private struct EntryRow: View {
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(Palette.textSecondary)
                             .rotationEffect(.degrees(expanded ? 90 : 0))
                     }

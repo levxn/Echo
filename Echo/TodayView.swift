@@ -146,6 +146,7 @@ struct ScreenHeader: View {
     let status: String
     let reachable: Bool
     var onReset: (() -> Void)?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(alignment: .center) {
@@ -162,13 +163,13 @@ struct ScreenHeader: View {
                         .foregroundStyle(Palette.textSecondary)
                         .contentTransition(.opacity)
                 }
-                .animation(.easeOut(duration: 0.2), value: status)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: status)
             }
             Spacer()
             if let onReset {
                 Button(action: onReset) {
                     Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(Palette.textPrimary)
                         .frame(width: 44, height: 44)
                 }

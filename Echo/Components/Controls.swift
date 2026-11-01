@@ -60,7 +60,7 @@ struct PlayButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: isPlaying ? "stop.fill" : "play.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 44, height: 44)
                 .background(Palette.fillStrong, in: Circle())

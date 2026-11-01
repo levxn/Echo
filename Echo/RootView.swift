@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var today = TodayState()
     @State private var tab: RootTab
     @State private var caption: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(model: PipelineModel, link: PhoneLink) {
         self.model = model
@@ -51,11 +52,11 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             if let caption {
                 DemoCaption(text: caption)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.echoRise(reduceMotion: reduceMotion))
                     .id(caption)
             }
         }
-        .animation(.smooth(duration: 0.35), value: caption)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: caption)
         // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
         .sheet(item: Binding(get: { ledger.gate.pending }, set: { if $0 == nil { ledger.gate.cancel() } })) { review in
             ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })

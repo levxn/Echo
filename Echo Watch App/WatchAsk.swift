@@ -17,6 +17,8 @@ final class WatchAsk {
     /// 0 = capture, 1 = Ask. Lives here so the phone (demo driver) can bring the Ask page forward.
     var page = 0
     private(set) var state: State = .idle
+    /// True once an answer has taken more than a few seconds (the phone may be waiting for the user to approve).
+    private(set) var waitingLong = false
     private let link: WatchLink
     private var generation = 0
 
@@ -26,6 +28,12 @@ final class WatchAsk {
         generation += 1
         let mine = generation
         state = .asking(preset)
+        waitingLong = false
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard let self, mine == self.generation, case .asking = self.state else { return }
+            self.waitingLong = true
+        }
         let answer = await link.ask(preset.question)
         guard mine == generation else { return }
         if let answer {
@@ -53,6 +61,7 @@ final class WatchAsk {
 struct AskWatchView: View {
     let ask: WatchAsk
     let link: WatchLink
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -64,7 +73,7 @@ struct AskWatchView: View {
             case .failed(let preset): failed(preset)
             }
         }
-        .animation(.smooth(duration: 0.25), value: ask.state)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: ask.state)
     }
 
     // MARK: Idle
@@ -72,19 +81,19 @@ struct AskWatchView: View {
     private var presets: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("Ask your day")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
                         .foregroundStyle(Palette.textPrimary)
                     Text(link.reachable ? "Answered by your phone" : "No phone nearby")
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(link.reachable ? Palette.textSecondary : Palette.rose)
                 }
                 ForEach(QuickAsk.presets) { preset in
                     Button { Task { await ask.ask(preset) } } label: {
                         HStack(spacing: 6) {
                             Image(systemName: preset.symbol)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.footnote.weight(.semibold))
                                 .foregroundStyle(preset.usesCloud ? Palette.cloud : Palette.local)
                                 .frame(width: 18)
                             Text(preset.label)
@@ -92,11 +101,11 @@ struct AskWatchView: View {
                                 .foregroundStyle(Palette.textPrimary)
                             Spacer(minLength: 0)
                             Image(systemName: preset.usesCloud ? "cloud.fill" : "lock.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(Palette.textTertiary)
+                                .font(.caption2)
+                                .foregroundStyle(Palette.textSecondary)
                         }
                         .padding(.horizontal, Spacing.md)
-                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(EchoPressStyle())
                     .glassEffect(.regular.interactive(), in: .capsule)
@@ -118,8 +127,10 @@ struct AskWatchView: View {
                 .font(.system(.footnote, design: .rounded, weight: .semibold))
                 .foregroundStyle(Palette.textPrimary)
                 .multilineTextAlignment(.center)
-            Text(preset.usesCloud ? "Asking Muse through your phone…" : "Asking your phone…")
-                .font(.system(size: 10))
+            Text(ask.waitingLong ? "Waiting for your phone. It may need you to approve the request."
+                                 : (preset.usesCloud ? "Asking Muse through your phone…" : "Asking your phone…"))
+                .font(.caption2)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(Palette.textSecondary)
         }
         .padding(.horizontal, Spacing.md)
@@ -135,16 +146,10 @@ struct AskWatchView: View {
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(String(format: "%.1f s · %@", Double(answer.milliseconds) / 1000, preset.question))
-                    .font(.system(size: 10))
+                    .font(.caption2)
                     .foregroundStyle(Palette.textSecondary)
                     .lineLimit(2)
-                Button { ask.reset() } label: {
-                    Label("Ask another", systemImage: "arrow.uturn.backward")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(EchoPressStyle())
-                .glassEffect(.regular.interactive(), in: .capsule)
+                WatchButton(title: "Ask another", systemImage: "arrow.uturn.backward") { ask.reset() }
             }
             .padding(.horizontal, Spacing.sm)
         }
@@ -154,20 +159,17 @@ struct AskWatchView: View {
     private func failed(_ preset: QuickAsk) -> some View {
         VStack(spacing: Spacing.sm) {
             Image(systemName: "iphone.slash")
-                .font(.system(size: 22))
+                .font(.title3)
                 .foregroundStyle(Palette.amber)
             Text("No answer")
                 .font(.system(.footnote, design: .rounded, weight: .semibold))
                 .foregroundStyle(Palette.textPrimary)
             Text("Is your phone nearby, with Echo open?")
-                .font(.system(size: 11))
+                .font(.caption2)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Palette.textSecondary)
-            HStack(spacing: Spacing.sm) {
-                Button("Retry") { Task { await ask.ask(preset) } }
-                Button("Back") { ask.reset() }
-            }
-            .font(.system(.footnote, design: .rounded, weight: .semibold))
+            WatchButton(title: "Retry", systemImage: "arrow.clockwise") { Task { await ask.ask(preset) } }
+            WatchButton(title: "Back", systemImage: nil, quiet: true) { ask.reset() }
         }
         .padding(.horizontal, Spacing.md)
     }
@@ -180,10 +182,39 @@ struct AskWatchView: View {
         case .none: ("No answer", "info.circle", Palette.amber)
         }
         return Label(text, systemImage: symbol)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.system(.caption2, design: .rounded, weight: .semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(tint.opacity(0.18), in: Capsule())
+    }
+}
+
+/// A 44pt glass capsule button for the watch.
+private struct WatchButton: View {
+    let title: String
+    let systemImage: String?
+    var quiet = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if let systemImage { Label(title, systemImage: systemImage) } else { Text(title) }
+            }
+            .font(.system(.footnote, design: .rounded, weight: .semibold))
+            .foregroundStyle(quiet ? Palette.textSecondary : Palette.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(EchoPressStyle())
+        .modifier(WatchGlass(quiet: quiet))
+    }
+
+    private struct WatchGlass: ViewModifier {
+        let quiet: Bool
+        func body(content: Content) -> some View {
+            if quiet { content } else { content.glassEffect(.regular.interactive(), in: .capsule) }
+        }
     }
 }

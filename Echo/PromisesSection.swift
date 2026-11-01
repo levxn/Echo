@@ -10,6 +10,7 @@ struct PromisesSection: View {
     @AppStorage("echo.promiseDone") private var doneRaw = ""
     @State private var showAll = false
     @State private var expanded: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let collapsedCount = 5
     private var done: Set<String> { Set(doneRaw.split(separator: "\n").map(String.init)) }
@@ -29,7 +30,7 @@ struct PromisesSection: View {
                     PromiseRow(promise: promise, isDone: done.contains(promise.id), isExpanded: expanded == promise.id,
                                playing: player.playingID == promise.chunkID,
                                onToggleDone: { toggleDone(promise.id) },
-                               onToggleExpand: { withAnimation(.smooth(duration: 0.25)) { expanded = expanded == promise.id ? nil : promise.id } },
+                               onToggleExpand: { withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { expanded = expanded == promise.id ? nil : promise.id } },
                                onPlay: { if let chunk = model.record(id: promise.chunkID) { player.toggle(chunk) } })
                 }
             }

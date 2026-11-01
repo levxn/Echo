@@ -73,7 +73,7 @@ struct ArchitectureView: View {
             Spacer()
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.textPrimary)
                     .frame(width: 44, height: 44)
             }
@@ -94,7 +94,7 @@ struct ArchitectureView: View {
                 "Tier 2 is a live call to Muse Spark, or a labeled stub if no key is set.",
             ], id: \.self) { line in
                 HStack(alignment: .top, spacing: Spacing.sm) {
-                    Image(systemName: "circle.fill").font(.system(size: 5)).foregroundStyle(Palette.textTertiary).padding(.top, 6)
+                    Circle().fill(Palette.textTertiary).frame(width: 5, height: 5).padding(.top, 7).accessibilityHidden(true)
                     Text(line).font(.footnote).foregroundStyle(Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
                 }
             }

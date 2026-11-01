@@ -4,6 +4,12 @@ import SwiftUI
 struct PipelineView: View {
     let model: PipelineModel
 
+    @State private var showAll = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The feed shows the newest chunks until "Show all" is tapped.
+    static let feedLimit = 12
+
     var body: some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
@@ -22,20 +28,27 @@ struct PipelineView: View {
     }
 
     private var feed: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader("Live feed")
-            if model.chunks.isEmpty {
+        let newestFirst = Array(model.chunks.reversed())
+        return VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title: "Live feed") {
+                if model.isSettled && model.storedCount > 0 {
+                    Text("\(model.storedCount) stored · \(model.droppedCount) dropped")
+                        .font(.footnote).monospacedDigit().foregroundStyle(Palette.textSecondary)
+                }
+            }
+            if newestFirst.isEmpty {
                 EmptyState(icon: "applewatch.radiowaves.left.and.right", title: "Nothing captured yet",
                            message: "Start the day on your watch and conversations appear here as they are checked, transcribed and stored on this phone.")
             } else {
                 LazyVStack(spacing: Spacing.sm) {
-                    ForEach(model.chunks.reversed()) { chunk in
+                    ForEach(Capped.visible(newestFirst, limit: Self.feedLimit, showAll: showAll)) { chunk in
                         ChunkRow(chunk: chunk)
-                            .transition(.asymmetric(insertion: .move(edge: .top).combined(with: .opacity),
-                                                    removal: .opacity))
+                            .transition(reduceMotion ? .opacity
+                                        : .asymmetric(insertion: .move(edge: .top).combined(with: .opacity), removal: .opacity))
                     }
                 }
-                .animation(.spring(duration: 0.4, bounce: 0.15), value: model.chunks.count)
+                .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: model.chunks.count)
+                ShowMoreButton(total: newestFirst.count, limit: Self.feedLimit, isExpanded: $showAll)
             }
         }
     }
