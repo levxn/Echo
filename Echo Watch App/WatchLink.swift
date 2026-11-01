@@ -131,12 +131,32 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     /// Asks the phone a question and waits for its short answer. Gives up (nil) if the phone isn't reachable, the
     /// send fails, or nothing comes back within `timeout` (a live Muse answer takes about 7 s).
-    nonisolated func ask(_ question: String, timeout: TimeInterval = 40) async -> WatchAnswer? {
+    nonisolated func ask(_ question: String, via: AskVia = .watch, timeout: TimeInterval = 40) async -> WatchAnswer? {
+        let reply = await request([Wire.typeKey: Wire.ask, Wire.questionKey: question, Wire.viaKey: via.rawValue], timeout: timeout)
+        return reply.flatMap { WatchAnswer(dictionary: $0) }
+    }
+
+    /// Sends a recorded question to the phone to be understood (on the phone, on-device). The audio is never kept.
+    nonisolated func transcribe(_ clip: QuestionClip, timeout: TimeInterval = 25) async -> VoiceReply {
+        VoiceReply(dictionary: await request([Wire.typeKey: Wire.transcribe, Wire.audioKey: clip.audio], timeout: timeout))
+    }
+
+    /// The phone's recent questions and answers (nil if it can't be reached).
+    nonisolated func history(timeout: TimeInterval = 10) async -> [HistoryItem]? {
+        guard let reply = await request([Wire.typeKey: Wire.history], timeout: timeout), reply[Wire.okKey] as? Bool == true,
+              let items = reply[Wire.itemsKey] as? [[String: Any]] else { return nil }
+        return items.compactMap { HistoryItem(dictionary: $0) }
+    }
+
+    /// One request with a reply, racing the reply, an error and a timeout. Nil if the phone isn't reachable or doesn't answer.
+    private nonisolated func request(_ payload: [String: Any], timeout: TimeInterval) async -> [String: Any]? {
         guard WCSession.default.isReachable else { return nil }
-        return await withCheckedContinuation { (continuation: CheckedContinuation<WatchAnswer?, Never>) in
+        nonisolated(unsafe) let payload = payload
+        return await withCheckedContinuation { (continuation: CheckedContinuation<[String: Any]?, Never>) in
             let once = Once()
-            WCSession.default.sendMessage([Wire.typeKey: Wire.ask, Wire.questionKey: question], replyHandler: { reply in
-                if once.first() { continuation.resume(returning: WatchAnswer(dictionary: reply)) }
+            WCSession.default.sendMessage(payload, replyHandler: { reply in
+                nonisolated(unsafe) let reply = reply
+                if once.first() { continuation.resume(returning: reply) }
             }, errorHandler: { _ in
                 if once.first() { continuation.resume(returning: nil) }
             })

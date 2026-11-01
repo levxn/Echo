@@ -122,13 +122,16 @@ struct RootView: View {
                 _ = TextNormalizer.nameTokens(in: "Warm Up")
             }
             // Questions asked on the watch: answered here, shown here too, and logged like any other.
-            link.onAsk = { question in
-                await warm.value
-                tab = .ask
-                let answer = await ask.quickAnswer(question)
-                Log.link.notice("watch ask: \(answer.source.rawValue) in \(answer.milliseconds) ms")
-                return answer
-            }
+            link.requests = WatchRequests(
+                transcriber: QuestionTranscriber(),
+                answer: { question, via in
+                    await warm.value
+                    tab = .ask
+                    let answer = await ask.quickAnswer(question, via: via)
+                    Log.link.notice("watch ask: \(answer.source.rawValue) in \(answer.milliseconds) ms (\(via.rawValue))")
+                    return answer
+                },
+                history: { history.recentForWatch() })
             await history.reload()
             await ledger.reload()
             await digest.load()

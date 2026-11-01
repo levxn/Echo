@@ -12,8 +12,8 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// Called after a chunk is stored as `.received`.
     var onChunkReceived: ((ChunkRecord) -> Void)?
 
-    /// Answers a question the watch asked (quick-ask).
-    var onAsk: ((String) async -> WatchAnswer)?
+    /// Handles the watch's requests: questions, recorded questions to understand, and the recent history.
+    var requests: WatchRequests?
 
     init(model: PipelineModel) {
         self.model = model
@@ -44,10 +44,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     private func handle(message: [String: Any]) async -> [String: Any] {
         switch message[Wire.typeKey] as? String {
         case Wire.session: return await handle(session: message)
-        case Wire.ask:
-            guard let question = message[Wire.questionKey] as? String, let onAsk else { return [Wire.okKey: false] }
-            return await onAsk(question).dictionary
-        default: return [Wire.okKey: false]
+        default: return await requests?.handle(message) ?? [Wire.okKey: false]
         }
     }
 
