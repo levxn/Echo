@@ -24,7 +24,6 @@ struct MomentsView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    ScreenTitle(title: "Moments", subtitle: "What your watch heard today. Tap one to hear it, or delete it.")
                     MomentsStatusCard(status: model.captureStatus(conversations: layout.groups.count))
                     if layout.groups.isEmpty && layout.working.isEmpty {
                         EmptyState(icon: "waveform", tint: Palette.blue, title: "Nothing heard yet",
@@ -39,6 +38,7 @@ struct MomentsView: View {
                         feed(layout, defaults: defaults)
                     }
                     BehindTheScenesView(lines: lines(layout), isOpen: $showBehind, onHowItWorks: onShowHowItWorks)
+                        .id("behind")
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.sm)
@@ -46,6 +46,12 @@ struct MomentsView: View {
             }
             .scrollIndicators(.hidden)
             .background { AuroraBackground() }
+            // Dev hook: `-moments-behind` opens Behind the scenes and scrolls to it (screenshots).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-moments-behind") else { return }
+                try? await Task.sleep(for: .milliseconds(700))
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.6)) { proxy.scrollTo("behind", anchor: .bottom) }
+            }
         }
         .confirmationDialog("Delete this moment?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { item in

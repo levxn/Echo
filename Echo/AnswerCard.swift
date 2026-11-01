@@ -1,10 +1,21 @@
 import SwiftUI
 
-/// Shows where a question was answered: this phone, the (design-only) on-device Glimmer tier, or Muse in the cloud.
+/// Says which tier answered in one line. Tap it to see all three tiers (this phone, the design-only Glimmer, Muse in the
+/// cloud), so the routing story stays one tap away without taking space above every answer.
 struct RouteStrip: View {
     enum Active { case local, cloud, none }
     let active: Active
+    @State private var open = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var summary: (symbol: String, text: String, tint: Color) {
+        switch active {
+        case .local: ("iphone", "Tier 0 · This phone", Palette.local)
+        case .cloud: ("cloud.fill", "Tier 2 · Muse Spark", Palette.cloud)
+        case .none: ("hand.raised.fill", "Not sent to the cloud", Palette.amber)
+        }
+    }
 
     /// With very large text only the tier that answered is shown (all three when none did), so the answer stays on screen.
     private func showsPill(_ tier: Active?) -> Bool {
@@ -18,21 +29,53 @@ struct RouteStrip: View {
     }
 
     var body: some View {
-        layout {
-            if showsPill(.local) {
-                TierPill(symbol: "iphone", title: "This phone", detail: "Tier 0", tint: Palette.local,
-                         state: active == .local ? .active : .idle)
+        let s = summary
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Button {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { open.toggle() }
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: s.symbol)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(s.tint)
+                        .accessibilityHidden(true)
+                    Text(s.text)
+                        .font(.echoLabel)
+                        .foregroundStyle(Palette.textPrimary)
+                    Spacer(minLength: Spacing.sm)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.textSecondary)
+                        .rotationEffect(.degrees(open ? 180 : 0))
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: 44)
+                .echoRow(vertical: 0, fill: s.tint.opacity(0.12))
+                .contentShape(Rectangle())
             }
-            if showsPill(nil) {
-                TierPill(symbol: "cpu", title: "Muse Glimmer", detail: "Tier 1 · design only", tint: Palette.textTertiary,
-                         state: .designOnly)
-            }
-            if showsPill(.cloud) {
-                TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Tier 2 · Meta API", tint: Palette.cloud,
-                         state: active == .cloud ? .active : .idle)
+            .buttonStyle(EchoPressStyle())
+            .accessibilityLabel(s.text)
+            .accessibilityValue(open ? "expanded" : "collapsed")
+            .accessibilityHint(open ? "Hides the three tiers" : "Shows how the question was routed")
+
+            if open {
+                layout {
+                    if showsPill(.local) {
+                        TierPill(symbol: "iphone", title: "This phone", detail: "Tier 0", tint: Palette.local,
+                                 state: active == .local ? .active : .idle)
+                    }
+                    if showsPill(nil) {
+                        TierPill(symbol: "cpu", title: "Muse Glimmer", detail: "Tier 1 · design only", tint: Palette.textTertiary,
+                                 state: .designOnly)
+                    }
+                    if showsPill(.cloud) {
+                        TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Tier 2 · Meta API", tint: Palette.cloud,
+                                 state: active == .cloud ? .active : .idle)
+                    }
+                }
+                .transition(.opacity)
             }
         }
-        .accessibilityElement(children: .contain)
     }
 }
 

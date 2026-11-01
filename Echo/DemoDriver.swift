@@ -111,6 +111,9 @@ struct DemoDriver {
     }
 
     func run() async {
+        // The simulators can take a while to see each other after the app launches. Wait here, before the take begins, so
+        // the recording script can cut that dead time out of the video.
+        _ = await wait(timeout: 120) { model.watchReachable }
         mark("begin")
         setTab(.today)
         setCaption("Echo: a private memory for your day")

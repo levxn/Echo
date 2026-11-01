@@ -110,4 +110,18 @@ struct PromiseTests {
         #expect(TextNormalizer.personNames(in: "Right I will send the API specification by Wednesday noon").isEmpty)
         #expect(TextNormalizer.personNames(in: "Thanks everyone same time tomorrow").isEmpty)
     }
+
+    @Test func aCommitmentIsNeverLabelledAsMadeToTheUserThemselves() {
+        func chunk(_ id: String, at wall: Double, _ text: String) -> ChunkRecord {
+            ChunkRecord(id: id, index: 0, wallStart: wall, fileOffset: 0, duration: 5, peakDb: -10, meanDb: -30,
+                        audioFile: "\(id).m4a", status: .stored, speechConfidence: 0.9, confirmedSeconds: 5, transcript: text)
+        }
+        // Someone addresses Priya, then says they will do something.
+        let day = [chunk("a", at: 40_000, "That sounds amazing Priya which hotel did you pick?"),
+                   chunk("b", at: 40_006, "I will text you the link tonight.")]
+        #expect(PromiseExtractor.extract(from: day).first?.toWhom == "Priya", "with no profile, the addressed name is the recipient")
+        #expect(PromiseExtractor.extract(from: day, userName: "Priya Shah").first?.toWhom == nil, "it is the user, so there is no recipient")
+        #expect(PromiseExtractor.extract(from: day, userName: "priya").first?.toWhom == nil, "in any case")
+        #expect(PromiseExtractor.extract(from: day, userName: "Jordan").first?.toWhom == "Priya", "a different profile name changes nothing")
+    }
 }

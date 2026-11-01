@@ -12,7 +12,7 @@ struct FunnelCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            SectionHeader(title: "Today's funnel") {
+            SectionHeader(title: "What Echo kept") {
                 if model.isSettled {
                     Label("Settled", systemImage: "checkmark.circle.fill")
                         .font(Font.echoMeta.weight(.medium))
@@ -24,13 +24,6 @@ struct FunnelCard: View {
                         .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
                 }
             }
-
-            FunnelRow(label: "Recorded on watch", seconds: recorded,
-                      fraction: model.recordedSeconds > 0 || model.watchKeptSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
-            FunnelRow(label: "Kept by watch", seconds: model.watchKeptSeconds,
-                      fraction: model.watchKeptSeconds / recorded, tint: Palette.blue)
-            FunnelRow(label: "Confirmed on phone", seconds: model.phoneConfirmedSeconds,
-                      fraction: model.phoneConfirmedSeconds / recorded, tint: Palette.teal)
 
             if model.isSettled && model.recordedSeconds > 0 {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
@@ -44,6 +37,13 @@ struct FunnelCard: View {
                 }
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
             }
+
+            FunnelRow(label: "Heard by the watch", seconds: recorded,
+                      fraction: model.recordedSeconds > 0 || model.watchKeptSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
+            FunnelRow(label: "Kept as speech", seconds: model.watchKeptSeconds,
+                      fraction: model.watchKeptSeconds / recorded, tint: Palette.blue)
+            FunnelRow(label: "Saved on this phone", seconds: model.phoneConfirmedSeconds,
+                      fraction: model.phoneConfirmedSeconds / recorded, tint: Palette.teal)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()

@@ -6,6 +6,16 @@ enum RootTab: String {
 
     /// Launch-argument values for `-tab`. The old name `pipeline` still opens Moments, so older scripts keep working.
     static func from(argument: String) -> RootTab? { argument == "pipeline" ? .moments : RootTab(rawValue: argument) }
+
+    /// The title in the top bar.
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .moments: "Moments"
+        case .ask: "Ask"
+        case .ledger: "Privacy"
+        }
+    }
 }
 
 struct RootView: View {
@@ -17,6 +27,8 @@ struct RootView: View {
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
     @State private var today = TodayState()
+    @State private var profile = ProfileStore()
+    @State private var showProfile = ProcessInfo.processInfo.arguments.contains("-show-profile")
     @State private var tab: RootTab
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -36,6 +48,15 @@ struct RootView: View {
         _tab = State(initialValue: requested ?? .today)
     }
 
+    /// One slim bar on every tab: profile, where you are, and the watch / cloud / on-this-phone indicators.
+    private func topBar(_ tab: RootTab) -> some View {
+        EchoTopBar(title: tab.title, profile: profile,
+                   watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.session == .running),
+                   cloud: HeaderStatus.cloud(enabled: ledger.cloudEnabled, reviewing: ledger.reviewBeforeSend),
+                   listening: model.session == .running,
+                   onProfile: { showProfile = true }, onWatch: { self.tab = .moments }, onCloud: { self.tab = .ledger })
+    }
+
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
@@ -45,14 +66,22 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) { TodayView(model: model, digest: digest, player: player, state: today) }
+            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) {
+                TodayView(model: model, digest: digest, player: player, state: today, profile: profile)
+                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.today) }
+            }
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
                 MomentsView(model: model, player: player) { ledger.showArchitecture = true }
+                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
                 AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
+                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.ask) }
             }
-            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) { LedgerView(ledger: ledger, model: model) { includeLedger in forgetDay(includeLedger: includeLedger) } }
+            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) {
+                LedgerView(ledger: ledger, model: model) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                    .safeAreaInset(edge: .top, spacing: 0) { topBar(.ledger) }
+            }
         }
         .overlay(alignment: .bottom) {
             if let caption {
@@ -64,6 +93,11 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: caption)
         // "How Echo works" can be opened from Moments and from the Ledger, so the sheet lives here.
         .background { Color.clear.sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) } }
+        .background {
+            Color.clear.sheet(isPresented: $showProfile) {
+                ProfileSheet(profile: profile) { tab = .ledger }
+            }
+        }
         // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
         .sheet(item: Binding(get: { ledger.gate.pending }, set: { if $0 == nil { ledger.gate.cancel() } })) { review in
             ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })

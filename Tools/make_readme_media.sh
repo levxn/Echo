@@ -29,7 +29,7 @@ shot_watch() {   # name  -> docs/media/screenshots/watch-<name>.png, with the re
   ffmpeg -loglevel error -y -i "$TMP/raw_watch_$1.png" -vf "crop=iw:ih-72:0:72" "$SHOTS/watch-$1.png"
   cp "$SHOTS/watch-$1.png" "$TMP/raw_watchcrop_$1.png"
 }
-launch_phone() { xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1; xcrun simctl launch "$PHONE" levtech.Echo "$@" >/dev/null; }
+launch_phone() { xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1; xcrun simctl launch "$PHONE" levtech.Echo -profile-name Jordan -profile-color 0 "$@" >/dev/null; }
 
 # scene NAME SECONDS ARGS...: record both simulators, open the phone with ARGS, wait, screenshot, stop.
 scene() {
@@ -56,11 +56,11 @@ sleep 2; shot_phone empty; shot_watch ready
 echo "2/6 the watch replays the day (recorded)…"
 dir="$TMP/clip_replay"; mkdir -p "$dir"
 ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh start >/dev/null
-launch_phone -tab pipeline
+launch_phone -tab moments
 sleep 2
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
 xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "$(date +%s)" >/dev/null
-sleep 13; shot_phone pipeline-live; shot_watch listening
+sleep 13; shot_phone moments-live; shot_watch listening
 sleep 10
 ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh stop >/dev/null
 
@@ -81,7 +81,9 @@ sleep 3; shot_watch done
 echo "4/6 each screen (recorded)…"
 # Every scene passes the settings it needs, because they persist between launches.
 scene today 7.5 -tab today -today-section day -review off -mask off
-scene pipeline 6.5 -tab pipeline
+scene moments 6.5 -tab moments
+scene moments-open 6.5 -tab moments -moments-expand latest
+scene moments-behind 7 -tab moments -moments-behind
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
 scene ask-lease 7.5 -tab ask -ask "What did Mister Brennan say about the lease?"
 scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
@@ -90,6 +92,7 @@ scene today-summary 7.5 -tab today -today-section summary           # the saved 
 scene today-commitments 7.5 -tab today -today-section commitments
 scene ledger 7.5 -tab ledger
 scene ledger-data 7.5 -tab ledger -ledger-focus data
+scene profile 6.5 -tab today -show-profile
 scene ask-masked 14 -tab ask -mask on -ask "What did I promise people today?"   # names become placeholders, then come back
 scene review 9 -tab ask -review on -ask "What did I promise people today?"      # the sheet waits for approval
 launch_phone -review off -mask off; sleep 3

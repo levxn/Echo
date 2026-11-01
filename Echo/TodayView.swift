@@ -40,6 +40,7 @@ struct TodayView: View {
     let digest: DigestModel
     let player: ChunkPlayer
     let state: TodayState
+    let profile: ProfileStore
 
     @State private var episodes: [Episode] = []
     @State private var promises: [Promise] = []
@@ -58,10 +59,7 @@ struct TodayView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: Spacing.xl) {
-                ScreenHeader(title: "Echo", status: statusText, reachable: model.watchReachable) {
-                    Task { await model.reset() }
-                }
-                .id("todayTop")
+                greeting.id("todayTop")
                 FunnelCard(model: model)
                 if model.chunks.isEmpty {
                     EmptyDayHint()
@@ -77,11 +75,12 @@ struct TodayView: View {
         .background { AuroraBackground() }
         .onChange(of: model.storedCount, initial: true) {
             episodes = EpisodeBuilder.build(from: model.chunks)
-            promises = PromiseExtractor.extract(from: model.chunks)
+            promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name)
             if model.storedCount == 0 { digest.reset() }
         }
         // Dev hook: with `-today-focus` or `-today-section`, scroll so the switcher and its content fill the screen
         // once the day has loaded (screenshots, demo take).
+        .onChange(of: profile.name) { promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name) }
         .onChange(of: state.scrollTarget) { _, target in
             guard let target else { return }
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
@@ -96,6 +95,25 @@ struct TodayView: View {
             }
         }
         }
+    }
+
+    /// "Good evening, Jordan" and one line on where the day stands.
+    private var greeting: some View {
+        VStack(alignment: .leading, spacing: Spacing.tight) {
+            Text(profile.greeting)
+                .font(.echoScreenTitle)
+                .foregroundStyle(Palette.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: Spacing.tight) {
+                Circle().fill(model.watchReachable ? Palette.teal : Palette.amber).frame(width: 8, height: 8).accessibilityHidden(true)
+                Text(statusText)
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.textSecondary)
+                    .contentTransition(.opacity)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var sections: some View {
@@ -144,46 +162,6 @@ struct TodayView: View {
                        message: "Conversations appear here as a timeline once they have been transcribed.")
         } else {
             EpisodesSection(episodes: episodes)
-        }
-    }
-}
-
-struct ScreenHeader: View {
-    let title: String
-    let status: String
-    let reachable: Bool
-    var onReset: (() -> Void)?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                    .foregroundStyle(Palette.textPrimary)
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(reachable ? Palette.teal : Palette.amber)
-                        .frame(width: 8, height: 8)
-                    Text(status)
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.textSecondary)
-                        .contentTransition(.opacity)
-                }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: status)
-            }
-            Spacer()
-            if let onReset {
-                Button(action: onReset) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(EchoPressStyle())
-                .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel("Clear today's memory")
-            }
         }
     }
 }

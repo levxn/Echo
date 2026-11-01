@@ -20,11 +20,11 @@ struct ArchitectureView: View {
                     }
                 }
 
-                Connector(label: model.arrivedCount > 0 ? "\(model.arrivedCount) chunks of speech" : "chunks of speech")
+                Connector(label: model.arrivedCount > 0 ? "\(model.arrivedCount) snippets of speech" : "snippets of speech")
 
                 Stage(symbol: "iphone", title: "iPhone", tint: Palette.teal, badge: "Everything here runs on-device") {
                     Row("Stage 2 · speech check", "Apple SoundAnalysis rejects what isn't speech.")
-                    if model.droppedCount > 0 { Stat("\(model.droppedCount) chunks dropped as non-speech", Palette.rose) }
+                    if model.droppedCount > 0 { Stat("\(model.droppedCount) snippets dropped as non-speech", Palette.rose) }
                     Row("Transcription", "Apple's on-device speech recognition. Audio stays here.")
                     Row("Memory", "SQLite with FTS5 keyword search plus word-vector similarity.")
                     if model.storedCount > 0 { Stat("\(model.storedCount) moments indexed · \(Format.clock(model.phoneConfirmedSeconds)) confirmed", Palette.teal) }

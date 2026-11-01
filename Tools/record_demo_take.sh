@@ -24,7 +24,7 @@ ECHO_VIDEO_DIR="$DIR" Tools/record_demo.sh start >/dev/null || exit 1
 T0=$(python3 -I -c "import time; print(f'{time.time():.3f}')")
 START=$(date -r "${T0%.*}" '+%Y-%m-%d %H:%M:%S')
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
-xcrun simctl launch "$PHONE" levtech.Echo -demo-script full >/dev/null
+xcrun simctl launch "$PHONE" levtech.Echo -demo-script full -profile-name Jordan -profile-color 0 -review off -mask off >/dev/null
 
 echo "3/5 the app is performing the demo (about 4 minutes)…"
 FINISHED=0
@@ -44,6 +44,17 @@ if xcrun simctl spawn "$PHONE" log show --info --start "$START" --predicate 'sub
 fi
 xcrun simctl spawn "$PHONE" log show --info --start "$START" --predicate 'subsystem == "echo" AND eventMessage CONTAINS "demo-script"' --style compact > /tmp/take_markers.txt 2>/dev/null
 TRIM=$(ECHO_VIDEO_DIR="$DIR" Tools/compose_video.sh --trim-start auto --print-trim)
+# Start the video at the app's "begin" marker: anything before it (launch, waiting for the watch to connect) is dead time.
+TRIM=$(python3 -I - "$T0" "$TRIM" /tmp/take_markers.txt <<'PY'
+import datetime, re, sys
+t0, trim = float(sys.argv[1]), float(sys.argv[2])
+begin = None
+for line in open(sys.argv[3]):
+    g = re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+).*demo-script: begin\b", line)
+    if g: begin = datetime.datetime.strptime(g.group(1), "%Y-%m-%d %H:%M:%S.%f").timestamp() - t0
+print(f"{max(trim, begin - 0.4):.2f}" if begin is not None else f"{trim:.2f}")
+PY
+)
 read -r S E <<< "$(python3 -I - "$T0" "$TRIM" /tmp/take_markers.txt <<'PY'
 import datetime, re, sys
 t0, trim = float(sys.argv[1]), float(sys.argv[2])

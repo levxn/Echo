@@ -39,7 +39,8 @@ enum PromiseExtractor {
     /// Conversations are far shorter than this; a longer gap means the previous line is unrelated.
     private static let contextGap = 60.0
 
-    static func extract(from chunks: [ChunkRecord]) -> [Promise] {
+    /// `userName` is the profile name: a commitment is never labelled as made "to" the user themselves.
+    static func extract(from chunks: [ChunkRecord], userName: String = "") -> [Promise] {
         let stored = chunks
             .filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
             .sorted { $0.wallStart < $1.wallStart }
@@ -52,7 +53,7 @@ enum PromiseExtractor {
                 out.append(Promise(
                     id: "\(chunk.id)#\(n)", chunkID: chunk.id, kind: kind,
                     timeLabel: chunk.wallLabel, wallStart: chunk.wallStart, sentence: clause,
-                    toWhom: kind == .commitment ? recipient(previous: previous?.transcript) : nil,
+                    toWhom: kind == .commitment ? recipient(previous: previous?.transcript).flatMap { ProfileLogic.isSamePerson($0, as: userName) ? nil : $0 } : nil,
                     due: due(in: clause), context: previous?.transcript))
             }
         }

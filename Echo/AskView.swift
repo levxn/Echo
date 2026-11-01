@@ -22,8 +22,7 @@ struct AskView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    ScreenTitle(title: "Ask your day", subtitle: "Answers come from this phone first. Only synthesis questions reach the cloud.")
-                        .id("askTop")
+                    Color.clear.frame(height: 0).id("askTop")
                     field
                     suggestions
                     result

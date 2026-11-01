@@ -20,8 +20,7 @@ struct LedgerView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                ScreenTitle(title: "Privacy ledger", subtitle: "Every question, and exactly what left this phone.")
-                    .id("ledgerTop")
+                Color.clear.frame(height: 0).id("ledgerTop")
                 SummaryCard(totals: ledger.totals)
                 settings
                 activity

@@ -36,22 +36,3 @@ extension SectionHeader where Trailing == Text {
         }
     }
 }
-
-/// The large title at the top of a tab, with one line under it.
-struct ScreenTitle: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.tight) {
-            Text(title)
-                .font(.echoScreenTitle)
-                .foregroundStyle(Palette.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
