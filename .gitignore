@@ -6,3 +6,12 @@ Secrets.xcconfig
 *.key
 meta_api_key
 Config/meta_api_key.txt
+
+# Never commit credentials
+.env
+.env.*
+*.pem
+*.p8
+*.key
+*api_key*.txt
+!Config/README.md
