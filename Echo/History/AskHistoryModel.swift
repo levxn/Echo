@@ -34,8 +34,18 @@ final class AskHistoryModel {
         await store.clearHistory()
     }
 
-    /// The last few, in the short form the watch shows.
-    func recentForWatch(limit: Int = 8) -> [HistoryItem] { items.prefix(limit).map(\.item) }
+    /// The last few distinct questions, newest first, in the short form the watch shows. Asking the same thing again shows
+    /// only its latest answer there; the phone's own history keeps every time.
+    func recentForWatch(limit: Int = 8) -> [HistoryItem] {
+        var seen = Set<String>()
+        var out: [HistoryItem] = []
+        for record in items {
+            guard seen.insert(record.question.lowercased()).inserted else { continue }
+            out.append(record.item)
+            if out.count == limit { break }
+        }
+        return out
+    }
 
     func record(id: String) -> AskRecord? { items.first { $0.id == id } }
 }

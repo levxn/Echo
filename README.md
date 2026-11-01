@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-254%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-255%20passing-34D399)
 ![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
@@ -152,7 +152,7 @@ flowchart LR
 | Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 254 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 255 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
 
 ## The privacy model
 

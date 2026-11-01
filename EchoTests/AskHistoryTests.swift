@@ -108,6 +108,18 @@ struct AskHistoryTests {
         #expect(recent.allSatisfy { $0.via == .watchVoice })
     }
 
+    @Test func theWatchShowsEachQuestionOnceWithItsLatestAnswerWhilePhoneKeepsEveryTime() async throws {
+        let h = try await Harness.make()
+        defer { h.cleanup() }
+        let model = AskHistoryModel(store: h.store)
+        await model.record(record("What did I promise?", at: 0))
+        await model.record(record("When is the plumber coming?", at: 10))
+        await model.record(record("what did i promise?", at: 20, via: .watchVoice))
+        let recent = model.recentForWatch()
+        #expect(recent.map(\.question) == ["what did i promise?", "When is the plumber coming?"], "the later wording and time win")
+        #expect(model.items.count == 3, "the phone's own list is untouched")
+    }
+
     // MARK: Wiping and privacy
 
     @Test func startingANewDayOrForgettingTheDayClearsTheHistoryButNotTheSettings() async throws {
