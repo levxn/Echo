@@ -26,6 +26,7 @@ struct RootView: View {
     @State private var history: AskHistoryModel
     @State private var voice = VoiceAskModel()
     @State private var speaker = Speaker()
+    @State private var reminders = Reminders()
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
@@ -68,7 +69,7 @@ struct RootView: View {
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
-                                  ledger: ledger, includeLedger: includeLedger)
+                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders)
         }
     }
 
@@ -114,6 +115,7 @@ struct RootView: View {
         // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
         .onChange(of: model.session) { Task { await history.reload() } }
         .environment(speaker)
+        .environment(reminders)
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
