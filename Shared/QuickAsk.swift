@@ -10,6 +10,16 @@ extension Wire {
     static let answerKey = "a"
     static let tierKey = "tier"
     static let millisecondsKey = "ms"
+
+    // Voice questions and history.
+    static let transcribe = "ask.transcribe" // watch -> phone: a recorded question; the reply carries what was heard
+    static let history = "history"           // watch -> phone: send me the recent questions and answers
+    static let demoVoiceAsk = "demo.voiceask" // phone -> watch: run recorded question N, as if spoken (demo driver)
+    static let audioKey = "audio"
+    static let heardKey = "heard"
+    static let reasonKey = "reason"
+    static let viaKey = "via"
+    static let itemsKey = "items"
 }
 
 /// A question the watch can ask without a keyboard.
@@ -31,7 +41,7 @@ nonisolated struct QuickAsk: Identifiable, Equatable, Sendable {
 
 /// What the phone sends back to the watch: a short answer and where it came from.
 nonisolated struct WatchAnswer: Equatable, Sendable {
-    enum Source: String, Sendable {
+    enum Source: String, Sendable, Codable {
         case local      // answered on the phone, nothing sent
         case muse       // Muse Spark
         case stub       // the labeled offline stand-in
@@ -41,9 +51,13 @@ nonisolated struct WatchAnswer: Equatable, Sendable {
     var text: String
     var source: Source
     var milliseconds: Int
+    /// What the phone understood from a spoken question, when there was one.
+    var heard: String?
 
     var dictionary: [String: Any] {
-        [Wire.okKey: true, Wire.answerKey: text, Wire.tierKey: source.rawValue, Wire.millisecondsKey: milliseconds]
+        var d: [String: Any] = [Wire.okKey: true, Wire.answerKey: text, Wire.tierKey: source.rawValue, Wire.millisecondsKey: milliseconds]
+        if let heard { d[Wire.heardKey] = heard }
+        return d
     }
 
     /// Whole sentences up to about `limit` characters (a watch screen is small); one long sentence is cut at a word.
@@ -66,13 +80,13 @@ nonisolated struct WatchAnswer: Equatable, Sendable {
         return words.joined(separator: " ") + "…"
     }
 
-    init(text: String, source: Source, milliseconds: Int = 0) {
-        self.text = text; self.source = source; self.milliseconds = milliseconds
+    init(text: String, source: Source, milliseconds: Int = 0, heard: String? = nil) {
+        self.text = text; self.source = source; self.milliseconds = milliseconds; self.heard = heard
     }
 
     init?(dictionary: [String: Any]) {
         guard dictionary[Wire.okKey] as? Bool == true, let text = dictionary[Wire.answerKey] as? String else { return nil }
         self.init(text: text, source: (dictionary[Wire.tierKey] as? String).flatMap(Source.init) ?? .none,
-                  milliseconds: dictionary[Wire.millisecondsKey] as? Int ?? 0)
+                  milliseconds: dictionary[Wire.millisecondsKey] as? Int ?? 0, heard: dictionary[Wire.heardKey] as? String)
     }
 }
