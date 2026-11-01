@@ -24,6 +24,7 @@ struct RootView: View {
 
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
+    @State private var voice = VoiceAskModel()
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
@@ -80,11 +81,12 @@ struct RootView: View {
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
-                AskView(ask: ask, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks)
+                AskView(ask: ask, voice: voice, history: history, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks,
+                        onViewLedger: { tab = .ledger })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
             }
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) {
-                LedgerView(ledger: ledger, model: model) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                LedgerView(ledger: ledger, model: model, history: history) { includeLedger in forgetDay(includeLedger: includeLedger) }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ledger) }
             }
         }
@@ -146,6 +148,12 @@ struct RootView: View {
                                  watchQuickAsk: { link.sendDemoQuickAsk($0) },
                                  setTab: { tab = $0 },
                                  setCaption: { caption = $0 }).run()
+            } else if let i = args.firstIndex(of: "-voice-ask"), i + 1 < args.count, let clip = Int(args[i + 1]) {
+                // Asks recorded question N (1...5) by voice: the real recorder, on-device understanding, the real Ask flow.
+                await warm.value
+                await model.load()
+                tab = .ask
+                await voice.listen(clip: clip, ask: ask)
             } else if let i = args.firstIndex(of: "-ask"), i + 1 < args.count {
                 await warm.value
                 await model.load()

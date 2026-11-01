@@ -4,11 +4,13 @@ import SwiftUI
 struct LedgerView: View {
     let ledger: LedgerModel
     let model: PipelineModel
+    let history: AskHistoryModel
     /// Wipes the day (and optionally the ledger); owned by RootView because it touches every model.
     let onForget: (_ includeLedger: Bool) -> Void
 
     @State private var confirmClear = false
     @State private var confirmForget = false
+    @State private var confirmClearHistory = false
     @State private var showAllActivity = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -44,6 +46,11 @@ struct LedgerView: View {
             Button("Forget the day and the ledger", role: .destructive) { onForget(true) }
         } message: {
             Text("Deletes every transcript, audio clip, summary and checked-off commitment on this phone. Your API key and settings stay. The ledger stays too, unless you choose to forget it.")
+        }
+        .confirmationDialog("Clear your ask history?", isPresented: $confirmClearHistory, titleVisibility: .visible) {
+            Button("Clear history", role: .destructive) { Task { await history.clear() } }
+        } message: {
+            Text("Deletes the questions you asked and the answers you got, on this phone. The privacy ledger is separate and stays.")
         }
         .confirmationDialog("Clear the privacy ledger?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Clear ledger", role: .destructive) { Task { await ledger.clear() } }
@@ -121,6 +128,12 @@ struct LedgerView: View {
                 dataRow("Forget my day", systemImage: "trash", tint: Palette.rose)
             }
             .buttonStyle(EchoPressStyle())
+            if !history.items.isEmpty {
+                Button { confirmClearHistory = true } label: {
+                    dataRow("Clear ask history", systemImage: "clock.arrow.circlepath", tint: Palette.rose)
+                }
+                .buttonStyle(EchoPressStyle())
+            }
             if !ledger.entries.isEmpty {
                 Button { confirmClear = true } label: {
                     dataRow("Clear the ledger", systemImage: "list.bullet.clipboard", tint: Palette.rose)
