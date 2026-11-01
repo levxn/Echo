@@ -6,15 +6,7 @@ struct EpisodesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Your day")
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                Spacer()
-                Text("\(episodes.count) conversation\(episodes.count == 1 ? "" : "s")")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.textSecondary)
-            }
+            SectionHeader("Your day", meta: "\(episodes.count) conversation\(episodes.count == 1 ? "" : "s")")
             VStack(spacing: Spacing.md) {
                 ForEach(Array(episodes.enumerated()), id: \.element.id) { i, episode in
                     EpisodeRow(episode: episode, isLast: i == episodes.count - 1)
@@ -63,22 +55,15 @@ private struct EpisodeRow: View {
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 6) {
-                    ForEach(episode.keywords, id: \.self) { word in
-                        Text(word)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Palette.teal)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Palette.teal.opacity(0.14), in: Capsule())
-                    }
+                FlowLayout {
+                    ForEach(episode.keywords, id: \.self) { Chip(text: $0) }
                 }
                 Text("\(episode.chunks.count) moments · about \(episode.minutes) min")
                     .font(.caption)
                     .foregroundStyle(Palette.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .echoCard(radius: 22)
+            .echoCard(radius: Radius.card)
             .accessibilityElement(children: .combine)
         }
     }

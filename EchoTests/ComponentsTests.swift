@@ -1,0 +1,46 @@
+import CoreGraphics
+import Testing
+@testable import Echo
+
+struct ComponentsTests {
+    private func sizes(_ widths: [CGFloat], height: CGFloat = 20) -> [CGSize] { widths.map { CGSize(width: $0, height: height) } }
+
+    @Test func itemsThatFitStayOnOneLine() {
+        let r = FlowLayout.arrange(sizes: sizes([50, 60, 40]), maxWidth: 300, spacing: 6, lineSpacing: 6)
+        #expect(r.positions == [CGPoint(x: 0, y: 0), CGPoint(x: 56, y: 0), CGPoint(x: 122, y: 0)])
+        #expect(r.size == CGSize(width: 162, height: 20))
+    }
+
+    @Test func anItemThatDoesNotFitStartsANewLine() {
+        let r = FlowLayout.arrange(sizes: sizes([100, 100, 100]), maxWidth: 230, spacing: 6, lineSpacing: 8)
+        #expect(r.positions == [CGPoint(x: 0, y: 0), CGPoint(x: 106, y: 0), CGPoint(x: 0, y: 28)])
+        #expect(r.size.height == 48)
+    }
+
+    @Test func aTooWideItemSitsAloneAndNothingIsLost() {
+        let r = FlowLayout.arrange(sizes: sizes([40, 500, 40]), maxWidth: 200, spacing: 6, lineSpacing: 6)
+        #expect(r.positions.count == 3)
+        #expect(r.positions[1] == CGPoint(x: 0, y: 26), "the wide one starts its own line")
+        #expect(r.positions[2] == CGPoint(x: 0, y: 52), "and the next one wraps below it")
+        #expect(r.size.width <= 200)
+    }
+
+    @Test func aLineIsAsTallAsItsTallestItem() {
+        let r = FlowLayout.arrange(sizes: [CGSize(width: 50, height: 20), CGSize(width: 50, height: 44), CGSize(width: 200, height: 20)],
+                                   maxWidth: 150, spacing: 6, lineSpacing: 6)
+        #expect(r.positions[2] == CGPoint(x: 0, y: 50))
+    }
+
+    @Test func noItemsTakeNoSpace() {
+        #expect(FlowLayout.arrange(sizes: [], maxWidth: 100, spacing: 6, lineSpacing: 6).size == .zero)
+    }
+
+    @Test func durationsAreSpokenInWords() {
+        #expect(Format.spoken(233) == "3 minutes 53 seconds")
+        #expect(Format.spoken(60) == "1 minute")
+        #expect(Format.spoken(61) == "1 minute 1 second")
+        #expect(Format.spoken(45) == "45 seconds")
+        #expect(Format.spoken(0) == "0 seconds")
+        #expect(Format.spoken(-5) == "0 seconds")
+    }
+}

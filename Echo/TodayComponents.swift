@@ -12,18 +12,14 @@ struct FunnelCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Today's funnel")
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                Spacer()
+            SectionHeader(title: "Today's funnel") {
                 if model.isSettled {
                     Label("Settled", systemImage: "checkmark.circle.fill")
-                        .font(.caption.weight(.medium))
+                        .font(Font.echoMeta.weight(.medium))
                         .foregroundStyle(Palette.teal)
                 } else if model.session == .running || model.pendingCount > 0 {
                     Label("Processing", systemImage: "waveform")
-                        .font(.caption.weight(.medium))
+                        .font(Font.echoMeta.weight(.medium))
                         .foregroundStyle(Palette.blue)
                         .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
                 }
@@ -39,19 +35,19 @@ struct FunnelCard: View {
             if model.isSettled && model.recordedSeconds > 0 {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                     Text("\(Int((model.savedFraction * 100).rounded()))%")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .font(.echoScreenTitle)
                         .monospacedDigit()
                         .foregroundStyle(Palette.accentGradient)
                     Text("of the day was never stored")
                         .font(.subheadline)
                         .foregroundStyle(Palette.textSecondary)
                 }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()
-        .animation(.smooth(duration: 0.5), value: model.isSettled)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.5), value: model.isSettled)
         .accessibilityElement(children: .contain)
     }
 }
@@ -61,9 +57,10 @@ private struct FunnelRow: View {
     let seconds: Double
     let fraction: Double
     let tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.tight) {
             HStack {
                 Text(label)
                     .font(.subheadline)
@@ -77,7 +74,7 @@ private struct FunnelRow: View {
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.08))
+                    Capsule().fill(Palette.fillStrong)
                     Capsule()
                         .fill(LinearGradient(colors: [tint.opacity(0.7), tint], startPoint: .leading, endPoint: .trailing))
                         .frame(width: max(6, geo.size.width * min(1, max(0, fraction))))
@@ -85,10 +82,10 @@ private struct FunnelRow: View {
             }
             .frame(height: 8)
         }
-        .animation(.smooth(duration: 0.6), value: fraction)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.6), value: fraction)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
-        .accessibilityValue("\(Format.clock(seconds)) minutes")
+        .accessibilityValue(Format.spoken(seconds))
     }
 }
 
@@ -113,28 +110,29 @@ private struct StageChip: View {
     let label: String
     let count: Int
     let tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Spacing.xs) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.callout.weight(.semibold))
                 .foregroundStyle(tint)
                 .frame(height: 20)
             Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(.title3, design: .rounded, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
                 .contentTransition(.numericText())
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(Font.echoMicro.weight(.medium))
                 .foregroundStyle(Palette.textSecondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.md)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .animation(.snappy, value: count)
+        .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+        .animation(reduceMotion ? nil : .snappy, value: count)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue("\(count)")
@@ -150,7 +148,7 @@ struct ChunkRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(chunk.wallLabel)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .monospacedDigit()
@@ -162,7 +160,7 @@ struct ChunkRow: View {
             }
             .frame(width: 52, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.tight) {
                 if let text = chunk.transcript, !text.isEmpty {
                     Text(text)
                         .font(.subheadline)
@@ -182,9 +180,8 @@ struct ChunkRow: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(isDropped ? 0.03 : 0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .echoRow(fill: isDropped ? Color.white.opacity(0.03) : Palette.fill)
         .opacity(isDropped ? 0.8 : 1)
         .accessibilityElement(children: .combine)
     }
@@ -209,7 +206,7 @@ private struct StageDots: View {
     private var inFlight: Bool { status == .received || status == .vad || status == .asr }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.tight) {
             ForEach(0..<4, id: \.self) { i in
                 let lit = i < reached
                 Circle()

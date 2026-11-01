@@ -15,13 +15,10 @@ struct CloudAnswerCard: View {
             RouteStrip(active: .cloud)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: 6) {
-                    Image(systemName: isStub ? "testtube.2" : "cloud.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(isStub ? "Stub preview · no API key" : "Answered by Muse Spark")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
-                }
-                .foregroundStyle(isStub ? Palette.amber : Palette.cloud)
+                Label(isStub ? "Stub preview · no API key" : "Answered by Muse Spark",
+                      systemImage: isStub ? "testtube.2" : "cloud.fill")
+                    .font(.echoLabel)
+                    .foregroundStyle(isStub ? Palette.amber : Palette.cloud)
                 Text(result.decision.reason)
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
@@ -29,7 +26,7 @@ struct CloudAnswerCard: View {
             }
 
             Text(result.answer.answer)
-                .font(.system(.title3, design: .rounded, weight: .semibold))
+                .font(.echoAnswer)
                 .foregroundStyle(Palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -70,13 +67,8 @@ struct SourcePlayChip: View {
     var body: some View {
         if let chunk {
             Button { player.toggle(chunk) } label: {
-                Label(label, systemImage: playing ? "stop.fill" : "play.fill")
-                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                Chip(text: label, icon: playing ? "stop.fill" : "play.fill", tint: tint)
                     .monospacedDigit()
-                    .foregroundStyle(tint)
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: 32)
-                    .background(tint.opacity(0.16), in: Capsule())
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
             }
@@ -108,8 +100,7 @@ private struct ItemRow: View {
                     .transition(.opacity)
             }
         }
-        .padding(Spacing.md)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .echoRow()
         .contentShape(Rectangle())
         .onTapGesture { if chunk != nil { withAnimation(.smooth(duration: 0.25)) { showQuote.toggle() } } }
         .accessibilityElement(children: .contain)
@@ -117,7 +108,7 @@ private struct ItemRow: View {
 
     private var content: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.textPrimary)
@@ -126,14 +117,7 @@ private struct ItemRow: View {
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
                 }
-                if !item.when.isEmpty {
-                    Label(item.when, systemImage: "clock")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Palette.cloud)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Palette.cloud.opacity(0.16), in: Capsule())
-                }
+                if !item.when.isEmpty { Chip(text: item.when, icon: "clock", tint: Palette.cloud) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             SourcePlayChip(label: item.sourceTime, chunk: chunk, player: player)
@@ -156,7 +140,7 @@ struct SentDisclosure: View {
             } label: {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: isStub ? "eye" : "paperplane")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                     Text(isStub ? "What would be sent" : "What left your phone")
                         .font(.footnote.weight(.semibold))
                     Spacer()
@@ -164,7 +148,7 @@ struct SentDisclosure: View {
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                 }
                 .foregroundStyle(Palette.textPrimary)
@@ -204,9 +188,8 @@ struct SentDisclosure: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Palette.teal)
                 }
-                .padding(Spacing.md)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .echoRow()
                 .transition(.opacity)
             }
         }
@@ -255,7 +238,7 @@ struct CloudFailureCard: View {
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Label("Muse couldn't answer", systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    .font(.echoLabel)
                     .foregroundStyle(Palette.amber)
                 Text(failure.error.localizedDescription)
                     .font(.subheadline)
@@ -268,21 +251,11 @@ struct CloudFailureCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Button(action: onRetry) {
-                Label("Try again", systemImage: "arrow.clockwise")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(EchoPressStyle())
-            .glassEffect(.regular.interactive(), in: .capsule)
+            EchoButton(title: "Try again", systemImage: "arrow.clockwise", action: onRetry)
 
             if let local = failure.localAnswer {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("Closest moments on this phone")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.textSecondary)
-                        .textCase(.uppercase)
+                    SectionHeader("Closest moments on this phone", style: .overline)
                     ForEach(local.sources) { SourceRow(hit: $0, terms: local.highlightTerms, player: player) }
                 }
             }

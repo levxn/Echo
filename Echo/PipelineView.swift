@@ -23,24 +23,10 @@ struct PipelineView: View {
 
     private var feed: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Live feed")
-                .font(.system(.headline, design: .rounded, weight: .semibold))
-                .foregroundStyle(Palette.textPrimary)
+            SectionHeader("Live feed")
             if model.chunks.isEmpty {
-                VStack(spacing: Spacing.sm) {
-                    Image(systemName: "applewatch.radiowaves.left.and.right")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Palette.blue)
-                    Text("Nothing captured yet")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.textPrimary)
-                    Text("Start the day on your watch and conversations appear here as they are checked, transcribed and stored on this phone.")
-                        .font(.footnote)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Palette.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .echoCard(padding: Spacing.xl)
+                EmptyState(icon: "applewatch.radiowaves.left.and.right", title: "Nothing captured yet",
+                           message: "Start the day on your watch and conversations appear here as they are checked, transcribed and stored on this phone.")
             } else {
                 LazyVStack(spacing: Spacing.sm) {
                     ForEach(model.chunks.reversed()) { chunk in

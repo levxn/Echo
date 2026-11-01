@@ -61,10 +61,11 @@ struct ArchitectureView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.tight) {
                 Text("How Echo works")
-                    .font(.system(.title, design: .rounded, weight: .bold))
+                    .font(.echoSheetTitle)
                     .foregroundStyle(Palette.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Text("From a wrist to an answer, and what never leaves the phone.")
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
@@ -85,9 +86,7 @@ struct ArchitectureView: View {
 
     private var honesty: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("What's real in this demo")
-                .font(.system(.footnote, design: .rounded, weight: .semibold))
-                .foregroundStyle(Palette.textPrimary)
+            SectionHeader("What's real in this demo")
             ForEach([
                 "The audio is pre-recorded speech replayed through the real pipeline.",
                 "The watch and phone are simulators linked by WatchConnectivity messages.",
@@ -102,7 +101,7 @@ struct ArchitectureView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.lg)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .padding(.top, Spacing.sm)
     }
 }
@@ -120,23 +119,18 @@ private struct Stage<Content: View>: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(spacing: Spacing.md) {
                 Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(tint)
                     .frame(width: 40, height: 40)
-                    .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+                    .accessibilityHidden(true)
                 Text(title)
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .font(.echoSection)
                     .foregroundStyle(Palette.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
             }
-            if let badge {
-                Text(badge)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(tint)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(tint.opacity(0.14), in: Capsule())
-            }
+            if let badge { Chip(text: badge, tint: tint) }
             VStack(alignment: .leading, spacing: Spacing.sm) { content }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,7 +145,7 @@ private struct Row: View {
     init(_ title: String, _ detail: String) { self.title = title; self.detail = detail }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.textPrimary)
             Text(detail).font(.footnote).foregroundStyle(Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
         }
@@ -164,13 +158,8 @@ private struct Stat: View {
     init(_ text: String, _ tint: Color) { self.text = text; self.tint = tint }
 
     var body: some View {
-        Text(text)
-            .font(.system(.caption, design: .rounded, weight: .semibold))
+        Chip(text: text, tint: tint)
             .monospacedDigit()
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(tint.opacity(0.14), in: Capsule())
     }
 }
 
@@ -184,10 +173,11 @@ private struct TierCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(tint)
                 .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 3) {
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.textPrimary)
                 Text(detail).font(.footnote).foregroundStyle(Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
@@ -195,8 +185,8 @@ private struct TierCard: View {
         }
         .padding(Spacing.md)
         .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white.opacity(dashed ? 0.03 : 0.06))
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous).fill(dashed ? Color.white.opacity(0.03) : Palette.fill)
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
                 .strokeBorder(tint.opacity(dashed ? 0.5 : 0.7), style: StrokeStyle(lineWidth: 1, dash: dashed ? [5, 4] : []))
         }
         .opacity(dashed ? 0.8 : 1)
@@ -212,7 +202,7 @@ private struct Connector: View {
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
-                Capsule().fill(Color.white.opacity(0.16)).frame(width: 2, height: 30)
+                Capsule().fill(Palette.stroke).frame(width: 2, height: 30)
                 if !reduceMotion {
                     Circle()
                         .fill(Palette.teal)

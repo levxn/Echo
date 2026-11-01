@@ -21,14 +21,7 @@ struct DigestSection: View {
 
     private var prompt: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Button(action: run) {
-                Label("Summarize my day with Muse", systemImage: "sparkles")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 48)
-            }
-            .buttonStyle(EchoPressStyle())
-            .glassEffect(.regular.tint(Palette.cloud.opacity(0.35)).interactive(), in: .capsule)
+            EchoButton(title: "Summarize my day with Muse", systemImage: "sparkles", style: .prominent, action: run)
             Text("Sends the day's text (\(model.storedCount) snippets, no audio) to Muse Spark. It is recorded in your Privacy Ledger.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
@@ -51,17 +44,10 @@ struct DigestSection: View {
     private func failed(_ message: String) -> some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Label("Muse couldn't summarize the day", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .font(.echoLabel)
                 .foregroundStyle(Palette.amber)
             Text(message).font(.subheadline).foregroundStyle(Palette.textPrimary)
-            Button(action: run) {
-                Label("Try again", systemImage: "arrow.clockwise")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(EchoPressStyle())
-            .glassEffect(.regular.interactive(), in: .capsule)
+            EchoButton(title: "Try again", systemImage: "arrow.clockwise", action: run)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()
@@ -70,7 +56,7 @@ struct DigestSection: View {
     private func notice(icon: String, title: String, text: String) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Label(title, systemImage: icon)
-                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .font(.echoLabel)
                 .foregroundStyle(Palette.amber)
             Text(text).font(.subheadline).foregroundStyle(Palette.textSecondary)
         }
@@ -87,15 +73,14 @@ private struct DigestCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(spacing: 6) {
-                Image(systemName: ready.isStub ? "testtube.2" : "sparkles")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(ready.isStub ? "Stub preview · no API key" : "Muse's view of your day")
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+            HStack(spacing: Spacing.tight) {
+                Label(ready.isStub ? "Stub preview · no API key" : "Muse's view of your day",
+                      systemImage: ready.isStub ? "testtube.2" : "sparkles")
+                    .font(.echoLabel)
                 Spacer()
                 Button(action: onRerun) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(EchoPressStyle())
@@ -110,17 +95,14 @@ private struct DigestCard: View {
 
             if !ready.digest.actionItems.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("Action items")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.textSecondary)
-                        .textCase(.uppercase)
+                    SectionHeader("Action items", style: .overline)
                     ForEach(ready.digest.actionItems) { item in
                         HStack(alignment: .top, spacing: Spacing.md) {
                             Image(systemName: "circle")
-                                .font(.system(size: 14))
+                                .font(.subheadline)
                                 .foregroundStyle(Palette.cloud)
                                 .padding(.top, 2)
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
                                 Text(item.what).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.textPrimary)
                                 Text([item.toWhom, item.due].filter { !$0.isEmpty }.joined(separator: " · "))
                                     .font(.footnote).foregroundStyle(Palette.textSecondary)
@@ -131,27 +113,16 @@ private struct DigestCard: View {
                                                                            detail: item.what, snippets: [], chunks: model.chunks),
                                            player: player)
                         }
-                        .padding(Spacing.md)
-                        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .echoRow()
                         .accessibilityElement(children: .combine)
                     }
                 }
             }
 
             if !ready.digest.people.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(ready.digest.people, id: \.self) { name in
-                            Label(name, systemImage: "person.fill")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Palette.cloud)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Palette.cloud.opacity(0.16), in: Capsule())
-                        }
-                    }
+                FlowLayout {
+                    ForEach(ready.digest.people, id: \.self) { Chip(text: $0, icon: "person.fill", tint: Palette.cloud) }
                 }
-                .scrollIndicators(.hidden)
             }
 
             Text(ready.isStub ? "Stub: nothing was sent. Run Tools/set_api_key.sh to connect Muse Spark."

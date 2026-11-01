@@ -26,34 +26,36 @@ private struct TierPill: View {
     let detail: String
     let tint: Color
     let state: PillState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: Spacing.xxs) {
             Image(systemName: symbol)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.callout.weight(.semibold))
                 .foregroundStyle(state == .active ? tint : Palette.textTertiary)
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Font.echoMicro.weight(.semibold))
                 .foregroundStyle(state == .active ? Palette.textPrimary : Palette.textSecondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.7)
             Text(detail)
-                .font(.system(size: 10))
+                .font(.system(.caption2))
                 .foregroundStyle(Palette.textSecondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.md)
         .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(state == .active ? tint.opacity(0.18) : Color.white.opacity(0.04))
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(state == .active ? tint.opacity(0.8) : Color.white.opacity(0.1),
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
+                .fill(state == .active ? tint.opacity(0.18) : Palette.fill)
+            RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
+                .strokeBorder(state == .active ? tint.opacity(0.8) : Palette.stroke,
                               style: StrokeStyle(lineWidth: 1, dash: state == .designOnly ? [4, 3] : []))
         }
-        .opacity(state == .designOnly ? 0.75 : 1)
-        .animation(.easeOut(duration: 0.25), value: state == .active)
+        // Dimmed by dashing and colour, not by opacity: fading the whole pill would push its text below contrast.
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: state == .active)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title), \(detail)")
         .accessibilityValue(state == .active ? "used for this answer" : (state == .designOnly ? "not available in this demo" : "not used"))
@@ -74,29 +76,26 @@ struct AnswerCard: View {
                 switch result.note {
                 case .cloudOff:
                     Label("Cloud is off", systemImage: "cloud.slash.fill")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .font(.echoLabel)
                         .foregroundStyle(Palette.amber)
                     Text("This question needs synthesis, but you've switched the cloud off, so nothing was sent. Here are the closest moments on this phone. Turn the cloud back on in the Privacy Ledger to let Muse answer.")
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 case .declined:
                     Label("Not sent", systemImage: "hand.raised.fill")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .font(.echoLabel)
                         .foregroundStyle(Palette.amber)
                     Text("You chose not to send this to Muse, so nothing left your phone. Here are the closest moments on this phone.")
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 case .nothingMatched:
                     Label("Nothing matched", systemImage: "magnifyingglass")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .font(.echoLabel)
                         .foregroundStyle(Palette.amber)
                     Text("Nothing in today's transcripts matches that closely enough, so nothing was sent anywhere.")
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 case nil:
-                    HStack(spacing: 6) {
-                        Image(systemName: "lock.fill").font(.system(size: 12, weight: .semibold))
-                        Text("Answered on this phone")
-                            .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    }
-                    .foregroundStyle(Palette.local)
+                    Label("Answered on this phone", systemImage: "lock.fill")
+                        .font(.echoLabel)
+                        .foregroundStyle(Palette.local)
                     Text(result.decision.reason)
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 }
@@ -114,10 +113,7 @@ struct AnswerCard: View {
 
     private func sources(_ answer: Answer) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Closest moments")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Palette.textSecondary)
-                .textCase(.uppercase)
+            SectionHeader("Closest moments", style: .overline)
             ForEach(answer.sources) { SourceRow(hit: $0, terms: answer.highlightTerms, player: player) }
         }
     }
@@ -125,7 +121,7 @@ struct AnswerCard: View {
     @ViewBuilder
     private func localAnswer(_ answer: Answer) -> some View {
         Text(Highlighter.attributed(answer.headline, terms: answer.highlightTerms, highlight: Palette.teal, base: Palette.textPrimary))
-            .font(.system(.title3, design: .rounded, weight: .semibold))
+            .font(.echoAnswer)
             .fixedSize(horizontal: false, vertical: true)
 
         if !result.outcome.unknownTerms.isEmpty {
@@ -136,10 +132,7 @@ struct AnswerCard: View {
         }
 
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("From these moments")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Palette.textSecondary)
-                .textCase(.uppercase)
+            SectionHeader("From these moments", style: .overline)
             ForEach(answer.sources) { hit in
                 SourceRow(hit: hit, terms: answer.highlightTerms, player: player)
             }
@@ -160,7 +153,7 @@ struct SourceRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(hit.chunk.wallLabel)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .monospacedDigit()
@@ -178,18 +171,8 @@ struct SourceRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button { player.toggle(hit.chunk) } label: {
-                Image(systemName: playing ? "stop.fill" : "play.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.08), in: Circle())
-            }
-            .buttonStyle(EchoPressStyle())
-            .accessibilityLabel(playing ? "Stop audio" : "Play the audio from \(hit.chunk.wallLabel)")
+            PlayButton(isPlaying: playing, label: "Play the audio from \(hit.chunk.wallLabel)") { player.toggle(hit.chunk) }
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .echoRow(vertical: Spacing.sm)
     }
 }

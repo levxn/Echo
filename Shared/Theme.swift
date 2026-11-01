@@ -55,6 +55,8 @@ extension Font {
     static let echoSheetTitle = Font.system(.title, design: .rounded, weight: .bold)
     static let echoSection = Font.system(.headline, design: .rounded, weight: .semibold)
     static let echoBody = Font.system(.body, design: .rounded, weight: .medium)
+    /// The headline of an answer.
+    static let echoAnswer = Font.system(.title3, design: .rounded, weight: .semibold)
     static let echoLabel = Font.system(.footnote, design: .rounded, weight: .semibold)
     static let echoMeta = Font.caption
     static let echoMicro = Font.caption2
@@ -133,6 +135,15 @@ enum ByteFormat {
 }
 
 enum Format {
+    /// 233 -> "3 minutes 53 seconds", for VoiceOver.
+    static func spoken(_ seconds: Double) -> String {
+        let s = max(0, Int(seconds.rounded()))
+        let (m, r) = (s / 60, s % 60)
+        let minutes = m == 1 ? "1 minute" : "\(m) minutes"
+        let secs = r == 1 ? "1 second" : "\(r) seconds"
+        return m == 0 ? secs : (r == 0 ? minutes : "\(minutes) \(secs)")
+    }
+
     /// 427 -> "7:07"
     static func clock(_ seconds: Double) -> String {
         let s = max(0, Int(seconds.rounded()))

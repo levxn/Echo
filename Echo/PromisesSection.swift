@@ -17,16 +17,7 @@ struct PromisesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Commitments")
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                Spacer()
-                Text("\(promises.count) heard · \(promises.filter { done.contains($0.id) }.count) done")
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.textSecondary)
-            }
+            SectionHeader("Commitments", meta: "\(promises.count) heard · \(promises.filter { done.contains($0.id) }.count) done")
             Label("Found on this phone, nothing sent. Echo doesn't tell speakers apart, so these are commitments heard, not only yours.",
                   systemImage: "lock.fill")
                 .font(.caption)
@@ -75,7 +66,7 @@ private struct PromiseRow: View {
             HStack(alignment: .top, spacing: Spacing.sm) {
                 Button(action: onToggleDone) {
                     Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 22))
+                        .font(.title2)
                         .foregroundStyle(isDone ? Palette.teal : Palette.textSecondary)
                         .frame(width: 44, height: 44)
                 }
@@ -90,12 +81,12 @@ private struct PromiseRow: View {
                             .strikethrough(isDone, color: Palette.textSecondary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                        HStack(spacing: 6) {
-                            if promise.kind == .reminder { tag("Reminder", icon: "bell.fill", color: Palette.amber) }
-                            if let due = promise.due { tag(due, icon: "clock", color: Palette.teal) }
-                            if let to = promise.toWhom { tag("to \(to)", icon: "person.fill", color: Palette.blue) }
+                        FlowLayout {
+                            if promise.kind == .reminder { Chip(text: "Reminder", icon: "bell.fill", tint: Palette.amber, size: .compact) }
+                            if let due = promise.due { Chip(text: due, icon: "clock", tint: Palette.teal, size: .compact) }
+                            if let to = promise.toWhom { Chip(text: "to \(to)", icon: "person.fill", tint: Palette.blue, size: .compact) }
                             Text(promise.timeLabel)
-                                .font(.caption.weight(.semibold))
+                                .font(Font.echoMeta.weight(.semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(Palette.textSecondary)
                         }
@@ -106,15 +97,7 @@ private struct PromiseRow: View {
                 }
                 .buttonStyle(.plain)
 
-                Button(action: onPlay) {
-                    Image(systemName: playing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.08), in: Circle())
-                }
-                .buttonStyle(EchoPressStyle())
-                .accessibilityLabel(playing ? "Stop audio" : "Play the audio from \(promise.timeLabel)")
+                PlayButton(isPlaying: playing, label: "Play the audio from \(promise.timeLabel)", action: onPlay)
             }
             if isExpanded, let context = promise.context {
                 Text("Just before: “\(context)”")
@@ -125,17 +108,7 @@ private struct PromiseRow: View {
                     .transition(.opacity)
             }
         }
-        .padding(.horizontal, Spacing.sm)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .echoRow(horizontal: Spacing.sm, vertical: 0)
         .opacity(isDone ? 0.7 : 1)
-    }
-
-    private func tag(_ text: String, icon: String, color: Color) -> some View {
-        Label(text, systemImage: icon)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.15), in: Capsule())
     }
 }
