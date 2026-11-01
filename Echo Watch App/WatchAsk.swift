@@ -287,11 +287,6 @@ struct AskWatchView: View {
             Text(link.reachable ? "Tap to ask" : "Phone needed to ask")
                 .font(.system(.footnote, design: .rounded, weight: .semibold))
                 .foregroundStyle(link.reachable ? Palette.textPrimary : Palette.textSecondary)
-            #if targetEnvironment(simulator)
-            Text("Simulated microphone")
-                .font(.caption2)
-                .foregroundStyle(Palette.textSecondary)
-            #endif
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xs)
@@ -312,7 +307,7 @@ struct AskWatchView: View {
             Text("Listening…")
                 .font(.system(.footnote, design: .rounded, weight: .semibold))
                 .foregroundStyle(Palette.textPrimary)
-            Text(ask.recorder.simulated ? "Simulated microphone" : "Tap to stop")
+            Text("Tap to stop")
                 .font(.caption2)
                 .foregroundStyle(Palette.textSecondary)
             WatchButton(title: "Cancel", systemImage: nil, quiet: true) { ask.reset() }

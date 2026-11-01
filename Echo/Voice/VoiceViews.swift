@@ -22,7 +22,7 @@ struct VoiceCard: View {
                         Text("Listening…")
                             .font(.echoLabel)
                             .foregroundStyle(Palette.textPrimary)
-                        Text(voice.recorder.simulated ? "Simulated microphone · a recorded question" : "Say your question. I'll stop when you pause.")
+                        Text("Say your question. I'll stop when you pause.")
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

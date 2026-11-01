@@ -28,7 +28,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             AuroraBackground(calm: true, fps: 12)
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
                 // Left-aligned so it never collides with the system clock at the top right.
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(title)
@@ -38,7 +38,7 @@ struct ContentView: View {
                         Circle()
                             .fill(link.reachable ? Palette.teal : Palette.rose)
                             .frame(width: 6, height: 6)
-                        Text(link.reachable ? "Linked · simulated mic" : "No phone · simulated mic")
+                        Text(link.reachable ? "Phone linked" : "No phone nearby")
                             .font(.caption2)
                             .foregroundStyle(Palette.textSecondary)
                             .lineLimit(1)
@@ -49,7 +49,7 @@ struct ContentView: View {
                 HStack(spacing: Spacing.sm) {
                     MicRing(progress: engine.progress, level: engine.level, tint: ringTint,
                             active: engine.phase == .running, reduceMotion: reduceMotion)
-                        .frame(width: 64, height: 64)
+                        .frame(width: 80, height: 80)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Counter(value: engine.captured, label: "heard")
@@ -67,10 +67,6 @@ struct ContentView: View {
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .accessibilityLabel(buttonLabel)
 
-                Text("A real watch listens in the background.")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, Spacing.sm)
         }
@@ -139,7 +135,7 @@ private struct MicRing: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Microphone")
-        .accessibilityValue("\(Int(progress * 100)) percent of the day replayed")
+        .accessibilityValue("\(Int(progress * 100)) percent of the day captured")
     }
 }
 

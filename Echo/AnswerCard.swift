@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Says which tier answered in one line. Tap it to see all three tiers (this phone, the design-only Glimmer, Muse in the
-/// cloud), so the routing story stays one tap away without taking space above every answer.
+/// Says where an answer came from in one line. Tap it to see both places a question can be answered (this phone, or Muse in
+/// the cloud), so the routing story stays one tap away without taking space above every answer.
 struct RouteStrip: View {
     enum Active { case local, cloud, none }
     let active: Active
@@ -11,19 +11,19 @@ struct RouteStrip: View {
 
     private var summary: (symbol: String, text: String, tint: Color) {
         switch active {
-        case .local: ("iphone", "Tier 0 · This phone", Palette.local)
-        case .cloud: ("cloud.fill", "Tier 2 · Muse Spark", Palette.cloud)
+        case .local: ("iphone", "On this phone", Palette.local)
+        case .cloud: ("cloud.fill", "Muse Spark", Palette.cloud)
         case .none: ("hand.raised.fill", "Not sent to the cloud", Palette.amber)
         }
     }
 
-    /// With very large text only the tier that answered is shown (all three when none did), so the answer stays on screen.
+    /// With very large text only the one that answered is shown (both when none did), so the answer stays on screen.
     private func showsPill(_ tier: Active?) -> Bool {
         guard typeSize.isAccessibilitySize, active != .none else { return true }
         return tier == active
     }
 
-    /// Three pills side by side do not fit once text is very large, so they stack.
+    /// Two pills side by side do not fit once text is very large, so they stack.
     private var layout: AnyLayout {
         typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: Spacing.sm)) : AnyLayout(HStackLayout(spacing: Spacing.sm))
     }
@@ -56,20 +56,16 @@ struct RouteStrip: View {
             .buttonStyle(EchoPressStyle())
             .accessibilityLabel(s.text)
             .accessibilityValue(open ? "expanded" : "collapsed")
-            .accessibilityHint(open ? "Hides the three tiers" : "Shows how the question was routed")
+            .accessibilityHint(open ? "Hides the details" : "Shows how the question was routed")
 
             if open {
                 layout {
                     if showsPill(.local) {
-                        TierPill(symbol: "iphone", title: "This phone", detail: "Tier 0", tint: Palette.local,
+                        TierPill(symbol: "iphone", title: "This phone", detail: "On-device", tint: Palette.local,
                                  state: active == .local ? .active : .idle)
                     }
-                    if showsPill(nil) {
-                        TierPill(symbol: "cpu", title: "Muse Glimmer", detail: "Tier 1 · design only", tint: Palette.textTertiary,
-                                 state: .designOnly)
-                    }
                     if showsPill(.cloud) {
-                        TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Tier 2 · Meta API", tint: Palette.cloud,
+                        TierPill(symbol: "cloud.fill", title: "Muse Spark", detail: "Meta API", tint: Palette.cloud,
                                  state: active == .cloud ? .active : .idle)
                     }
                 }
@@ -80,7 +76,7 @@ struct RouteStrip: View {
 }
 
 private struct TierPill: View {
-    enum PillState { case active, idle, designOnly }
+    enum PillState { case active, idle }
 
     let symbol: String
     let title: String
@@ -113,13 +109,13 @@ private struct TierPill: View {
                 .fill(state == .active ? tint.opacity(0.18) : Palette.fill)
             RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
                 .strokeBorder(state == .active ? tint.opacity(0.8) : Palette.stroke,
-                              style: StrokeStyle(lineWidth: 1, dash: state == .designOnly ? [4, 3] : []))
+                              style: StrokeStyle(lineWidth: 1))
         }
         // Dimmed by dashing and colour, not by opacity: fading the whole pill would push its text below contrast.
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: state == .active)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title), \(detail)")
-        .accessibilityValue(state == .active ? "used for this answer" : (state == .designOnly ? "not available in this demo" : "not used"))
+        .accessibilityValue(state == .active ? "used for this answer" : "not used")
     }
 }
 

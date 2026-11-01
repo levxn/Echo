@@ -12,11 +12,11 @@ struct ArchitectureView: View {
             VStack(spacing: Spacing.md) {
                 header
 
-                Stage(symbol: "applewatch", title: "Apple Watch", tint: Palette.blue, badge: "Simulated microphone") {
+                Stage(symbol: "applewatch", title: "Apple Watch", tint: Palette.blue, badge: nil) {
                     Row("Stage 1 · lenient voice detector", "Energy gate with a 2 s pre-roll so the first word is never clipped.")
                     Row("Compress and stream", "Speech only, as AAC, over WatchConnectivity.")
                     if model.recordedSeconds > 0 {
-                        Stat("Kept \(Format.clock(model.watchKeptSeconds)) of \(Format.clock(model.recordedSeconds)) recorded", Palette.blue)
+                        Stat("Kept \(Format.clock(model.watchKeptSeconds)) of \(Format.clock(model.recordedSeconds)) heard", Palette.blue)
                     }
                 }
 
@@ -34,21 +34,18 @@ struct ArchitectureView: View {
                 Connector(label: "a question")
 
                 VStack(spacing: Spacing.sm) {
-                    TierCard(symbol: "iphone", title: "Tier 0 · this phone", detail: "Lookups answered from your transcripts in about 30 ms. Nothing leaves.", tint: Palette.local, dashed: false)
-                    TierCard(symbol: "cpu", title: "Tier 1 · Muse Glimmer", detail: "An open-weights model running on-device. Design only: not run in this demo.", tint: Palette.textTertiary, dashed: true)
-                    TierCard(symbol: "cloud.fill", title: "Tier 2 · Muse Spark", detail: "Synthesis across the day through the Meta Model API. Text snippets only, never audio.", tint: Palette.cloud, dashed: false)
+                    TierCard(symbol: "iphone", title: "This phone", detail: "Lookups answered from your transcripts in about 30 ms. Nothing leaves.", tint: Palette.local, dashed: false)
+                    TierCard(symbol: "cloud.fill", title: "Muse Spark", detail: "Synthesis across the day through the Meta Model API. Text snippets only, never audio.", tint: Palette.cloud, dashed: false)
                 }
 
-                Connector(label: "every question is recorded")
+                Connector(label: "every question is logged")
 
                 Stage(symbol: "lock.shield.fill", title: "Privacy ledger", tint: Palette.teal, badge: nil) {
-                    Row("What it records", "Each question, which tier answered, the exact text and bytes sent, tokens and latency.")
+                    Row("What it records", "Each question, where it was answered, the exact text and bytes sent, tokens and latency.")
                     let t = ledger.totals
                     Stat("\(t.stayedOnPhone) stayed on this phone · \(t.usedMuse) used Muse · \(ByteFormat.short(t.bytesSent)) sent", Palette.teal)
                     Row("Kill switch", "Turn the cloud off and nothing is ever sent.")
                 }
-
-                honesty
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.lg)
@@ -82,27 +79,6 @@ struct ArchitectureView: View {
             .accessibilityLabel("Close")
         }
         .padding(.bottom, Spacing.sm)
-    }
-
-    private var honesty: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            SectionHeader("What's real in this demo")
-            ForEach([
-                "The audio is pre-recorded speech replayed through the real pipeline.",
-                "The watch and phone are simulators linked by WatchConnectivity messages.",
-                "Tier 1 is a design, not something this demo runs.",
-                "Tier 2 is a live call to Muse Spark, or a labeled stub if no key is set.",
-            ], id: \.self) { line in
-                HStack(alignment: .top, spacing: Spacing.sm) {
-                    Circle().fill(Palette.textTertiary).frame(width: 5, height: 5).padding(.top, 7).accessibilityHidden(true)
-                    Text(line).font(.footnote).foregroundStyle(Palette.textSecondary).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.lg)
-        .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .padding(.top, Spacing.sm)
     }
 }
 
