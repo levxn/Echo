@@ -27,7 +27,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            AuroraBackground(calm: true)
+            AuroraBackground(calm: true, fps: 12)
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 // Left-aligned so it never collides with the system clock at the top right.
                 VStack(alignment: .leading, spacing: 1) {

@@ -60,6 +60,7 @@ struct RootView: View {
             ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })
         }
         .preferredColorScheme(.dark)
+        .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
         // would wrap mid-word, so the scale is capped there.
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)

@@ -1,9 +1,5 @@
 import SwiftUI
 
-enum ByteFormat {
-    static func short(_ n: Int) -> String { n < 1024 ? "\(n) B" : String(format: "%.1f KB", Double(n) / 1024) }
-}
-
 /// A structured answer from Muse Spark (or the labeled stub), with exactly what was sent.
 struct CloudAnswerCard: View {
     let result: CloudResult

@@ -56,7 +56,7 @@ struct AskWatchView: View {
 
     var body: some View {
         ZStack {
-            AuroraBackground(calm: true)
+            AuroraBackground(calm: true, fps: 12)
             switch ask.state {
             case .idle: presets
             case .asking(let preset): asking(preset)
