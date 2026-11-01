@@ -13,7 +13,10 @@ final class PipelineModel {
     private(set) var totalSeconds = 0.0
     private(set) var watchReachable = false
 
-    let store = ChunkStore()
+    let store: ChunkStore
+
+    /// `store` is injectable so tests can use a temporary folder; the app uses its own.
+    init(store: ChunkStore = ChunkStore()) { self.store = store }
 
     /// The replay's totals survive app restarts, so the funnel still reads correctly afterwards.
     private enum Key {
@@ -99,4 +102,11 @@ final class PipelineModel {
     }
 
     func record(id: String) -> ChunkRecord? { chunks.first { $0.id == id } }
+
+    /// Deletes one moment from the day: its transcript, audio file and search entry. Search reads the store on every
+    /// query and Today, Commitments and the feed are derived from `chunks`, so it disappears from all of them.
+    func remove(id: String) async {
+        chunks.removeAll { $0.id == id }
+        await store.delete(id: id)
+    }
 }

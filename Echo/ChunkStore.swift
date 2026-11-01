@@ -214,6 +214,27 @@ actor ChunkStore {
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
 
+    /// Removes one moment: its row (and the embedding on it), its search entry and its audio file. Unknown ids do nothing.
+    func delete(id: String) {
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        var audioFile: String?
+        if sqlite3_prepare_v2(db, "SELECT audio_file FROM chunk WHERE id = ?", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, id, -1, transient)
+            if sqlite3_step(stmt) == SQLITE_ROW, let c = sqlite3_column_text(stmt, 0) { audioFile = String(cString: c) }
+        }
+        sqlite3_finalize(stmt)
+        for sql in ["DELETE FROM chunk WHERE id = ?", "DELETE FROM chunk_fts WHERE id = ?"] {
+            stmt = nil
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(stmt, 1, id, -1, transient)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
+        if let audioFile { try? FileManager.default.removeItem(at: chunksDirectory.appending(path: audioFile)) }
+    }
+
     func write(audio: Data, named file: String) throws {
         try audio.write(to: chunksDirectory.appending(path: file), options: .atomic)
     }
