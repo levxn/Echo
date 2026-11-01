@@ -39,60 +39,36 @@ Echo turns a day of conversations into something you can ask questions of, **wit
 
 ### Apple Watch
 
-On a real watch the day's capture would run in the background, with no button at all. Here it is a recorded day, so the first screen is a proof of life: a ring that traces the replay and breathes with the (simulated) microphone level, three counters, and one control. Swipe up to **ask**: tap the big mic and say a question. The watch shows what it heard (the phone understood it, on-device, and deleted the recording), then the answer, which can be read aloud. Four suggestions cover the usual questions, and **Recent** lists the last eight you asked; tap one to see its answer again without asking anew. The phone answers on its own, or with Muse for the broad ones.
+On a real watch the day's capture would run in the background, with no button at all. Here it is a recorded day, so the first screen is a proof of life. Swipe up to **ask**: tap the big mic and say a question, and the watch shows what it heard, then the answer (which can be read aloud). Four suggestions cover the usual questions, and **Recent** lists the last eight, each reopening without asking again.
 
 <table align="center">
   <tr>
     <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>A simulated microphone and a recorded day</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-listening.png" width="200" alt="Watch, listening"><br><sub><b>Listening</b><br>Chunks stream to the phone</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-done.png" width="200" alt="Watch, day captured"><br><sub><b>Day captured</b><br>Everything synced</sub></td>
-  </tr>
-  <tr>
     <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="200" alt="Watch, the Ask page with a mic"><br><sub><b>Ask</b><br>Tap the mic and speak</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="200" alt="Watch, suggestions and recent questions"><br><sub><b>Suggestions and Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="200" alt="Watch, recent questions"><br><sub><b>Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="200" alt="Watch, an answer to a spoken question"><br><sub><b>An answer</b><br>To a spoken question, from Muse</sub></td>
   </tr>
 </table>
 
 ### iPhone
 
-A slim bar sits at the top of every tab: your profile on the left, where you are in the middle, and three indicators on the right (is the watch there, is the cloud allowed, and a lock that says everything stays on this phone). The profile is just a name and a colour, stored only on the phone: there is no account and no login.
+A slim bar sits at the top of every tab: your profile, where you are, and indicators for the watch, the cloud and a lock that says everything stays on the phone. The profile is just a name and a colour kept on the phone; there is no account.
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-empty.jpg" width="250" alt="Today, before anything is captured"><br><sub><b>First launch</b><br>A clean slate</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-live.jpg" width="250" alt="Moments, while the watch is listening"><br><sub><b>Moments, live</b><br>Listening: the ribbon grows and new moments appear</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments.jpg" width="250" alt="Moments, caught up"><br><sub><b>Moments, caught up</b><br>45 moments from 4 conversations, all on this phone</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments.jpg" width="250" alt="Moments"><br><sub><b>Moments</b><br>What the phone heard, all on this phone</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-lookup.jpg" width="250" alt="Ask, answered on the phone"><br><sub><b>Ask, locally</b><br>Highlighted words, source audio, about 30 ms</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, answered by Muse Spark"><br><sub><b>Ask, with Muse</b><br>Live Muse Spark, with proof of what left the phone; Read aloud and Share</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-open.jpg" width="250" alt="Moments, a conversation opened"><br><sub><b>Moments, a conversation</b><br>Play any moment, or delete it</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments-behind.jpg" width="250" alt="Behind the scenes"><br><sub><b>Behind the scenes</b><br>The technical story, in plain words</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-profile.jpg" width="250" alt="Profile"><br><sub><b>Profile</b><br>A name and a colour, kept on this phone only</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask out loud</b><br>Understood on the phone; a recorded question stands in for the mic in the simulator</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-followup.jpg" width="250" alt="Ask, a follow-up question"><br><sub><b>Follow-ups</b><br>"Which of those is due first?" is sent with the earlier question, never the earlier answer</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-history-detail.jpg" width="250" alt="A past question reopened"><br><sub><b>History</b><br>Every question kept on the phone, with citations that still play</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-today.jpg" width="250" alt="Today, the day timeline"><br><sub><b>Today · Day</b><br>The funnel, then the day as conversations</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-today-commitments.jpg" width="250" alt="Today, commitments"><br><sub><b>Today · Commitments</b><br>Found on the phone with plain rules; tap to hear the moment</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-today-summary.jpg" width="250" alt="Today, the day digest"><br><sub><b>Today · Summary</b><br>Written by Muse, with action items you can play back</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-lookup.jpg" width="250" alt="Ask, answered on the phone"><br><sub><b>Ask, answered locally</b><br>Highlighted words, source audio, ~30 ms</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-lease.jpg" width="250" alt="Ask, a second local answer"><br><sub><b>Ask, another lookup</b><br>The headline is the sentence that answers</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, a synthesis question routed to Tier 2"><br><sub><b>Ask, synthesis</b><br>Live Muse Spark, with the proof of what left the phone</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask by voice</b><br>Tap the mic; a recorded question stands in for it in the simulator</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-history.jpg" width="250" alt="History of questions"><br><sub><b>History</b><br>Everything asked, newest first, kept on this phone</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-history-detail.jpg" width="250" alt="A past question reopened"><br><sub><b>A past question</b><br>The full answer, with citations you can still play</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-masked.jpg" width="250" alt="Ask, with names masked"><br><sub><b>Names masked</b><br>Muse sees placeholders; you see real names</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-review.jpg" width="250" alt="Review before sending"><br><sub><b>Review before sending</b><br>The exact text, then Send or Don't send</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, what left, and the settings</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger-data.jpg" width="250" alt="Your data"><br><sub><b>Your data</b><br>Export the ledger, or forget the day</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-digest.jpg" width="250" alt="Generating the digest"><br><sub><b>Day digest</b><br>One tap, one structured call</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-architecture.jpg" width="250" alt="How Echo works"><br><sub><b>How Echo works</b><br>The system with live numbers and honesty labels</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-today-commitments.jpg" width="250" alt="Commitments with a reminder"><br><sub><b>Promises</b><br>Found with plain rules; the bell sets a reminder</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-people.jpg" width="250" alt="People mentioned today"><br><sub><b>People</b><br>Who came up, and where; misheard names can be hidden</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, what left, and the switches</sub></td>
   </tr>
 </table>
 

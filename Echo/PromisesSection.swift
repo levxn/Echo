@@ -45,9 +45,10 @@ struct PromisesSection: View {
             ShowMoreButton(total: promises.count, limit: Self.collapsedCount, isExpanded: $showAll)
         }
         .task {
-            // Dev hook: `-remind-first` sets a reminder on the first commitment for an hour from now (screenshots).
-            guard ProcessInfo.processInfo.arguments.contains("-remind-first"), let first = promises.first, reminders.date(for: first.id) == nil else { return }
-            await reminders.schedule(first, at: Date().addingTimeInterval(3_600))
+            // Dev hook: `-remind-first` sets a reminder on the first commitment, at its due time if it has one (screenshots).
+            guard ProcessInfo.processInfo.arguments.contains("-remind-first"), let first = promises.first, reminders.date(for: first.id) == nil,
+                  let option = ReminderOptions.options(due: first.due, now: Date()).first else { return }
+            await reminders.schedule(first, at: option.date)
         }
     }
 

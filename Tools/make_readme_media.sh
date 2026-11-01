@@ -80,13 +80,11 @@ sleep 3; shot_watch done
 
 echo "4/6 each screen (recorded)…"
 # Every scene passes the settings it needs, because they persist between launches.
-scene today 7.5 -tab today -today-section day -review off -mask off
+scene today 7.5 -tab today -today-section day -review off -mask off      # also a clip in the preview video
 scene moments 6.5 -tab moments
-scene moments-open 6.5 -tab moments -moments-expand latest
-scene moments-behind 7 -tab moments -moments-behind
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
-scene ask-lease 7.5 -tab ask -ask "What did Mister Brennan say about the lease?"
 scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
+scene ask-followup 24 -tab ask -ask "What did I promise people today?" -then "Which of those is due first?"   # two live calls
 
 # A spoken question: a recorded one stands in for the microphone. Listening is brief, so its screenshot is taken early.
 dir="$TMP/clip_voice-answer"; mkdir -p "$dir"
@@ -95,16 +93,13 @@ launch_phone -tab ask -voice-ask 4
 sleep 1.0; shot_phone ask-listening
 sleep 15; shot_phone ask-voice
 ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh stop >/dev/null
-scene history 7 -tab ask -history all            # the list, with the spoken question on top
-scene history-detail 7 -tab ask -history first   # the newest one reopened: its answer and citations
-scene digest 17 -digest -today-section summary                      # the digest takes ~11 s live
-scene today-summary 7.5 -tab today -today-section summary           # the saved digest
-scene today-commitments 7.5 -tab today -today-section commitments
+scene history-detail 7 -tab ask -history first   # the newest question reopened: its answer and citations
+
+scene today-commitments 7.5 -tab today -today-section commitments -notify-provisional -remind-first   # the first one has a reminder
+# "Lee" is the recognizer mishearing "leave"; hiding it is exactly what the Not a person button does.
+scene people 8 -tab today -today-section people -people-open -echo.peopleIgnored lee
+scene digest 17 -digest -today-section summary                      # the digest takes ~11 s live (also a preview clip)
 scene ledger 7.5 -tab ledger
-scene ledger-data 7.5 -tab ledger -ledger-focus data
-scene profile 6.5 -tab today -show-profile
-scene ask-masked 14 -tab ask -mask on -ask "What did I promise people today?"   # names become placeholders, then come back
-scene review 9 -tab ask -review on -ask "What did I promise people today?"      # the sheet waits for approval
 launch_phone -review off -mask off; sleep 3
 scene architecture 8.5 -tab ledger -architecture
 
@@ -137,6 +132,9 @@ echo "6/6 the hero image…"
 ffmpeg -loglevel error -y -f lavfi -i "color=c=0x070914:s=1920x1080" -i "$TMP/raw_phone_ask-lookup.png" -i "$TMP/raw_watchcrop_done.png" \
   -filter_complex "[1:v]scale=-2:1000[p];[2:v]scale=-2:560[w];[0:v][p]overlay=x=380:y=40[t];[t][w]overlay=x=1000:y=260" \
   -frames:v 1 "$OUT/hero.png"
+
+# Keep only the screenshots the README shows.
+for f in "$SHOTS"/*; do grep -q "$(basename "$f")" README.md || rm -f "$f"; done
 
 echo; ls -la "$OUT" "$SHOTS" | grep -v '^total'
 echo; echo "Status bar overrides are still on; run Tools/demo_prep.sh --clear when you're finished."
