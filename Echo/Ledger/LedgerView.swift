@@ -11,19 +11,22 @@ struct LedgerView: View {
     @State private var confirmForget = false
     @State private var showAllActivity = false
     @State private var exportURL: URL?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Activity shows this many entries until "Show all" is tapped.
     static let activityLimit = 5
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 ScreenTitle(title: "Privacy ledger", subtitle: "Every question, and exactly what left this phone.")
+                    .id("ledgerTop")
                 SummaryCard(totals: ledger.totals)
                 settings
                 activity
                 EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
-                yourData
+                yourData.id("yourData")
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.sm)
@@ -31,6 +34,11 @@ struct LedgerView: View {
         }
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
+        .task(id: ledger.focus) {
+            guard let target = ledger.focus else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
+        }
         .sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) }
         .onChange(of: ledger.entries, initial: true) { refreshExport() }
         .confirmationDialog("Forget the day?", isPresented: $confirmForget, titleVisibility: .visible) {
@@ -43,6 +51,7 @@ struct LedgerView: View {
             Button("Clear ledger", role: .destructive) { Task { await ledger.clear() } }
         } message: {
             Text("This deletes the record of what was sent. It can't be undone.")
+        }
         }
     }
 

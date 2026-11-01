@@ -89,8 +89,9 @@ struct RootView: View {
             if DemoDriver.requested {
                 await warm.value
                 await model.load()
-                await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest,
+                await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest, today: today, player: player,
                                  startWatch: { link.sendDemoStart() },
+                                 watchQuickAsk: { link.sendDemoQuickAsk($0) },
                                  setTab: { tab = $0 },
                                  setCaption: { caption = $0 }).run()
             } else if let i = args.firstIndex(of: "-ask"), i + 1 < args.count {

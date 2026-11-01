@@ -36,6 +36,10 @@ struct AskView: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background { AuroraBackground() }
+            .onChange(of: ask.scrollTarget) { _, target in
+                guard let target else { return }
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.8)) { proxy.scrollTo(target, anchor: .top) }
+            }
             // The demo driver opens the "What left your phone" panel, which sits below the answer's items.
             .onChange(of: ask.expandSent) { _, open in
                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.8)) { proxy.scrollTo(open ? "sentPanel" : "askTop", anchor: open ? .center : .top) }

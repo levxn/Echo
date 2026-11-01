@@ -55,6 +55,8 @@ final class AskModel {
     var query = ""
     /// Opens the "What left your phone" panel on a cloud answer. Set by the demo driver only.
     var expandSent = false
+    /// Scrolls the Ask tab to an anchor ("items", "sentPanel", "askTop"). Set by the demo driver only.
+    var scrollTarget: String?
     private(set) var state: State = .idle
     private(set) var recent: [String] = []
 

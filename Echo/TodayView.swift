@@ -30,6 +30,8 @@ enum TodaySection: String, CaseIterable, Identifiable {
 @Observable
 final class TodayState {
     var section = TodaySection.initial(arguments: ProcessInfo.processInfo.arguments)
+    /// Scrolls Today to an anchor ("sections", "todayTop"). Set by the demo driver only.
+    var scrollTarget: String?
 }
 
 /// The funnel, then the day as a summary, its commitments, or its conversations: one at a time, so each fits a screen.
@@ -59,6 +61,7 @@ struct TodayView: View {
                 ScreenHeader(title: "Echo", status: statusText, reachable: model.watchReachable) {
                     Task { await model.reset() }
                 }
+                .id("todayTop")
                 FunnelCard(model: model)
                 if model.chunks.isEmpty {
                     EmptyDayHint()
@@ -79,6 +82,10 @@ struct TodayView: View {
         }
         // Dev hook: with `-today-focus` or `-today-section`, scroll so the switcher and its content fill the screen
         // once the day has loaded (screenshots, demo take).
+        .onChange(of: state.scrollTarget) { _, target in
+            guard let target else { return }
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
+        }
         .onChange(of: promises.count) {
             let args = ProcessInfo.processInfo.arguments
             guard !focusedSections, !promises.isEmpty, args.contains("-today-focus") || args.contains("-today-section") else { return }

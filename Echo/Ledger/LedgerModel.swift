@@ -8,6 +8,12 @@ final class LedgerModel {
     private(set) var entries: [LedgerEntry] = []
     /// Whether the "How Echo works" sheet is showing. Lives here so the demo driver can open it.
     var showArchitecture = ProcessInfo.processInfo.arguments.contains("-architecture")
+    /// Scrolls the Ledger to an anchor ("yourData", "ledgerTop"). Set by the demo driver, or by `-ledger-focus data`.
+    var focus: String? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-ledger-focus"), i + 1 < args.count, args[i + 1] == "data" else { return nil }
+        return "yourData"
+    }()
     private let store: ChunkStore
     private let defaults: UserDefaults
     private static let cloudKey = "echo.cloudEnabled"

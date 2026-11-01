@@ -37,6 +37,7 @@ struct CloudAnswerCard: View {
                 VStack(spacing: Spacing.sm) {
                     ForEach(result.answer.items) { ItemRow(item: $0, chunk: chunkFor($0), player: player) }
                 }
+                .id("items")
             }
 
             Text(footer)

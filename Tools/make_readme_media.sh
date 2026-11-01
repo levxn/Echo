@@ -79,14 +79,27 @@ done
 sleep 3; shot_watch done
 
 echo "4/6 each screen (recorded)…"
-scene today 7.5 -tab today
+# Every scene passes the settings it needs, because they persist between launches.
+scene today 7.5 -tab today -today-section day -review off -mask off
 scene pipeline 6.5 -tab pipeline
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
 scene ask-lease 7.5 -tab ask -ask "What did Mister Brennan say about the lease?"
 scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
-scene digest 17 -digest                                             # the digest takes ~11 s live
+scene digest 17 -digest -today-section summary                      # the digest takes ~11 s live
+scene today-summary 7.5 -tab today -today-section summary           # the saved digest
+scene today-commitments 7.5 -tab today -today-section commitments
 scene ledger 7.5 -tab ledger
+scene ledger-data 7.5 -tab ledger -ledger-focus data
+scene ask-masked 14 -tab ask -mask on -ask "What did I promise people today?"   # names become placeholders, then come back
+scene review 9 -tab ask -review on -ask "What did I promise people today?"      # the sheet waits for approval
+launch_phone -review off -mask off; sleep 3
 scene architecture 8.5 -tab ledger -architecture
+
+echo "   the watch's Ask page…"
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask >/dev/null; sleep 5; shot_watch ask
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -quick 2 "media$(date +%s)" >/dev/null; sleep 20; shot_watch answer
 
 
 # Phone screenshots as JPEG: the aurora gradients make PNGs several times larger for no visible gain.

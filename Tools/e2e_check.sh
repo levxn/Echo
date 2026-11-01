@@ -10,11 +10,11 @@ PHONE=3BDBF6CE-2235-4CFE-9437-1EB803417569
 WATCH=373A257B-EB2B-4A7B-8E94-CFF47E52792D
 KEYFILE="$(xcrun simctl get_app_container "$PHONE" levtech.Echo data 2>/dev/null)/Library/Application Support/Echo/meta_api_key"
 
-echo "1/5 preparing the simulators…"
+echo "1/7 preparing the simulators…"
 Tools/demo_prep.sh >/tmp/e2e_prep.log 2>&1 || { cat /tmp/e2e_prep.log; echo "FAIL: demo_prep"; exit 1; }
 LIVE=0; [ -f "$(xcrun simctl get_app_container "$PHONE" levtech.Echo data)/Library/Application Support/Echo/meta_api_key" ] && LIVE=1
 
-echo "2/5 replaying the day from the watch…"
+echo "2/7 replaying the day from the watch…"
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
 xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "$(date +%s)" >/dev/null
 DB=""
@@ -35,7 +35,7 @@ print(c.execute('select count(*) from chunk').fetchone()[0], c.execute(\"select 
 done
 sleep 3
 
-echo "3/5 asking the demo questions…"
+echo "3/7 asking the demo questions…"
 Q1="When is the plumber coming?"; Q2="What did Mister Brennan say about the lease?"; Q3="Where is Priya going in March?"
 Q4="What did I promise people today?"; Q5="Summarize my day"
 for Q in "$Q1" "$Q2" "$Q3" "$Q4" "$Q5"; do
@@ -49,7 +49,7 @@ for Q in "$Q1" "$Q2" "$Q3" "$Q4" "$Q5"; do
   done
 done
 
-echo "4/5 asking Muse to summarize the day…"
+echo "4/7 asking Muse to summarize the day…"
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
 xcrun simctl launch "$PHONE" levtech.Echo -digest >/dev/null
 for _ in $(seq 1 40); do
@@ -60,9 +60,33 @@ c=sqlite3.connect('file:$DB?mode=ro',uri=True)
 print(c.execute(\"select count(*) from ledger where kind='digest' and status in ('ok','error')\").fetchone()[0])" 2>/dev/null)
   [ "${n:-0}" -ge 1 ] && break
 done
-xcrun simctl spawn "$PHONE" log show --info --last 12m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact > /tmp/e2e_asklog.txt 2>/dev/null
 
-echo "5/5 checking results…"
+echo "5/7 asking the broad question again with names masked…"
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -tab ask -mask on -review off -ask "$Q4" >/dev/null
+for _ in $(seq 1 40); do
+  sleep 3
+  n=$(python3 -I -c "
+import sqlite3
+c=sqlite3.connect('file:$DB?mode=ro',uri=True)
+print(c.execute(\"select count(*) from ledger where masked_names>0 and status in ('ok','error')\").fetchone()[0])" 2>/dev/null)
+  [ "${n:-0}" -ge 1 ] && break
+done
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -mask off -review off >/dev/null   # leave the preference off
+
+echo "6/7 asking from the watch (quick-ask)…"
+sleep 5
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -quick 0 "e2e$(date +%s)" >/dev/null
+for _ in $(seq 1 40); do
+  sleep 3
+  xcrun simctl spawn "$PHONE" log show --info --last 90s --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact 2>/dev/null | grep -q "watch ask" && break
+done
+xcrun simctl spawn "$PHONE" log show --info --last 15m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact > /tmp/e2e_asklog.txt 2>/dev/null
+xcrun simctl spawn "$PHONE" log show --info --last 15m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact > /tmp/e2e_watchlog.txt 2>/dev/null
+
+echo "7/7 checking results…"
 python3 -I - "$DB" "$LIVE" "$Q1" "$Q2" "$Q3" "$Q4" "$Q5" <<'PY'
 import json, re, sqlite3, subprocess, sys
 db, live = sys.argv[1], sys.argv[2] == "1"
@@ -116,6 +140,42 @@ else:
     check("STUB: cloud calls are labeled stubs and sent nothing", len(cloud) >= 3 and all(r[3] == 1 and r[2] == 0 and r[4] == 0 for r in cloud), f"{len(cloud)} rows")
 digest = con.execute("select count(*) from day_digest").fetchone()[0]
 check("the day digest was produced and saved", digest == 1, f"{digest} saved")
+
+# commitments: found on the phone with rules, so the day must contain first-person promises
+promise = re.compile(r"\bI will\b|\bI'll\b|\bI promise\b|\bI am going to\b", re.I)
+transcripts = [r[0] or "" for r in con.execute("select transcript from chunk where status='stored'")]
+n_promises = sum(1 for t in transcripts if promise.search(t))
+check("commitments: the day contains first-person promises to list", n_promises >= 10, f"{n_promises} moments")
+
+# citations: every cited label points inside the request that was sent
+asks = [r for r in con.execute("select kind, snippets_json, response, masked_names from ledger where tier='cloud' and left_device=1 and status='ok'")]
+bad = 0; cited = 0
+for kind, snips, resp, masked in asks:
+    n = len(json.loads(snips))
+    try: d = json.loads(resp)
+    except Exception: continue
+    items = d.get("items", []) if kind == "ask" else d.get("action_items", [])
+    for it in items:
+        label = it.get("source", "")
+        m = re.fullmatch(r"[Ss](\d+)", label.strip()) if label else None
+        if m:
+            cited += 1
+            if not (1 <= int(m.group(1)) <= n): bad += 1
+if live:
+    check("citations: Muse cites snippets that exist in the request", cited >= 5 and bad == 0, f"{cited} cited, {bad} out of range")
+
+# masking: the masked request carried placeholders and none of the people's names
+masked_rows = [r for r in asks if r[3] and r[3] > 0]
+if live:
+    names = ["Jordan", "Priya", "Brennan", "Patel"]
+    leaked = [n for r in masked_rows for n in names if n in r[1]]
+    check("masking: a masked request was sent, with placeholders and no names", len(masked_rows) >= 1 and not leaked and any("[PERSON_" in r[1] for r in masked_rows),
+          f"{len(masked_rows)} masked request(s), leaked {sorted(set(leaked))}")
+
+# the watch: a question asked on the watch was answered by the phone
+try: wlog = open("/tmp/e2e_watchlog.txt").read()
+except OSError: wlog = ""
+check("watch: a quick-ask from the watch was answered by the phone", "watch ask:" in wlog, "answered" if "watch ask:" in wlog else "no reply logged")
 
 width = max(len(n) for _, n, _ in results)
 print()

@@ -14,7 +14,11 @@ struct DemoDriver {
     let ask: AskModel
     let ledger: LedgerModel
     let digest: DigestModel
+    let today: TodayState
+    let player: ChunkPlayer
     let startWatch: () -> Void
+    /// Asks the watch to run quick-ask preset N, as if tapped.
+    let watchQuickAsk: (Int) -> Void
     let setTab: (RootTab) -> Void
     let setCaption: (String?) -> Void
 
@@ -51,6 +55,26 @@ struct DemoDriver {
             await pause(0.4)
         }
         return condition()
+    }
+
+    /// True once the Ask flow has finished answering `query` (locally, by Muse, or with a failure).
+    private func answered(_ query: String) -> Bool {
+        switch ask.state {
+        case .answered(let r): r.query == query
+        case .cloudAnswered(let r): r.query == query
+        case .cloudFailed(let f): f.query == query
+        default: false
+        }
+    }
+
+    /// Plays the first citation of the current Muse answer, as a tap on its play chip would.
+    private func playFirstCitation() async {
+        guard case .cloudAnswered(let r) = ask.state, let item = r.answer.items.first,
+              let chunk = CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail + " " + item.title,
+                                                   snippets: r.plan.snippets, chunks: model.chunks) else { return }
+        player.toggle(chunk)
+        await pause(3)
+        player.stop()
     }
 
     /// Starts the watch and confirms it began. After the phone app relaunches, WatchConnectivity needs several
@@ -112,7 +136,28 @@ struct DemoDriver {
         await question("What did I promise people today?", caption: "Synthesis goes to Muse Spark: text only, never audio", hold: 5)
         setCaption("Exactly the text that left the phone, and 0 bytes of audio")
         ask.expandSent = true
-        await pause(6)
+        await pause(5.5)
+        ask.expandSent = false
+        ask.scrollTarget = "items"
+        setCaption("Every claim links back to the audio it came from")
+        await pause(1.8)
+        await playFirstCitation()
+        ask.scrollTarget = nil
+
+        setTab(.today)
+        today.section = .commitments
+        today.scrollTarget = "sections"
+        setCaption("Commitments are found on the phone, with no model at all")
+        await pause(2.5)
+        for promise in PromiseExtractor.extract(from: model.chunks).prefix(2) {
+            var done = Set((UserDefaults.standard.string(forKey: DayWiper.promiseDoneKey) ?? "").split(separator: "\n").map(String.init))
+            done.insert(promise.id)
+            UserDefaults.standard.set(done.sorted().joined(separator: "\n"), forKey: DayWiper.promiseDoneKey)
+            await pause(1)
+        }
+        await pause(3)
+        today.scrollTarget = "todayTop"
+        today.section = .summary
 
         setTab(.ledger)
         setCaption("Every question is on the record")
@@ -128,13 +173,44 @@ struct DemoDriver {
         ledger.cloudEnabled = true
         await pause(2.5)
 
+        setCaption("Optionally, names are masked before anything is sent")
+        ledger.maskNames = true
+        await question("What did I promise people today?", caption: "Muse sees placeholders like [PERSON_1]; you see the real names", hold: 4)
+        ask.expandSent = true
+        await pause(5)
+        ask.expandSent = false
+        ledger.maskNames = false
+
         setTab(.today)
-        setCaption("One tap: Muse summarizes the whole day")
+        today.section = .summary
+        today.scrollTarget = "sections"
+        setCaption("Or approve every request first")
+        ledger.reviewBeforeSend = true
         await pause(1.5)
-        await digest.generate(chunks: model.chunks)
+        let summary = Task { await digest.generate(chunks: model.chunks) }
+        _ = await wait(timeout: 20) { ledger.gate.pending != nil }
+        setCaption("You see exactly what would leave, then choose")
+        await pause(5.5)
+        ledger.gate.approve()
+        await summary.value
+        ledger.reviewBeforeSend = false
+        setCaption("One tap: Muse summarizes the whole day")
+        await pause(6)
+
+        setTab(.ask)
+        setCaption("Ask from your wrist: the phone answers, and Muse handles the broad ones")
+        await pause(1.5)
+        watchQuickAsk(3)   // "My day"
+        _ = await wait(timeout: 45) { answered("Summarize my day") }
         await pause(6)
 
         setTab(.ledger)
+        ledger.focus = "yourData"
+        setCaption("Your data is yours: export the ledger, or forget the day")
+        await pause(5)
+        ledger.focus = "ledgerTop"
+        await pause(1.2)
+
         setCaption("How it all fits together")
         await pause(1.5)
         ledger.showArchitecture = true
