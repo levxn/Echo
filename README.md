@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-264%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-289%20passing-34D399)
 ![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
@@ -103,12 +103,13 @@ A slim bar sits at the top of every tab: your profile on the left, where you are
 3. **Ask your day.** A rules-based router decides where each question is answered:
    - **Lookups** ("When is the plumber coming?") are answered on the phone in about 30 ms, with the matching words highlighted and the original audio one tap away.
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
-4. **Commitments.** Things people said they will do ("I will send the spec by Wednesday noon") are collected on the phone with plain rules, no model: a checklist with who and when where known, and the audio of each one tap away. Echo doesn't tell speakers apart, so it lists commitments heard, not only yours.
-5. **Follow-up questions.** A short question that leans on the last one ("Which of those is due first?") is understood as a follow-up for ten minutes. Echo carries the earlier *question* along, never the earlier answer, so what is sent is exactly the combined text, which the review sheet and the ledger show. A line under the field says what it was a follow-up to, with "Ask on its own" to undo it.
-6. **Citations you can hear.** Muse cites the snippets its answer comes from by label, and Echo maps each label back to the audio on the phone, so every claim plays its source. Answers suggest follow-up questions.
-7. **Ask out loud, from the phone or the watch.** Tap the mic and say the question. It is understood on the phone with Apple's on-device recognizer (the recording is deleted straight away, and audio never goes to Muse), shown back to you as heard, then answered like any typed question. The watch has four suggestions too. Answers can be **read aloud**, and are read back automatically after a spoken question (a switch in your profile turns that off).
-8. **History.** Every question and its answer is kept on the phone, newest first, with citations that still play, until you clear it. Open one to see it again, ask it again, or find it in the ledger. The watch shows the last eight. Forget my day removes the history too, and now also blanks Muse's replies in the ledger.
-9. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
+4. **Commitments.** Things people said they will do ("I will send the spec by Wednesday noon") are collected on the phone with plain rules, no model: a checklist with who and when where known, and the audio of each one tap away. Echo doesn't tell speakers apart, so it lists commitments heard, not only yours. A bell on each one sets a **reminder**: a local notification at the due time when Echo can place it ("Wednesday noon", "tomorrow morning"), in an hour, or tomorrow morning. It repeats the commitment on the lock screen, and Forget my day cancels every reminder.
+5. **People.** Who the day mentions or speaks to, with the moments each name came up in (playable), the commitments that involve them, and a button to ask about them. Names come from the same on-device tagger as name masking, so a misheard word can slip in; "Not a person" hides it, and nothing is sent.
+6. **Follow-up questions.** A short question that leans on the last one ("Which of those is due first?") is understood as a follow-up for ten minutes. Echo carries the earlier *question* along, never the earlier answer, so what is sent is exactly the combined text, which the review sheet and the ledger show. A line under the field says what it was a follow-up to, with "Ask on its own" to undo it.
+7. **Citations you can hear.** Muse cites the snippets its answer comes from by label, and Echo maps each label back to the audio on the phone, so every claim plays its source. Answers suggest follow-up questions, and any answer or the day's summary can be **shared** as plain text through the system share sheet.
+8. **Ask out loud, from the phone or the watch.** Tap the mic and say the question. It is understood on the phone with Apple's on-device recognizer (the recording is deleted straight away, and audio never goes to Muse), shown back to you as heard, then answered like any typed question. The watch has four suggestions too. Answers can be **read aloud**, and are read back automatically after a spoken question (a switch in your profile turns that off).
+9. **History.** Every question and its answer is kept on the phone, newest first, with citations that still play, until you clear it. Open one to see it again, ask it again, or find it in the ledger. The watch shows the last eight. Forget my day removes the history too, and now also blanks Muse's replies in the ledger.
+10. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
 
 ## What's real, simulated, and design-only
 
@@ -153,7 +154,7 @@ flowchart LR
 | Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 264 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 289 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
 
 ## The privacy model
 

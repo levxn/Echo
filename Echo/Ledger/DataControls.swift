@@ -76,6 +76,7 @@ enum DayWiper {
         await ask.history?.clear()
         reminders?.clearAll()
         defaults.removeObject(forKey: promiseDoneKey)
+        defaults.removeObject(forKey: PeopleIgnore.key)
         if includeLedger { await ledger.clear() } else { await ledger.redactResponses() }
     }
 }

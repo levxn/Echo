@@ -3,7 +3,7 @@ import Observation
 import SwiftUI
 
 /// The profile is a name and a colour, kept only on this phone. There is no account and no login.
-enum ProfileLogic {
+nonisolated enum ProfileLogic {
     static let colorCount = 6
 
     /// "Jordan Lee" -> "JL", "jordan" -> "J", "  " -> "". At most two letters.

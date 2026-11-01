@@ -1,16 +1,17 @@
 import Observation
 import SwiftUI
 
-/// The three views of the day under the funnel on Today.
+/// The four views of the day under the funnel on Today.
 enum TodaySection: String, CaseIterable, Identifiable {
-    case summary, commitments, day
+    case summary, commitments, people, day
     var id: String { rawValue }
 
-    /// The segment label, with a count where one helps ("Commitments 15").
-    func title(commitments: Int, conversations: Int) -> String {
+    /// The segment label, with a count where one helps ("Promises 15").
+    func title(commitments: Int, people: Int, conversations: Int) -> String {
         switch self {
         case .summary: "Summary"
-        case .commitments: commitments > 0 ? "Commitments \(commitments)" : "Commitments"
+        case .commitments: commitments > 0 ? "Promises \(commitments)" : "Promises"
+        case .people: people > 0 ? "People \(people)" : "People"
         case .day: conversations > 0 ? "Day \(conversations)" : "Day"
         }
     }
@@ -41,11 +42,17 @@ struct TodayView: View {
     let player: ChunkPlayer
     let state: TodayState
     let profile: ProfileStore
+    /// Asks the Ask tab a question (from a person's page).
+    var onAsk: (String) -> Void = { _ in }
 
     @State private var episodes: [Episode] = []
     @State private var promises: [Promise] = []
+    @State private var heardPeople: [Person] = []
+    @AppStorage(PeopleIgnore.key) private var ignoredPeople = ""
     @State private var focusedSections = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var people: [Person] { PeopleIgnore.visible(heardPeople, ignoring: ignoredPeople) }
 
     private var statusText: String {
         switch model.session {
@@ -77,10 +84,14 @@ struct TodayView: View {
             episodes = EpisodeBuilder.build(from: model.chunks)
             promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name)
             if model.storedCount == 0 { digest.reset() }
+            refreshPeople()
         }
         // Dev hook: with `-today-focus` or `-today-section`, scroll so the switcher and its content fill the screen
         // once the day has loaded (screenshots, demo take).
-        .onChange(of: profile.name) { promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name) }
+        .onChange(of: profile.name) {
+            promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name)
+            refreshPeople()
+        }
         .onChange(of: state.scrollTarget) { _, target in
             guard let target else { return }
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
@@ -120,13 +131,14 @@ struct TodayView: View {
         VStack(spacing: Spacing.xl) {
             EchoSegmented(
                 segments: TodaySection.allCases.map {
-                    .init(value: $0, title: $0.title(commitments: promises.count, conversations: episodes.count))
+                    .init(value: $0, title: $0.title(commitments: promises.count, people: people.count, conversations: episodes.count))
                 },
                 selection: Bindable(state).section)
             Group {
                 switch state.section {
                 case .summary: summary
                 case .commitments: commitments
+                case .people: peopleView
                 case .day: day
                 }
             }
@@ -152,6 +164,26 @@ struct TodayView: View {
                        message: "Things people say they will do, like \u{201C}I will send it Friday\u{201D}, are collected here as they are transcribed.")
         } else {
             PromisesSection(promises: promises, model: model, player: player)
+        }
+    }
+
+    /// Name-finding runs the on-device tagger over the whole day, so it happens off the main thread.
+    private func refreshPeople() {
+        let chunks = model.chunks, name = profile.name
+        Task {
+            let found = await Task.detached(priority: .utility) { PeopleIndex.build(from: chunks, userName: name) }.value
+            heardPeople = found
+        }
+    }
+
+    @ViewBuilder
+    private var peopleView: some View {
+        if people.isEmpty {
+            EmptyState(icon: "person.2", tint: Palette.blue, title: "No names heard yet",
+                       message: "People who are mentioned or spoken to appear here as conversations are transcribed.")
+        } else {
+            PeopleSection(people: people, promises: promises, model: model, player: player, onAsk: onAsk,
+                          onIgnore: { ignoredPeople = PeopleIgnore.raw(adding: $0.id, to: ignoredPeople) })
         }
     }
 

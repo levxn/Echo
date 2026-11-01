@@ -47,11 +47,13 @@ struct ComponentsTests {
 
 struct TodaySectionTests {
     @Test func labelsCarryCountsOnlyWhenThereIsSomethingToCount() {
-        #expect(TodaySection.summary.title(commitments: 15, conversations: 4) == "Summary")
-        #expect(TodaySection.commitments.title(commitments: 15, conversations: 4) == "Commitments 15")
-        #expect(TodaySection.day.title(commitments: 15, conversations: 4) == "Day 4")
-        #expect(TodaySection.commitments.title(commitments: 0, conversations: 0) == "Commitments")
-        #expect(TodaySection.day.title(commitments: 0, conversations: 0) == "Day")
+        #expect(TodaySection.summary.title(commitments: 15, people: 5, conversations: 4) == "Summary")
+        #expect(TodaySection.commitments.title(commitments: 15, people: 5, conversations: 4) == "Promises 15")
+        #expect(TodaySection.people.title(commitments: 15, people: 5, conversations: 4) == "People 5")
+        #expect(TodaySection.day.title(commitments: 15, people: 5, conversations: 4) == "Day 4")
+        #expect(TodaySection.commitments.title(commitments: 0, people: 0, conversations: 0) == "Promises")
+        #expect(TodaySection.people.title(commitments: 0, people: 0, conversations: 0) == "People")
+        #expect(TodaySection.day.title(commitments: 0, people: 0, conversations: 0) == "Day")
     }
 
     @Test func launchArgumentsPickTheOpeningSection() {

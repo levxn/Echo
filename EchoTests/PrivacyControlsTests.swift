@@ -100,6 +100,7 @@ struct PrivacyControlsTests {
         let player = ChunkPlayer(directory: await h.store.chunksDirectory)
         let defaults = UserDefaults(suiteName: "echo-forget-\(UUID().uuidString)")!
         defaults.set("a\nb", forKey: DayWiper.promiseDoneKey)
+        defaults.set("lee", forKey: PeopleIgnore.key)
         defaults.set(true, forKey: "echo.cloudEnabled")
         await h.store.upsertLedger(entry("kept"))   // record() saves in the background; write directly so reload sees it
         await ledger.reload()
@@ -112,6 +113,7 @@ struct PrivacyControlsTests {
         #expect((await h.store.all()).isEmpty, "every transcript is gone")
         #expect((await h.store.ftsSearch(tokens: ["plumber"], limit: 5)).isEmpty, "and the search index")
         #expect(defaults.object(forKey: DayWiper.promiseDoneKey) == nil, "checked-off commitments are forgotten")
+        #expect(defaults.object(forKey: PeopleIgnore.key) == nil, "names hidden as 'not a person' are forgotten with the day")
         #expect(defaults.bool(forKey: "echo.cloudEnabled"), "settings stay")
         #expect(ledger.entries.contains { $0.query == "kept" }, "the ledger is the record of what left, so it stays")
         if case .idle = ask.state {} else { Issue.record("the answer on screen is cleared") }

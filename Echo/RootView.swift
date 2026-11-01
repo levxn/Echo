@@ -76,7 +76,11 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) {
-                TodayView(model: model, digest: digest, player: player, state: today, profile: profile)
+                TodayView(model: model, digest: digest, player: player, state: today, profile: profile,
+                          onAsk: { question in
+                              tab = .ask
+                              Task { await ask.ask(question, via: .suggestion) }
+                          })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.today) }
             }
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
