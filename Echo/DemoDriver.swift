@@ -14,11 +14,15 @@ struct DemoDriver {
     let ask: AskModel
     let ledger: LedgerModel
     let digest: DigestModel
+    let voice: VoiceAskModel
+    let history: AskHistoryModel
     let today: TodayState
     let player: ChunkPlayer
     let startWatch: () -> Void
     /// Asks the watch to run quick-ask preset N, as if tapped.
     let watchQuickAsk: (Int) -> Void
+    /// Asks the watch to ask recorded question N by voice, as if its mic had been tapped.
+    let watchVoiceAsk: (Int) -> Void
     let setTab: (RootTab) -> Void
     let setCaption: (String?) -> Void
 
@@ -44,6 +48,16 @@ struct DemoDriver {
         await pause(1.2)
         await type(text)
         await ask.ask(text)
+        await pause(hold)
+    }
+
+    /// Taps the mic and lets a recorded question stand in for the voice, through the real recorder and on-device understanding.
+    private func voiceQuestion(clip: Int, caption: String, hold: Double) async {
+        setTab(.ask)
+        ask.clear()
+        setCaption(caption)
+        await pause(1.2)
+        await voice.listen(clip: clip, ask: ask)
         await pause(hold)
     }
 
@@ -135,7 +149,7 @@ struct DemoDriver {
 
         await question("When is the plumber coming?", caption: "Lookups are answered on the phone", hold: 4.5)
         await question("What did Mister Brennan say about the lease?", caption: "Matching words are highlighted, and the source audio is one tap away", hold: 4)
-        await question("Where is Priya going in March?", caption: "About 30 ms, and nothing left the phone", hold: 4)
+        await voiceQuestion(clip: 3, caption: "Or tap the mic and ask out loud: understood on the phone, then answered on the phone", hold: 5)
         await question("What did I promise people today?", caption: "Synthesis goes to Muse Spark: text only, never audio", hold: 5)
         setCaption("Exactly the text that left the phone, and 0 bytes of audio")
         ask.expandSent = true
@@ -201,11 +215,24 @@ struct DemoDriver {
         await pause(6)
 
         setTab(.ask)
-        setCaption("Ask from your wrist: the phone answers, and Muse handles the broad ones")
+        ask.clear()
+        setCaption("On the wrist, tap the mic and ask: the phone understands it, and Muse handles the broad ones")
         await pause(1.5)
-        watchQuickAsk(3)   // "My day"
-        _ = await wait(timeout: 45) { answered("Summarize my day") }
+        let before = history.items.count
+        watchVoiceAsk(5)   // "Summarize my day", spoken
+        _ = await wait(timeout: 60) { history.items.count > before && ask.isFinishedAsking }
         await pause(6)
+
+        ask.clear()
+        setCaption("Everything you ask is kept on the phone, until you clear it")
+        await pause(3.5)
+        ask.historyRequest = .list
+        await pause(4)
+        ask.historyRequest = .first
+        setCaption("Open one to see the answer, and play the moments it came from")
+        await pause(5)
+        ask.historyRequest = nil
+        await pause(1)
 
         setTab(.ledger)
         ledger.focus = "yourData"

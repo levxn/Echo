@@ -8,7 +8,7 @@ Tools/e2e_check.sh           # everything PASS (about 8 minutes)
 Tools/record_demo_take.sh    # one continuous take of both simulators, about 6 minutes, saved to docs/media/echo-demo-full.mp4
 ```
 
-The take is the whole story in 3:18 with live Muse Spark. The slow part (the watch syncing the day, about 90 seconds) is sped up 5x. Record your voiceover while watching it, then mux it in:
+The take is the whole story in about 3:45 with live Muse Spark. The slow part (the watch syncing the day, about 90 seconds) is sped up 5x. Record your voiceover while watching it, then mux it in:
 
 ```bash
 # Use the numbers the take script printed ("sync section sped up 5x from S s to E s"):
@@ -26,23 +26,25 @@ ECHO_VIDEO_DIR=/tmp/echo-take Tools/compose_video.sh --trim-start auto --speed S
 
 ## Shot list and narration
 
-Times are approximate (the take is 3:18). The caption on screen names each step, so you can speak a little before or after it.
+Times are approximate (the take is about 3:45; the script prints the real marker times). The caption on screen names each step, so you can speak a little before or after it.
 
 | Time | On screen | Say |
 |---|---|---|
 | 0:00 | **Moments** while the watch starts: "Waiting for your watch", then "Listening" with the ribbon growing and moments appearing (sped up) | "Every conversation you have in a day just disappears. Echo remembers it for you, and it never sends your voice to anyone. My watch listens. Here the microphone is a recorded day so you can see exactly what happens. It keeps only speech and streams it to the phone." |
 | 0:25 | Sync finishes. **Today**: the greeting, then "What Echo kept": "38% of the day was never stored" | "The phone checks again that it really is speech, and Apple's on-device recognizer transcribes it. Of six minutes recorded, thirty-eight percent was never stored. No cloud so far." |
 | 0:35 | **Ask**: *When is the plumber coming?*, *What did Mister Brennan say about the lease?*, *Where is Priya going in March?* | "Now I can ask my day questions. These are answered on the phone in about thirty milliseconds, with the matching words highlighted and the original audio one tap away." |
-| 0:58 | **Ask**: *What did I promise people today?* "Sending 27 snippets…", then the answer and the **What left your phone** strip, expanded | "Some questions need more than a lookup. Echo sends Muse Spark only the moments that contain promises: twenty-seven snippets, about four kilobytes of text, and no audio. And here is exactly what left the phone." |
-| 1:15 | The first item plays its audio (the citation chip) | "Muse cites where each claim came from, and I can play that moment to check it." |
+| 0:58 | **Ask**: the mic. "Listening…" (labelled *Simulated microphone*), "Understanding…", then *Where is Priya going in March?* is answered on the phone | "I can also just ask out loud. The phone understands it on-device, deletes the recording, and answers it the same way. In the simulator a recorded question stands in for the mic." |
+| 1:12 | **Ask**: *What did I promise people today?* "Sending 27 snippets…", then the answer and the **What left your phone** strip, expanded | "Some questions need more than a lookup. Echo sends Muse Spark only the moments that contain promises: twenty-seven snippets, about four kilobytes of text, and no audio. And here is exactly what left the phone." |
+| 1:30 | The first item plays its audio (the citation chip) | "Muse cites where each claim came from, and I can play that moment to check it." |
 | 1:22 | **Today · Commitments**: the checklist, two ticked off | "Commitments are found on the phone with plain rules. No model, nothing sent. Echo doesn't tell speakers apart, so this is promises heard, not only mine." |
 | 1:32 | **Ledger**: totals, "0 bytes of audio ever leave this phone", the three settings; then the cloud switch off and *Summarize my day* shows "Cloud is off" | "Everything is on the record: what stayed on the phone, what used Muse, and exactly what was sent. One switch turns the cloud off completely." |
 | 1:50 | Masking on, the same question again; the strip says names were masked | "If I want, names are swapped for placeholders before anything is sent, and swapped back in the answer. It's best effort, and I say so." |
 | 2:05 | **Review before sending** sheet for the digest, then Send | "Or I can review every request first: the exact text, then Send or Don't send." |
 | 2:22 | **Today · Summary**: the digest | "One tap, and Muse writes the day: conversations, action items I owe people, and who was there." |
-| 2:35 | **Ask**, with the watch beside it showing quick-ask "My day" and Muse's answer | "And from my wrist I can ask too. The phone does the work, and Muse handles the broad ones." |
-| 2:55 | **Ledger**: Your data (export, forget) | "My data stays mine: I can export the ledger or forget the day." |
-| 3:05 | **How Echo works** sheet | "The microphone here is simulated and the on-device Muse tier is a design, but everything between them is real. That's Echo." |
+| 2:35 | **Ask**, with the watch beside it: the mic, "Heard: Summarize my day", then Muse's answer | "And from my wrist I tap the mic and ask. The phone understands it and answers, and Muse handles the broad ones. On a real watch the day's capture runs in the background; this tap is just for questions." |
+| 3:00 | **History** on the phone: the list, then one question opened with its citations | "Everything I ask is kept on the phone, with the answer and the audio it came from, until I clear it." |
+| 3:15 | **Ledger**: Your data (export, clear history, forget) | "My data stays mine: I can export the ledger, clear my history, or forget the day." |
+| 3:25 | **How Echo works** sheet | "The microphone here is simulated and the on-device Muse tier is a design, but everything between them is real. That's Echo." |
 
 ## If something goes wrong while recording
 

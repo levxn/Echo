@@ -19,6 +19,10 @@ if [ "${1:-}" = "--clear" ]; then
 fi
 
 Tools/run_sims.sh --no-launch-watch || exit 1
+# Spoken questions use the microphone and speech recognition. Granting the microphone up front means a recording never
+# stops at a prompt (speech recognition was granted the first time the app transcribed, and survives reinstalls of the build).
+xcrun simctl privacy "$PHONE" grant microphone levtech.Echo 2>/dev/null || true
+xcrun simctl privacy "$WATCH" grant microphone levtech.Echo.watchkitapp 2>/dev/null || true
 xcrun simctl bootstatus "$PHONE" -b >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$WATCH" -b >/dev/null 2>&1 || true
 

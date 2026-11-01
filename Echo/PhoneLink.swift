@@ -39,6 +39,14 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         }
     }
 
+    /// Asks the watch to ask recorded question `clip` (1...5) by voice, as if its mic had been tapped (the demo driver uses this).
+    func sendDemoVoiceAsk(_ clip: Int) {
+        guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be asked from here"); return }
+        WCSession.default.sendMessage([Wire.typeKey: Wire.demoVoiceAsk, Wire.presetKey: clip], replyHandler: nil) { error in
+            Log.link.error("couldn't reach the watch: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: Handling (main actor)
 
     private func handle(message: [String: Any]) async -> [String: Any] {

@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-184%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-254%20passing-34D399)
 ![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
@@ -33,24 +33,24 @@ Echo turns a day of conversations into something you can ask questions of, **wit
   <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, about 3 min (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself: lookups, a live Muse answer with its citations, commitments, name masking, review before sending, a question asked from the watch, the kill switch and the architecture sheet, with the ~70 s sync sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself: lookups, a live Muse answer with its citations, commitments, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, the kill switch and the architecture sheet, with the ~70 s sync sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
 
 ## A tour of the screens
 
 ### Apple Watch
 
-The watch is mostly a silent sensor, so its first screen is a proof of life: a ring that traces the replay and breathes with the microphone level, three counters, and one control. Swipe up for **quick-ask**: four preset questions that the phone answers (on its own, or with Muse for the broad ones) and sends back as a sentence or two.
+On a real watch the day's capture would run in the background, with no button at all. Here it is a recorded day, so the first screen is a proof of life: a ring that traces the replay and breathes with the (simulated) microphone level, three counters, and one control. Swipe up to **ask**: tap the big mic and say a question. The watch shows what it heard (the phone understood it, on-device, and deleted the recording), then the answer, which can be read aloud. Four suggestions cover the usual questions, and **Recent** lists the last eight you asked; tap one to see its answer again without asking anew. The phone answers on its own, or with Muse for the broad ones.
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>Phone linked, demo audio</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>A simulated microphone and a recorded day</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-listening.png" width="200" alt="Watch, listening"><br><sub><b>Listening</b><br>Chunks stream to the phone</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-done.png" width="200" alt="Watch, day captured"><br><sub><b>Day captured</b><br>Everything synced</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="200" alt="Watch, quick-ask presets"><br><sub><b>Quick-ask</b><br>Lock = on the phone, cloud = Muse</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="200" alt="Watch, an answer from Muse Spark"><br><sub><b>An answer</b><br>With where it came from</sub></td>
-    <td></td>
+    <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="200" alt="Watch, the Ask page with a mic"><br><sub><b>Ask</b><br>Tap the mic and speak</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="200" alt="Watch, suggestions and recent questions"><br><sub><b>Suggestions and Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="200" alt="Watch, an answer to a spoken question"><br><sub><b>An answer</b><br>To a spoken question, from Muse</sub></td>
   </tr>
 </table>
 
@@ -80,6 +80,11 @@ A slim bar sits at the top of every tab: your profile on the left, where you are
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, a synthesis question routed to Tier 2"><br><sub><b>Ask, synthesis</b><br>Live Muse Spark, with the proof of what left the phone</sub></td>
   </tr>
   <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask by voice</b><br>Tap the mic; a recorded question stands in for it in the simulator</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-history.jpg" width="250" alt="History of questions"><br><sub><b>History</b><br>Everything asked, newest first, kept on this phone</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-history-detail.jpg" width="250" alt="A past question reopened"><br><sub><b>A past question</b><br>The full answer, with citations you can still play</sub></td>
+  </tr>
+  <tr>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-masked.jpg" width="250" alt="Ask, with names masked"><br><sub><b>Names masked</b><br>Muse sees placeholders; you see real names</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-review.jpg" width="250" alt="Review before sending"><br><sub><b>Review before sending</b><br>The exact text, then Send or Don't send</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, what left, and the settings</sub></td>
@@ -100,8 +105,9 @@ A slim bar sits at the top of every tab: your profile on the left, where you are
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
 4. **Commitments.** Things people said they will do ("I will send the spec by Wednesday noon") are collected on the phone with plain rules, no model: a checklist with who and when where known, and the audio of each one tap away. Echo doesn't tell speakers apart, so it lists commitments heard, not only yours.
 5. **Citations you can hear.** Muse cites the snippets its answer comes from by label, and Echo maps each label back to the audio on the phone, so every claim plays its source. Answers suggest follow-up questions.
-6. **Quick-ask on the watch.** Four preset questions on the watch are answered by the phone, with Muse for the broad ones.
-7. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
+6. **Ask out loud, from the phone or the watch.** Tap the mic and say the question. It is understood on the phone with Apple's on-device recognizer (the recording is deleted straight away, and audio never goes to Muse), shown back to you as heard, then answered like any typed question. The watch has four suggestions too. Answers can be **read aloud**, and are read back automatically after a spoken question (a switch in your profile turns that off).
+7. **History.** Every question and its answer is kept on the phone, newest first, with citations that still play, until you clear it. Open one to see it again, ask it again, or find it in the ledger. The watch shows the last eight. Forget my day removes the history too, and now also blanks Muse's replies in the ledger.
+8. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
 
 ## What's real, simulated, and design-only
 
@@ -110,7 +116,8 @@ A slim bar sits at the top of every tab: your profile on the left, where you are
 | Voice detection on the watch, chunking, AAC compression, streaming to the phone | **Real** (running in the watchOS simulator) |
 | Stage-2 speech check, on-device transcription, SQLite FTS5 + word-vector index, retriever, router, answers | **Real** |
 | Muse Spark calls (structured output, text-only snippets, ledger, error handling) | **Real**: live calls to `muse-spark-1.3` through the Meta Model API (the screenshots above are live answers), plus a mocked-network test suite. Without an API key in `Config/meta_api_key.txt` Echo falls back to a **labeled offline stub** |
-| The microphone | **Simulated**: a pre-recorded day (text-to-speech voices, 4 conversations) replayed as the mic |
+| The microphone | **Simulated**: a pre-recorded day (text-to-speech voices, 4 conversations) replayed as the mic. On a real watch this would be a background service, not a button |
+| Spoken questions | **Real from the recording onward**: the question is captured with an endpointer, compressed, sent from the watch, understood on-device, answered and kept. **Simulated** at the start: in the simulators a recorded question stands in for the mic (labelled on screen). The real-microphone path is implemented but has not been tried on hardware |
 | Watch ↔ phone link | **Simulated hardware**: WatchConnectivity messages between two simulators |
 | Muse Glimmer on-device (Tier 1) | **Design only**: shown in the UI as not available, never run |
 
@@ -145,7 +152,7 @@ flowchart LR
 | Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 184 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate and the watch quick-ask; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 254 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
 
 ## The privacy model
 
@@ -205,7 +212,9 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | `Echo/Components/` | The shared UI parts: section headers, chips with wrapping layout, buttons, rows, segmented control |
 | `Echo/Cloud/` | Muse client, planner and prompts, labeled stub, key handling |
 | `Echo/Ledger/` | The privacy ledger and the cloud switch |
-| `Shared/` | Code shared by both apps: voice detector, wire format, clock, theme |
+| `Echo/Voice/` | Spoken questions: the mic flow, on-device understanding, what the phone does for the watch |
+| `Echo/History/` | The history of questions: storage, the list, the detail view |
+| `Shared/` | Code shared by both apps: voice detector, question recorder, speaker, wire format, clock, theme |
 | `EchoTests/` | Unit tests and the transcript fixture |
 | `Tools/` | Demo audio generator, calibration, simulator, demo and media scripts |
 | `docs/media/` | The screenshots, preview video, GIF and hero image above |
@@ -219,4 +228,6 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - The router is rules, not a model; it is easy to explain and test, but a learned router could handle more phrasing.
 - Echo doesn't identify speakers, so Commitments lists promises heard rather than only the wearer's.
 - Name masking is best effort (it only masks names the on-device tagger recognizes) and is off by default.
-- Quick-ask needs the phone reachable; a question that needs Muse waits for approval on the phone when Review before sending is on.
+- Asking from the watch (by voice or a suggestion) needs the phone reachable; a question that needs Muse waits for approval on the phone when Review before sending is on. Recent still opens from the watch's cache when the phone is away.
+- Spoken questions: the microphone path (`AVAudioEngine`, on both devices) is written and shares the endpointer and the transcription with the recorded-question path, but only the recorded path has been run, because simulators have no microphone. Read aloud is untested on a real watch speaker.
+- The history is kept until you clear it (it is on the phone only, never exported, and cleared by Forget my day); there is no search in it yet.

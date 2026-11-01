@@ -153,9 +153,11 @@ struct RootView: View {
             if DemoDriver.requested {
                 await warm.value
                 await model.load()
-                await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest, today: today, player: player,
+                await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest, voice: voice, history: history,
+                                 today: today, player: player,
                                  startWatch: { link.sendDemoStart() },
                                  watchQuickAsk: { link.sendDemoQuickAsk($0) },
+                                 watchVoiceAsk: { link.sendDemoVoiceAsk($0) },
                                  setTab: { tab = $0 },
                                  setCaption: { caption = $0 }).run()
             } else if let i = args.firstIndex(of: "-voice-ask"), i + 1 < args.count, let clip = Int(args[i + 1]) {

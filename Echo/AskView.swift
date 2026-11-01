@@ -62,6 +62,7 @@ struct AskView: View {
                 try? await Task.sleep(for: .milliseconds(900))
                 sheet = HistoryRequest(open: args[i + 1] == "first" ? .first : .list)
             }
+            .onChange(of: ask.historyRequest) { _, open in sheet = open.map { HistoryRequest(open: $0) } }
             // The demo driver opens the "What left your phone" panel, which sits below the answer's items.
             .onChange(of: ask.expandSent) { _, open in
                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.8)) { proxy.scrollTo(open ? "sentPanel" : "askTop", anchor: open ? .center : .top) }

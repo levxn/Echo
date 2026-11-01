@@ -87,6 +87,16 @@ scene moments-behind 7 -tab moments -moments-behind
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
 scene ask-lease 7.5 -tab ask -ask "What did Mister Brennan say about the lease?"
 scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
+
+# A spoken question: a recorded one stands in for the microphone. Listening is brief, so its screenshot is taken early.
+dir="$TMP/clip_voice-answer"; mkdir -p "$dir"
+ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh start >/dev/null
+launch_phone -tab ask -voice-ask 4
+sleep 1.0; shot_phone ask-listening
+sleep 15; shot_phone ask-voice
+ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh stop >/dev/null
+scene history 7 -tab ask -history all            # the list, with the spoken question on top
+scene history-detail 7 -tab ask -history first   # the newest one reopened: its answer and citations
 scene digest 17 -digest -today-section summary                      # the digest takes ~11 s live
 scene today-summary 7.5 -tab today -today-section summary           # the saved digest
 scene today-commitments 7.5 -tab today -today-section commitments
@@ -102,7 +112,9 @@ echo "   the watch's Ask page…"
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
 xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask >/dev/null; sleep 5; shot_watch ask
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
-xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -quick 2 "media$(date +%s)" >/dev/null; sleep 20; shot_watch answer
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -ask-focus recent >/dev/null; sleep 9; shot_watch recent
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -voice 4 "media$(date +%s)" >/dev/null; sleep 34; shot_watch answer   # a spoken question, answered by Muse
 
 
 # Phone screenshots as JPEG: the aurora gradients make PNGs several times larger for no visible gain.
@@ -113,9 +125,9 @@ fi
 
 echo "5/6 the preview video and GIF…"
 compose_clip replay --speed 3 22 3
-for c in today ask-lookup ask-cloud digest ledger architecture; do compose_clip "$c"; done
+for c in today ask-lookup voice-answer digest ledger architecture; do compose_clip "$c"; done
 : > "$TMP/list.txt"
-for c in replay today ask-lookup ask-cloud digest ledger architecture; do echo "file '$TMP/clip_$c/out.mp4'" >> "$TMP/list.txt"; done
+for c in replay today ask-lookup voice-answer digest ledger architecture; do echo "file '$TMP/clip_$c/out.mp4'" >> "$TMP/list.txt"; done
 ffmpeg -loglevel error -y -f concat -safe 0 -i "$TMP/list.txt" -c copy "$OUT/echo-demo-preview.mp4"
 ffmpeg -loglevel error -y -i "$OUT/echo-demo-preview.mp4" \
   -vf "fps=8,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \

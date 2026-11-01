@@ -57,6 +57,8 @@ final class AskModel {
     var expandSent = false
     /// Scrolls the Ask tab to an anchor ("items", "sentPanel", "askTop"). Set by the demo driver only.
     var scrollTarget: String?
+    /// Opens (or, when nil, closes) the history sheet. Set by the demo driver only.
+    var historyRequest: HistoryRequest.Open?
     private(set) var state: State = .idle
     private(set) var recent: [String] = []
     /// Where finished questions and their answers are kept. Set by RootView; tests that don't care leave it nil.
@@ -219,6 +221,14 @@ final class AskModel {
             return WatchAnswer(text: f.localAnswer.map { brief($0.headline) } ?? "Muse couldn't answer just now.", source: f.localAnswer == nil ? .none : .local, milliseconds: milliseconds)
         default:
             return WatchAnswer(text: "Your phone was busy with another question. Try again.", source: .none, milliseconds: milliseconds)
+        }
+    }
+
+    /// True once a question has an answer (or a reason it has none) on screen, not while one is still being worked on.
+    var isFinishedAsking: Bool {
+        switch state {
+        case .idle, .searching, .sending: false
+        default: true
         }
     }
 

@@ -3,18 +3,19 @@
 # and before submitting. Takes ~6 minutes. Exits non-zero if anything fails.
 #
 #   watch replay -> phone pipeline settles -> calibration vs ground truth -> 3 local + 2 cloud questions
-#   -> day digest -> the privacy ledger tells the truth about each of them
+#   -> day digest -> the privacy ledger tells the truth about each of them -> a question spoken on the phone and one
+#   spoken on the watch (recorded questions through the real recorder and on-device understanding) -> the history
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PHONE=3BDBF6CE-2235-4CFE-9437-1EB803417569
 WATCH=373A257B-EB2B-4A7B-8E94-CFF47E52792D
 KEYFILE="$(xcrun simctl get_app_container "$PHONE" levtech.Echo data 2>/dev/null)/Library/Application Support/Echo/meta_api_key"
 
-echo "1/7 preparing the simulators…"
+echo "1/8 preparing the simulators…"
 Tools/demo_prep.sh >/tmp/e2e_prep.log 2>&1 || { cat /tmp/e2e_prep.log; echo "FAIL: demo_prep"; exit 1; }
 LIVE=0; [ -f "$(xcrun simctl get_app_container "$PHONE" levtech.Echo data)/Library/Application Support/Echo/meta_api_key" ] && LIVE=1
 
-echo "2/7 replaying the day from the watch…"
+echo "2/8 replaying the day from the watch…"
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
 xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "$(date +%s)" >/dev/null
 DB=""
@@ -35,7 +36,7 @@ print(c.execute('select count(*) from chunk').fetchone()[0], c.execute(\"select 
 done
 sleep 3
 
-echo "3/7 asking the demo questions…"
+echo "3/8 asking the demo questions…"
 Q1="When is the plumber coming?"; Q2="What did Mister Brennan say about the lease?"; Q3="Where is Priya going in March?"
 Q4="What did I promise people today?"; Q5="Summarize my day"
 for Q in "$Q1" "$Q2" "$Q3" "$Q4" "$Q5"; do
@@ -49,7 +50,7 @@ for Q in "$Q1" "$Q2" "$Q3" "$Q4" "$Q5"; do
   done
 done
 
-echo "4/7 asking Muse to summarize the day…"
+echo "4/8 asking Muse to summarize the day…"
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
 xcrun simctl launch "$PHONE" levtech.Echo -digest >/dev/null
 for _ in $(seq 1 40); do
@@ -61,7 +62,7 @@ print(c.execute(\"select count(*) from ledger where kind='digest' and status in 
   [ "${n:-0}" -ge 1 ] && break
 done
 
-echo "5/7 asking the broad question again with names masked…"
+echo "5/8 asking the broad question again with names masked…"
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
 xcrun simctl launch "$PHONE" levtech.Echo -tab ask -mask on -review off -ask "$Q4" >/dev/null
 for _ in $(seq 1 40); do
@@ -75,7 +76,7 @@ done
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
 xcrun simctl launch "$PHONE" levtech.Echo -mask off -review off >/dev/null   # leave the preference off
 
-echo "6/7 asking from the watch (quick-ask)…"
+echo "6/8 asking from the watch (quick-ask)…"
 sleep 5
 xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
 xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -quick 0 "e2e$(date +%s)" >/dev/null
@@ -83,10 +84,27 @@ for _ in $(seq 1 40); do
   sleep 3
   xcrun simctl spawn "$PHONE" log show --info --last 90s --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact 2>/dev/null | grep -q "watch ask" && break
 done
-xcrun simctl spawn "$PHONE" log show --info --last 15m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact > /tmp/e2e_asklog.txt 2>/dev/null
-xcrun simctl spawn "$PHONE" log show --info --last 15m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact > /tmp/e2e_watchlog.txt 2>/dev/null
 
-echo "7/7 checking results…"
+echo "7/8 asking by voice: on the phone, then on the watch…"
+history_rows() {   # how many history rows were asked this way?
+  python3 -I -c "
+import sqlite3
+c=sqlite3.connect('file:$DB?mode=ro',uri=True)
+print(c.execute(\"select count(*) from ask_history where via='$1'\").fetchone()[0])" 2>/dev/null
+}
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -tab ask -voice-ask 1 >/dev/null
+for _ in $(seq 1 30); do sleep 2; [ "$(history_rows voice)" -ge 1 ] && break; done
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -tab ask >/dev/null
+sleep 12   # the phone and the watch need a while to see each other after a relaunch
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -page ask -voice 3 "e2evoice$(date +%s)" >/dev/null
+for _ in $(seq 1 45); do sleep 2; [ "$(history_rows watchVoice)" -ge 1 ] && break; done
+xcrun simctl spawn "$PHONE" log show --info --last 20m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact > /tmp/e2e_asklog.txt 2>/dev/null
+xcrun simctl spawn "$PHONE" log show --info --last 20m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact > /tmp/e2e_watchlog.txt 2>/dev/null
+
+echo "8/8 checking results…"
 python3 -I - "$DB" "$LIVE" "$Q1" "$Q2" "$Q3" "$Q4" "$Q5" <<'PY'
 import json, re, sqlite3, subprocess, sys
 db, live = sys.argv[1], sys.argv[2] == "1"
@@ -176,6 +194,24 @@ if live:
 try: wlog = open("/tmp/e2e_watchlog.txt").read()
 except OSError: wlog = ""
 check("watch: a quick-ask from the watch was answered by the phone", "watch ask:" in wlog, "answered" if "watch ask:" in wlog else "no reply logged")
+
+# voice: recorded questions were understood on the phone, answered, and kept in the history
+def words(t): return re.findall(r"[a-z']+", t.lower().replace("mister", "mr"))
+def similar(heard, expected):
+    a, b = set(words(heard)), set(words(expected))
+    return bool(b) and len(a & b) / len(b) >= 0.8
+hist = con.execute("select question, via, source, short_answer from ask_history").fetchall()
+for via, expected in (("voice", "When is the plumber coming?"), ("watchVoice", "Where is Priya going in March?")):
+    rows = [r for r in hist if r[1] == via]
+    ok = any(similar(r[0], expected) and r[3].strip() for r in rows)
+    shown = f'heard "{rows[-1][0]}", {rows[-1][2]}' if rows else "no row"
+    check(f"voice: {'phone' if via == 'voice' else 'watch'} question understood and answered", ok, shown)
+check("voice: the watch's spoken question was answered by the phone", "(watchVoice)" in wlog, "logged" if "(watchVoice)" in wlog else "no reply logged")
+kept = {r[0].lower() for r in hist}
+missing = [q for q in questions if q.lower() not in kept]
+check("history: every typed question is kept, with how it was answered", not missing and all(r[2] in ("local", "muse", "stub", "none") for r in hist), f"{len(hist)} rows" + (f", missing {missing}" if missing else ""))
+has_detail = con.execute("select count(*) from ask_history where detail_json is not null and detail_json != ''").fetchone()[0]
+check("history: each entry keeps its full answer for reopening", has_detail == len(hist) and hist, f"{has_detail}/{len(hist)}")
 
 width = max(len(n) for _, n, _ in results)
 print()
