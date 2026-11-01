@@ -1,0 +1,40 @@
+{
+  "voice": "Daniel",
+  "questions": [
+    {
+      "file": "q1.wav",
+      "text": "When is the plumber coming?",
+      "speechStart": 0.5,
+      "speechEnd": 1.8,
+      "duration": 3.8
+    },
+    {
+      "file": "q2.wav",
+      "text": "What did Mister Brennan say about the lease?",
+      "speechStart": 0.5,
+      "speechEnd": 2.95,
+      "duration": 4.95
+    },
+    {
+      "file": "q3.wav",
+      "text": "Where is Priya going in March?",
+      "speechStart": 0.5,
+      "speechEnd": 2.26,
+      "duration": 4.26
+    },
+    {
+      "file": "q4.wav",
+      "text": "What did I promise people today?",
+      "speechStart": 0.5,
+      "speechEnd": 2.42,
+      "duration": 4.42
+    },
+    {
+      "file": "q5.wav",
+      "text": "Summarize my day",
+      "speechStart": 0.5,
+      "speechEnd": 1.79,
+      "duration": 3.79
+    }
+  ]
+}

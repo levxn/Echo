@@ -698,8 +698,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Echo listens when you tap the microphone to ask a question. The audio is turned into text on this phone and is never sent to Muse.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo turns your conversations and spoken questions into text on this device, so your day stays searchable and private.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo transcribes your captured conversations on this device to build a private, searchable memory.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -734,8 +735,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Echo listens when you tap the microphone to ask a question. The audio is turned into text on this phone and is never sent to Muse.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo turns your conversations and spoken questions into text on this device, so your day stays searchable and private.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo transcribes your captured conversations on this device to build a private, searchable memory.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
