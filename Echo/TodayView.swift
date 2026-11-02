@@ -42,6 +42,7 @@ struct TodayView: View {
     let player: ChunkPlayer
     let state: TodayState
     let profile: ProfileStore
+    let journal: JournalModel
     /// Asks the Ask tab a question (from a person's page).
     var onAsk: (String) -> Void = { _ in }
 
@@ -156,6 +157,7 @@ struct TodayView: View {
                 ResurfacedCard(item: item) { onAsk(item.question) }
             }
             summaryToday
+            if model.isSettled { JournalSection(journal: journal, model: model) }
             if model.storedCount > model.todayChunks.filter({ $0.status == .stored }).count {
                 EchoButton(title: "Summarize my week with Muse", systemImage: "calendar", action: { onAsk("Summarize my past week") })
             }

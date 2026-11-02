@@ -121,7 +121,11 @@ final class PipelineModel {
         guard !doomed.isEmpty else { return [] }
         let ids = doomed.map(\.id)
         await store.deleteChunks(ids: ids)
-        for day in Set(doomed.map(\.dayId)) { await store.deleteDigest(day: day.isEmpty ? DayID.today(now: now()) : day) }
+        for day in Set(doomed.map(\.dayId)) {
+            let d = day.isEmpty ? DayID.today(now: now()) : day
+            await store.deleteDigest(day: d)
+            await store.deleteJournal(day: d)
+        }
         chunks.removeAll { ids.contains($0.id) }
         return ids
     }

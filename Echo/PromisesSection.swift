@@ -15,6 +15,7 @@ struct PromisesSection: View {
     @AppStorage("echo.promiseDone") private var doneRaw = ""
     @State private var showAll = false
     @State private var onlyMine = false
+    @State private var draftFor: Promise?
     @State private var expanded: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -49,6 +50,7 @@ struct PromisesSection: View {
                                playing: player.playingID == promise.chunkID,
                                reminderAt: reminders.date(for: promise.id),
                                reminderOptions: ReminderOptions.options(due: promise.due, now: Date()),
+                               onDraft: { draftFor = promise },
                                calendarAt: calendar.date(for: promise.id),
                                calendarOptions: ReminderOptions.calendarOptions(due: promise.due, now: Date()),
                                onCalendar: { option in Task { if await calendar.add(promise, at: option.date) { Haptics.success() } } },
@@ -63,11 +65,15 @@ struct PromisesSection: View {
 
             if !decisions.isEmpty { DecisionsList(decisions: decisions, model: model, player: player) }
         }
+        .sheet(item: $draftFor) { promise in DraftSheet(promise: promise, chunks: model.chunks) }
         .task {
             // Dev hook: `-remind-first` sets a reminder on the first commitment, at its due time if it has one (screenshots).
-            guard ProcessInfo.processInfo.arguments.contains("-remind-first"), let first = promises.first, reminders.date(for: first.id) == nil,
-                  let option = ReminderOptions.options(due: first.due, now: Date()).first else { return }
-            await reminders.schedule(first, at: option.date)
+            if ProcessInfo.processInfo.arguments.contains("-remind-first"), let first = promises.first, reminders.date(for: first.id) == nil,
+               let option = ReminderOptions.options(due: first.due, now: Date()).first {
+                await reminders.schedule(first, at: option.date)
+            }
+            // Dev hook: `-draft-first` opens the draft sheet on the first commitment (screenshots).
+            if ProcessInfo.processInfo.arguments.contains("-draft-first"), draftFor == nil { draftFor = promises.first }
         }
     }
 
@@ -86,6 +92,7 @@ private struct PromiseRow: View {
     let playing: Bool
     let reminderAt: Date?
     let reminderOptions: [ReminderOption]
+    let onDraft: () -> Void
     let calendarAt: Date?
     let calendarOptions: [ReminderOption]
     let onCalendar: (ReminderOption) -> Void
@@ -168,8 +175,9 @@ private struct PromiseRow: View {
                     ForEach(calendarOptions) { option in Button(option.title) { onCalendar(option) } }
                 }
             }
+            Divider()
+            Button("Draft the message…", systemImage: "square.and.pencil", action: onDraft)
             if reminderAt != nil {
-                Divider()
                 Button("Remove the reminder", role: .destructive, action: onCancelReminder)
             }
         } label: {

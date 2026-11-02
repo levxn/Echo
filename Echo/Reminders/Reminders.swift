@@ -145,6 +145,13 @@ final class Reminders {
         save()
     }
 
+    /// Sets (or removes) the 9 pm nudge to write the journal. It says nothing about the day.
+    func setEveningJournal(enabled: Bool) async {
+        scheduler.remove(ids: [JournalReminder.notificationID])
+        guard enabled, let fire = JournalReminder.fireDate(now: now()), await scheduler.ensureAuthorized() else { return }
+        try? await scheduler.add(id: JournalReminder.notificationID, title: "Echo", body: "Your day is ready to write up whenever you are.", at: fire)
+    }
+
     /// Moments were forgotten, so reminders about promises made in them (ids start with the moment's id) go too.
     func cancel(forChunkIDs ids: [String]) {
         let gone = Set(ids)

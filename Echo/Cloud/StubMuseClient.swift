@@ -7,7 +7,13 @@ struct StubMuseClient: MuseClient {
 
     func complete(_ request: MuseRequest) async throws -> MuseResponse {
         try await Task.sleep(for: .milliseconds(700))
-        let content = request.schemaName == EchoSchemas.digestName ? Self.digest : Self.answer(for: request.user)
+        let content: String
+        switch request.schemaName {
+        case EchoSchemas.digestName: content = Self.digest
+        case EchoSchemas.draftName: content = Self.draft
+        case EchoSchemas.journalName: content = Self.journal
+        default: content = Self.answer(for: request.user)
+        }
         return MuseResponse(content: content, model: "stub", promptTokens: 0, completionTokens: 0,
                             latencyMs: 700, isStub: true)
     }
@@ -31,6 +37,15 @@ struct StubMuseClient: MuseClient {
         }
         return (try? String(data: JSONEncoder().encode(result), encoding: .utf8)) ?? ""
     }
+
+    private static let draft = (try? String(data: JSONEncoder().encode(MessageDraft(
+        subject: "About what I promised",
+        body: "Stub preview: Hi, I wanted to follow up on what I promised. I'll get it to you as soon as I can, and I'll let you know the moment it's done.")), encoding: .utf8)) ?? ""
+
+    private static let journal = (try? String(data: JSONEncoder().encode(JournalEntry(
+        title: "A full day (stub preview)",
+        entry: "Stub preview: a busy day with a stand-up about the billing service, lunch with Priya planning a trip, a call about the plumber and the lease, and a family dinner. I promised a few things I want to follow through on.",
+        highlights: ["Billing service ships Thursday", "Trip to Lisbon in March", "Plumber on Friday at ten"])), encoding: .utf8)) ?? ""
 
     private static let digest: String = {
         let digest = DayDigest(

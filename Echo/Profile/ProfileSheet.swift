@@ -57,6 +57,9 @@ struct ProfileSheet: View {
                     ToggleRow(title: "Catch promises as I say them", systemImage: "checkmark.circle.fill",
                               caption: "When you say you will do something, your watch shows “Got it” and you can tap Keep for a reminder.",
                               isOn: $profile.catchPromises, tint: Palette.teal)
+                    ToggleRow(title: "Remind me to write my journal", systemImage: "book.closed.fill",
+                              caption: "A nudge at 9 pm. It says nothing about your day, and nothing is written or sent until you ask.",
+                              isOn: $profile.journalReminder, tint: Palette.teal)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .echoCard()

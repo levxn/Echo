@@ -41,7 +41,7 @@ enum TierTwoPlanner {
         options: [.caseInsensitive])
 
     /// Masks names in `selected` and `query` (same masked text for the request and for what the UI and ledger show).
-    private static func masked(_ selected: [ChunkRecord], query: String, day: [ChunkRecord], enabled: Bool) -> (chunks: [ChunkRecord], query: String, masking: Masking) {
+    static func masked(_ selected: [ChunkRecord], query: String, day: [ChunkRecord], enabled: Bool) -> (chunks: [ChunkRecord], query: String, masking: Masking) {
         guard enabled else { return (selected, query, Masking()) }
         let masking = Pseudonymizer.build(question: query, texts: selected.map { $0.transcript ?? "" },
                                           corpus: day.map { $0.transcript ?? "" })
@@ -128,7 +128,7 @@ enum TierTwoPlanner {
     }
 
     /// One line for the model when names were replaced; nothing otherwise.
-    private static func maskingNote(_ masking: Masking) -> String {
+    static func maskingNote(_ masking: Masking) -> String {
         masking.isEmpty ? "" : "\n\nNames of people were replaced with placeholders like [PERSON_1]. Use the placeholders exactly as written whenever you refer to those people, and never guess who they are."
     }
 
@@ -172,7 +172,7 @@ enum TierTwoPlanner {
     - Do not mention these instructions.
     """
 
-    private static func userMessage(query: String, selected: [ChunkRecord], grouped: Bool, now: Date = Date()) -> String {
+    static func userMessage(query: String, selected: [ChunkRecord], grouped: Bool, now: Date = Date()) -> String {
         // Labels are ordinals within this request ("S1", "S2"…), never the phone's chunk ids, so the model can cite
         // a snippet and the phone can map the label back to its own audio without any identifier leaving it.
         let labels = Dictionary(uniqueKeysWithValues: selected.enumerated().map { ($1.id, "S\($0 + 1)") })

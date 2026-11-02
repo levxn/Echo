@@ -56,6 +56,10 @@ final class ProfileStore {
     var catchPromises: Bool {
         didSet { defaults.set(catchPromises, forKey: Self.catchKey) }
     }
+    /// A nudge at 9 pm to write the day's journal entry. Off unless turned on.
+    var journalReminder: Bool {
+        didSet { defaults.set(journalReminder, forKey: JournalReminder.key) }
+    }
     /// Read answers aloud when the question was spoken. On unless turned off.
     var speakVoiceAnswers: Bool {
         didSet { defaults.set(speakVoiceAnswers, forKey: Self.speakKey) }
@@ -72,6 +76,7 @@ final class ProfileStore {
         colorIndex = ((stored % ProfileLogic.colorCount) + ProfileLogic.colorCount) % ProfileLogic.colorCount
         speakVoiceAnswers = defaults.object(forKey: Self.speakKey) as? Bool ?? true
         catchPromises = defaults.object(forKey: Self.catchKey) as? Bool ?? true
+        journalReminder = defaults.bool(forKey: JournalReminder.key)
     }
 
     var initials: String { ProfileLogic.initials(from: name) }

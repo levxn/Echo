@@ -41,6 +41,7 @@ actor ChunkStore {
         exec(db, "CREATE INDEX IF NOT EXISTS chunk_day ON chunk(day_id)")
         if !columns.contains("speaker_id") { exec(db, "ALTER TABLE chunk ADD COLUMN speaker_id TEXT") }
         if !columns.contains("voiceprint") { exec(db, "ALTER TABLE chunk ADD COLUMN voiceprint BLOB") }
+        exec(db, "CREATE TABLE IF NOT EXISTS journal (day_id TEXT PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
         exec(db, """
         CREATE TABLE IF NOT EXISTS speaker (
           id TEXT PRIMARY KEY, label TEXT, name TEXT, is_me INTEGER DEFAULT 0, centroid BLOB, count INTEGER, color INTEGER, created REAL
@@ -241,6 +242,7 @@ actor ChunkStore {
     func reset() {
         Self.exec(db, "DELETE FROM chunk")
         Self.exec(db, "DELETE FROM chunk_fts")
+        Self.exec(db, "DELETE FROM journal")      // so does the journal
         Self.exec(db, "DELETE FROM day_digest")   // the digest summarizes the chunks; the ledger is an audit trail and stays
         Self.exec(db, "DELETE FROM ask_history")  // the questions and answers are about this day too
         Self.exec(db, "DELETE FROM speaker")      // who sounded like whom is part of what was heard
@@ -286,6 +288,7 @@ actor ChunkStore {
         let ids = all(day: day).map(\.id)
         for id in ids { delete(id: id) }
         deleteHistory(citing: ids)
+        deleteJournal(day: day)
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id = ?", -1, &stmt, nil) == SQLITE_OK {
@@ -298,6 +301,42 @@ actor ChunkStore {
 
     /// Removes a stored audio file by name (a moment that was heard but must not be kept).
     func removeAudio(named file: String) { try? FileManager.default.removeItem(at: chunksDirectory.appending(path: file)) }
+
+    // MARK: Journal
+
+    func saveJournal(json: String, model: String, isStub: Bool, day: String) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO journal (day_id, ts, json, model, is_stub) VALUES (?,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, day, -1, t)
+        sqlite3_bind_double(stmt, 2, Date().timeIntervalSince1970)
+        sqlite3_bind_text(stmt, 3, json, -1, t)
+        sqlite3_bind_text(stmt, 4, model, -1, t)
+        sqlite3_bind_int(stmt, 5, isStub ? 1 : 0)
+        sqlite3_step(stmt)
+    }
+
+    /// Every saved entry, newest day first.
+    func journals() -> [(day: String, json: String, model: String, isStub: Bool)] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT day_id, json, model, is_stub FROM journal ORDER BY day_id DESC", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [(String, String, String, Bool)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            func t(_ i: Int32) -> String { sqlite3_column_text(stmt, i).map { String(cString: $0) } ?? "" }
+            out.append((t(0), t(1), t(2), sqlite3_column_int(stmt, 3) != 0))
+        }
+        return out
+    }
+
+    func deleteJournal(day: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM journal WHERE day_id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, day, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
 
     /// Forgets a day's summary (it described moments that are gone).
     func deleteDigest(day: String) {
@@ -314,6 +353,7 @@ actor ChunkStore {
         let old = all().filter { !$0.dayId.isEmpty && $0.dayId < day }
         for c in old { delete(id: c.id) }
         deleteHistory(citing: old.map(\.id))
+        for d in Set(old.map(\.dayId)) { deleteJournal(day: d) }
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id < ? AND day_id != ''", -1, &stmt, nil) == SQLITE_OK {

@@ -24,7 +24,7 @@ struct ReviewSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Label(review.kind == .digest ? "Request" : "Your question", systemImage: "questionmark.bubble")
+                    Label(review.kind == .ask ? "Your question" : "Request", systemImage: "questionmark.bubble")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Palette.textSecondary)
                         .textCase(.uppercase)
