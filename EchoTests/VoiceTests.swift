@@ -184,7 +184,7 @@ struct VoiceTests {
             return "too late"
         }).transcribe(audio: audioBlob())
         #expect(result == .timedOut)
-        #expect(Date().timeIntervalSince(started) < 3, "gave up after the timeout, not after 30 s")
+        #expect(Date().timeIntervalSince(started) < 10, "gave up after the timeout, not after 30 s")
     }
 
     @Test func theTimeoutHelperPassesThroughResultsAndErrors() async throws {

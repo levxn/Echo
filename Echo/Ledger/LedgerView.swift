@@ -20,6 +20,7 @@ struct LedgerView: View {
     @State private var showAllActivity = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(BriefingCenter.self) private var briefings
 
     /// Activity shows this many entries until "Show all" is tapped.
     static let activityLimit = 5
@@ -105,6 +106,11 @@ struct LedgerView: View {
                       caption: privacy.announce ? "The watch buzzes every 10 minutes while it listens, so people nearby aren't unaware."
                                                 : "Off: the watch listens silently. Say “off the record” any time to pause.",
                       isOn: Bindable(privacy).announce, tint: Palette.teal)
+            Divider().overlay(Palette.stroke)
+            ToggleRow(title: "Brief me before meetings", systemImage: "calendar.badge.clock",
+                      caption: briefings.enabled ? "Looks at who you are meeting in your calendar, on this phone, and reminds you what you owe them 15 minutes before."
+                                                 : "Off. Turning it on asks to read your calendar. Nothing from it is sent anywhere.",
+                      isOn: Bindable(briefings).enabled, tint: Palette.teal)
         }
         .echoCard()
     }

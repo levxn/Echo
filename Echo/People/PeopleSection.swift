@@ -15,8 +15,16 @@ struct PeopleSection: View {
     @State private var showAll = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(VoiceBookModel.self) private var voices
+    @AppStorage("echo.promiseDone") private var doneRaw = ""
 
     private static let collapsedCount = 6
+
+    /// What to know before seeing this person, from every day Echo remembers.
+    private func briefing(for person: Person) -> Briefing {
+        BriefingBuilder.make(for: person, chunks: model.chunks, promises: PromiseExtractor.extract(from: model.chunks),
+                             done: Set(doneRaw.split(separator: "\n").map(String.init)), myVoice: voices.me?.id,
+                             voiceNamed: { name in voices.voices.first { ($0.name ?? "").lowercased() == name.lowercased() }?.id }, now: model.now())
+    }
     private var visible: [Person] { Capped.visible(people, limit: Self.collapsedCount, showAll: showAll) }
 
     var body: some View {
@@ -32,6 +40,7 @@ struct PeopleSection: View {
             VStack(spacing: Spacing.sm) {
                 ForEach(visible) { person in
                     PersonRow(person: person, isExpanded: expanded == person.id,
+                              briefing: expanded == person.id ? briefing(for: person) : nil,
                               moments: person.momentIDs.compactMap { model.record(id: $0) },
                               promises: PeopleIndex.promises(for: person, in: promises), player: player,
                               onToggle: { withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { expanded = expanded == person.id ? nil : person.id } },
@@ -55,6 +64,7 @@ struct PeopleSection: View {
 private struct PersonRow: View {
     let person: Person
     let isExpanded: Bool
+    let briefing: Briefing?
     let moments: [ChunkRecord]
     let promises: [Promise]
     let player: ChunkPlayer
@@ -104,6 +114,7 @@ private struct PersonRow: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: Spacing.md) {
+                    if let briefing, !briefing.isEmpty { BriefingCard(briefing: briefing) }
                     if !promises.isEmpty {
                         VStack(alignment: .leading, spacing: Spacing.xs) {
                             SectionHeader("Commitments", style: .overline)
@@ -133,6 +144,43 @@ private struct PersonRow: View {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
         .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+    }
+}
+
+/// "Before you see Priya": when you last talked, what you owe them, and what comes up between you.
+private struct BriefingCard: View {
+    let briefing: Briefing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("Before you see \(briefing.person.split(separator: " ").first.map(String.init) ?? briefing.person)", systemImage: "person.text.rectangle")
+                .font(.echoLabel)
+                .foregroundStyle(Palette.blue)
+            if let last = briefing.lastTime {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("Last time · \(last.when)").font(.caption.weight(.semibold)).foregroundStyle(Palette.textSecondary)
+                    Text("“\(last.gist)”").font(.footnote).foregroundStyle(Palette.textPrimary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if !briefing.youOwe.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("You owe them").font(.caption.weight(.semibold)).foregroundStyle(Palette.textSecondary)
+                    ForEach(briefing.youOwe, id: \.self) { Label($0, systemImage: "circle").font(.footnote).foregroundStyle(Palette.textPrimary).fixedSize(horizontal: false, vertical: true) }
+                }
+            }
+            if !briefing.theyOwe.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("They owe you").font(.caption.weight(.semibold)).foregroundStyle(Palette.textSecondary)
+                    ForEach(briefing.theyOwe, id: \.self) { Label($0, systemImage: "circle").font(.footnote).foregroundStyle(Palette.textPrimary).fixedSize(horizontal: false, vertical: true) }
+                }
+            }
+            if !briefing.topics.isEmpty {
+                FlowLayout { ForEach(briefing.topics, id: \.self) { Chip(text: $0, tint: Palette.blue, size: .compact) } }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .echoRow(fill: Palette.blue.opacity(0.10))
+        .accessibilityElement(children: .contain)
     }
 }
 

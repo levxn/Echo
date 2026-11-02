@@ -29,7 +29,8 @@ struct RootView: View {
     @State private var history: AskHistoryModel
     @State private var voice = VoiceAskModel()
     @State private var speaker = Speaker()
-    @State private var reminders = Reminders()
+    @State private var reminders: Reminders
+    @State private var briefings: BriefingCenter
     @State private var calendarLink = CalendarLink()
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
@@ -48,6 +49,9 @@ struct RootView: View {
         self.model = model
         self.link = link
         self.voices = voices
+        let reminders = Reminders()
+        _reminders = State(initialValue: reminders)
+        _briefings = State(initialValue: BriefingCenter(scheduler: reminders.scheduler))
         self.privacy = privacy
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
@@ -98,10 +102,27 @@ struct RootView: View {
         return ok
     }
 
+    /// Re-plans the briefings for meetings in the next day (when the person has turned them on).
+    private func refreshBriefings() async {
+        guard briefings.enabled else {
+            await briefings.refresh(people: [], briefing: { _ in Briefing(person: "", lastTime: nil, youOwe: [], theyOwe: [], topics: [], moments: 0) })
+            return
+        }
+        let chunks = model.chunks, name = profile.name
+        let people = await Task.detached(priority: .utility) { PeopleIndex.build(from: chunks, userName: name) }.value
+        let promises = PromiseExtractor.extract(from: chunks)
+        let done = Set((UserDefaults.standard.string(forKey: DayWiper.promiseDoneKey) ?? "").split(separator: "\n").map(String.init))
+        await briefings.refresh(people: people, briefing: { person in
+            BriefingBuilder.make(for: person, chunks: chunks, promises: promises, done: done, myVoice: voices.me?.id,
+                                 voiceNamed: { n in voices.voices.first { ($0.name ?? "").lowercased() == n.lowercased() }?.id }, now: model.now())
+        })
+        Log.app.notice("briefings: \(briefings.planned.count) planned")
+    }
+
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
-                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices, calendar: calendarLink, journal: journal)
+                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices, calendar: calendarLink, journal: journal, briefings: briefings)
         }
     }
 
@@ -157,7 +178,12 @@ struct RootView: View {
         // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
         .onChange(of: model.session) { Task { await history.reload() } }
         .onChange(of: profile.journalReminder) { _, on in Task { await reminders.setEveningJournal(enabled: on) } }
-        .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger))
+        .onChange(of: briefings.enabled) { Task { await refreshBriefings() } }
+        .task(id: model.storedCount) {
+            try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
+            await refreshBriefings()
+        }
+        .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings))
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
@@ -224,6 +250,8 @@ struct RootView: View {
         await ledger.reload()
         await digest.load()
         await journal.load()
+        // Dev hook: `-seed-calendar` adds an event with Priya, tomorrow at 13:00 (to see briefings work).
+        if ProcessInfo.processInfo.arguments.contains("-seed-calendar") { await SystemCalendarReader.seed(title: "Lunch with Priya") }
         await reminders.setEveningJournal(enabled: profile.journalReminder)
         let args = ProcessInfo.processInfo.arguments
         // Dev hooks for headless verification: `-ask "question"` and `-digest` run once the day has loaded,
@@ -268,6 +296,7 @@ private struct ModelEnvironment: ViewModifier {
     let calendar: CalendarLink
     let drafts: DraftModel
     let ledger: LedgerModel
+    let briefings: BriefingCenter
 
     func body(content: Content) -> some View {
         content
@@ -278,5 +307,6 @@ private struct ModelEnvironment: ViewModifier {
             .environment(calendar)
             .environment(drafts)
             .environment(ledger)
+            .environment(briefings)
     }
 }
