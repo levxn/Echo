@@ -1,35 +1,42 @@
 import SwiftUI
 
-/// A four-point star with concave sides: the "AI" sparkle.
-struct SparkleShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let c = CGPoint(x: rect.midX, y: rect.midY)
-        let r = min(rect.width, rect.height) / 2
-        let k = r * 0.17
-        var p = Path()
-        p.move(to: CGPoint(x: c.x, y: c.y - r))
-        p.addQuadCurve(to: CGPoint(x: c.x + r, y: c.y), control: CGPoint(x: c.x + k, y: c.y - k))
-        p.addQuadCurve(to: CGPoint(x: c.x, y: c.y + r), control: CGPoint(x: c.x + k, y: c.y + k))
-        p.addQuadCurve(to: CGPoint(x: c.x - r, y: c.y), control: CGPoint(x: c.x - k, y: c.y + k))
-        p.addQuadCurve(to: CGPoint(x: c.x, y: c.y - r), control: CGPoint(x: c.x - k, y: c.y - k))
-        p.closeSubpath()
-        return p
-    }
-}
-
-/// The Echo logo: uneven sound bars with a sparkle riding the tallest. `frame` says how it looks right now (bar heights,
-/// sparkle size), so the same view is the finished logo, the idling one and every moment of the launch animation.
+/// The Echo logo: uneven sound bars inside a shiny ring tilted 45 degrees, its back half behind the bars and its front half in front.
+/// `frame` says how it looks right now, so the same view is the finished logo, the idling one and every moment of the launch animation.
 struct EchoLogo: View {
     var height: CGFloat = 120
     var frame: LaunchFrame = LaunchChoreography.idle(at: 0)
 
     private var barWidth: CGFloat { height * LogoGeometry.barWidth }
     private var gap: CGFloat { height * LogoGeometry.gap }
-    private var rowWidth: CGFloat { CGFloat(frame.levels.count) * barWidth + CGFloat(frame.levels.count - 1) * gap }
+
+    private var gradient: AngularGradient {
+        AngularGradient(colors: [Palette.teal, .white, Palette.violet, Palette.teal], center: .center, angle: .degrees(360 * frame.shine))
+    }
+
+    private func arc(from: CGFloat, to: CGFloat, width: CGFloat, size: CGSize) -> some View {
+        Ellipse()
+            .trim(from: from, to: to)
+            .stroke(gradient, style: StrokeStyle(lineWidth: width, lineCap: .butt))
+            .frame(width: size.width, height: size.height)
+            .rotationEffect(.degrees(frame.ringDegrees))
+    }
+
+    /// The glint: a point on the front half of the ring that travels once round each cycle.
+    private func glintOffset(a: CGFloat, b: CGFloat) -> CGSize {
+        let theta = Double.pi * frame.shine
+        let x = Double(a) * cos(theta), y = Double(b) * sin(theta)
+        let r = frame.ringDegrees * .pi / 180
+        return CGSize(width: x * cos(r) - y * sin(r), height: x * sin(r) + y * cos(r))
+    }
 
     var body: some View {
-        let sparkle = height * LogoGeometry.sparkleRadius * 2
+        let a = height * frame.ringHalfWidth, b = height * LogoGeometry.ringB * frame.ringOpen
+        let size = CGSize(width: max(1, 2 * a), height: max(0.5, 2 * b))
+        let stroke = height * LogoGeometry.ringWidth
+        let glintStrength = frame.ringOpen > 0.9 ? sin(.pi * frame.shine) : 0
         ZStack {
+            arc(from: 0.5, to: 1, width: stroke * 0.8, size: size)          // the back of the ring, behind the bars
+                .opacity(0.45 * frame.ringOpacity)
             HStack(spacing: gap) {
                 ForEach(frame.levels.indices, id: \.self) { i in
                     Capsule()
@@ -38,18 +45,18 @@ struct EchoLogo: View {
                 }
             }
             .shadow(color: Palette.teal.opacity(0.75 * frame.glow), radius: height * 0.09)
-
-            // The "AI" sparkle: small, blue, in the top-right corner beside the bars.
-            SparkleShape()
-                .fill(LinearGradient(colors: [Color(red: 0.72, green: 0.86, blue: 1.0), Palette.blue], startPoint: .top, endPoint: .bottom))
-                .frame(width: sparkle, height: sparkle)
-                .shadow(color: Palette.blue.opacity(0.9), radius: height * 0.06)
-                .rotationEffect(.degrees(frame.sparkleDegrees))
-                .scaleEffect(max(0.0001, frame.sparkleScale))
-                .opacity(frame.sparkleScale > 0.001 ? 1 : 0)
-                .offset(x: height * LogoGeometry.sparkleX, y: height * LogoGeometry.sparkleY)
+            arc(from: 0, to: 0.5, width: stroke, size: size)                 // the front of the ring, across the bars
+                .shadow(color: Palette.teal.opacity(0.8 * frame.glow), radius: height * 0.06)
+                .opacity(frame.ringOpacity)
+            Circle()
+                .fill(.white)
+                .frame(width: height * 0.07, height: height * 0.07)
+                .blur(radius: height * 0.012)
+                .shadow(color: .white, radius: height * 0.05)
+                .offset(glintOffset(a: a, b: b))
+                .opacity(glintStrength * frame.ringOpacity)
         }
-        .frame(width: rowWidth + height * 0.5, height: height * 1.3)
+        .frame(width: height * 2.1, height: height * 2.1)
         .accessibilityHidden(true)
     }
 }
@@ -66,7 +73,7 @@ struct IdleLogo: View {
     }
 }
 
-/// The launch animation: the logo plays like live audio, freezes onto its shape, the sparkle springs in, and a ring of light
+/// The launch animation: a line becomes bars that play like live audio, falls back to a line, opens into a ring around the bars, and a ring of light
 /// opens onto the app. A tap jumps to the opening. It draws `LaunchChoreography` and nothing else.
 struct LaunchMark: View {
     @Binding var visible: Bool
@@ -112,7 +119,7 @@ struct LaunchMark: View {
                 RadialGradient(colors: [Palette.teal.opacity(0.55), .clear], center: .center, startRadius: 0, endRadius: 260)
                     .scaleEffect(1 + 1.6 * frame.bloom)
                     .opacity(frame.bloom)
-                EchoLogo(height: 108, frame: frame)
+                EchoLogo(height: 96, frame: frame)
                     .scaleEffect(frame.logoScale)
                     .opacity(frame.logoOpacity)
             }
