@@ -42,8 +42,11 @@ struct EchoApp: App {
                 await model.load()
                 await voices.load()
                 await places.load()
-                let authorized = await OnDeviceASR.authorize()
-                Log.app.info("speech authorized: \(authorized)")
+                // A first launch asks after the welcome screen has said why (see FirstImpression).
+                if !Welcome.isPending() {
+                    let authorized = await OnDeviceASR.authorize()
+                    Log.app.info("speech authorized: \(authorized)")
+                }
                 // Resume anything a previous launch left unprocessed.
                 model.chunks.filter { $0.status == .received || $0.status == .vad }.forEach { pipeline.enqueue($0) }
                 await pipeline.backfillIndex()

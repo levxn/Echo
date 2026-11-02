@@ -6,6 +6,10 @@ import SwiftUI
 struct FunnelCard: View {
     let model: PipelineModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Once the day has settled the three bars are tucked away behind "Details"; while it syncs they show the progress.
+    @State private var showDetail = false
+
+    private var showsRows: Bool { !model.isSettled || showDetail }
 
     /// Never smaller than what the watch kept, so the bars stay proportional even if the session totals are missing.
     private var recorded: Double { max(model.recordedSeconds, model.watchKeptSeconds, 0.0001) }
@@ -38,12 +42,29 @@ struct FunnelCard: View {
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
             }
 
-            FunnelRow(label: "Heard by the watch", seconds: recorded,
-                      fraction: model.recordedSeconds > 0 || model.watchKeptSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
-            FunnelRow(label: "Kept as speech", seconds: model.watchKeptSeconds,
-                      fraction: model.watchKeptSeconds / recorded, tint: Palette.blue)
-            FunnelRow(label: "Saved on this phone", seconds: model.phoneConfirmedSeconds,
-                      fraction: model.phoneConfirmedSeconds / recorded, tint: Palette.teal)
+            if showsRows {
+                Group {
+                    FunnelRow(label: "Heard by the watch", seconds: recorded,
+                              fraction: model.recordedSeconds > 0 || model.watchKeptSeconds > 0 ? 1 : 0, tint: Palette.textSecondary)
+                    FunnelRow(label: "Kept as speech", seconds: model.watchKeptSeconds,
+                              fraction: model.watchKeptSeconds / recorded, tint: Palette.blue)
+                    FunnelRow(label: "Saved on this phone", seconds: model.phoneConfirmedSeconds,
+                              fraction: model.phoneConfirmedSeconds / recorded, tint: Palette.teal)
+                }
+                .transition(.opacity)
+            }
+            if model.isSettled && model.recordedSeconds > 0 {
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { showDetail.toggle() }
+                } label: {
+                    Label(showDetail ? "Hide details" : "Details", systemImage: showDetail ? "chevron.up" : "chevron.down")
+                        .font(Font.echoMeta.weight(.medium))
+                        .foregroundStyle(Palette.textSecondary)
+                        .frame(minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()

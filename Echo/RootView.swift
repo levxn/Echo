@@ -207,6 +207,7 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
             await refreshBriefings()
         }
+        .modifier(FirstImpression())
         .modifier(WidgetSync(model: model, reminders: reminders, profile: profile, voices: voices, link: link))
         .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings, places: places))
         .preferredColorScheme(.dark)

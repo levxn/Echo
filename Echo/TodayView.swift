@@ -75,6 +75,13 @@ struct TodayView: View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 greeting.id("todayTop")
+                if model.todayChunks.contains(where: { $0.status == .stored }) {
+                    TodayHero(model: model, promises: promises, conversations: episodes.count) {
+                        withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { state.section = .commitments }
+                        state.scrollTarget = nil
+                        Task { state.scrollTarget = "sections" }
+                    }
+                }
                 FunnelCard(model: model)
                 if model.todayChunks.isEmpty {
                     EmptyDayHint()
