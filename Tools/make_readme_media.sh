@@ -53,7 +53,24 @@ echo "1/6 clean simulators…"
 Tools/demo_prep.sh >/tmp/echo_media_prep.log 2>&1 || { cat /tmp/echo_media_prep.log; exit 1; }
 sleep 2; shot_phone empty; shot_watch ready
 
-echo "2/6 the watch replays the day (recorded)…"
+echo "2/6 the watch replays last week, then today (today is recorded)…"
+launch_phone -tab moments
+sleep 3
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "prev$(date +%s)" -day-offset -7 >/dev/null
+sleep 25
+DBP=""; for _ in $(seq 1 30); do DBP=$(find ~/Library/Developer/CoreSimulator/Devices/$PHONE/data/Containers/Data/Application -name echo.sqlite 2>/dev/null | head -1); [ -n "$DBP" ] && break; sleep 2; done
+pp=-1; ss=0
+for _ in $(seq 1 60); do
+  o=$(python3 -I -c "
+import sqlite3
+c=sqlite3.connect('file:$DBP?mode=ro',uri=True)
+print(c.execute('select count(*) from chunk').fetchone()[0], c.execute(\"select count(*) from chunk where status in ('received','vad','asr')\").fetchone()[0])" 2>/dev/null)
+  set -- $o
+  if [ "${2:-x}" = "0" ] && [ "${1:-0}" = "$pp" ] && [ "${1:-0}" -gt 10 ]; then ss=$((ss+1)); else ss=0; fi
+  pp=${1:-0}; [ "$ss" -ge 3 ] && break; sleep 10
+done
+sleep 3
 dir="$TMP/clip_replay"; mkdir -p "$dir"
 ECHO_VIDEO_DIR="$dir" Tools/record_demo.sh start >/dev/null
 launch_phone -tab moments
@@ -80,7 +97,9 @@ sleep 3; shot_watch done
 
 echo "4/6 each screen (recorded)…"
 # Every scene passes the settings it needs, because they persist between launches.
-scene today 7.5 -tab today -today-section day -review off -mask off      # also a clip in the preview video
+scene today 7.5 -tab today -today-section day -voice-me -name-places -review off -mask off      # also a clip in the preview video
+scene places 8 -tab today -today-section day -today-scroll places -name-places
+scene voices 8 -tab today -today-section people -voice-me
 scene moments 6.5 -tab moments
 scene ask-lookup 7.5 -tab ask -ask "When is the plumber coming?"
 scene ask-cloud 14 -tab ask -ask "What did I promise people today?"   # a live Muse call takes ~6 s
@@ -98,8 +117,10 @@ scene history-detail 7 -tab ask -history first   # the newest question reopened:
 scene today-commitments 7.5 -tab today -today-section commitments -notify-provisional -remind-first   # the first one has a reminder
 # "Lee" is the recognizer mishearing "leave"; hiding it is exactly what the Not a person button does.
 scene people 8 -tab today -today-section people -people-open -echo.peopleIgnored lee
+scene draft 24 -tab today -today-section commitments -draft-first -draft-run -review off   # a live Muse call
 scene digest 17 -digest -today-section summary                      # the digest takes ~11 s live (also a preview clip)
 scene ledger 7.5 -tab ledger
+scene ledger-data 7.5 -tab ledger -ledger-focus data
 launch_phone -review off -mask off; sleep 3
 scene architecture 8.5 -tab ledger -architecture
 

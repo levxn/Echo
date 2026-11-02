@@ -4,13 +4,13 @@
 
 ### A private memory for your day
 
-*Your watch listens. Your phone remembers. Meta's Muse Spark helps only when it has to.*
+*Your watch listens. Your phone remembers, for weeks, not just a day. Meta's Muse Spark helps only when it has to.*
 
 ![iOS 26](https://img.shields.io/badge/iOS-26-111111?logo=apple&logoColor=white)
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-289%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-431%20passing-34D399)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
 
@@ -29,10 +29,10 @@ Echo turns a day of conversations into something you can ask questions of, **wit
 <p align="center">
   <a href="docs/media/echo-demo-preview.mp4"><b>▶ Watch the full-quality preview (MP4)</b></a>
   &nbsp;·&nbsp;
-  <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, about 3 min (MP4)</b></a>
+  <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, about 4½ min (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself: lookups, a live Muse answer with its citations, commitments, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, the kill switch and the architecture sheet, with the ~70 s sync sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself: last week's day and today's, lookups across days, a live Muse answer with its citations, commitments, a drafted message, voices and places, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, forgetting the last ten minutes, the kill switch and the architecture sheet, with the sync of both days sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
 
 ## A tour of the screens
 
@@ -71,6 +71,19 @@ A slim bar sits at the top of every tab: your profile, where you are, and indica
   </tr>
 </table>
 
+And what Echo does with more than one day, more than one voice and more than one place:
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-voices.jpg" width="250" alt="Voices and people"><br><sub><b>Voices</b><br>Told apart on the phone; name them, mark which is you</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-places.jpg" width="250" alt="Places the day happened"><br><sub><b>Places</b><br>Coarse locations you name yourself; never looked up, never sent</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-draft.jpg" width="250" alt="A drafted message"><br><sub><b>Draft the message</b><br>Only the promise and the line before it go to Muse, through the same review gate</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger-data.jpg" width="250" alt="Your data controls"><br><sub><b>Your data</b><br>How long to keep memories, forget the last minutes, announce recording</sub></td>
+  </tr>
+</table>
+
 ## What it does
 
 1. **Watch.** Listens, keeps only speech (a lenient voice detector with a 2-second pre-roll so the first word is never clipped), compresses it and streams it to the phone.
@@ -78,13 +91,22 @@ A slim bar sits at the top of every tab: your profile, where you are, and indica
 3. **Ask your day.** A rules-based router decides where each question is answered:
    - **Lookups** ("When is the plumber coming?") are answered on the phone in about 30 ms, with the matching words highlighted and the original audio one tap away.
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
-4. **Commitments.** Things people said they will do ("I will send the spec by Wednesday noon") are collected on the phone with plain rules, no model: a checklist with who and when where known, and the audio of each one tap away. Echo doesn't tell speakers apart, so it lists commitments heard, not only yours. A bell on each one sets a **reminder**: a local notification at the due time when Echo can place it ("Wednesday noon", "tomorrow morning"), in an hour, or tomorrow morning. It repeats the commitment on the lock screen, and Forget my day cancels every reminder.
+4. **Commitments.** Things people said they will do ("I will send the spec by Wednesday noon") are collected on the phone with plain rules, no model: a checklist with who and when where known, and the audio of each one tap away. It lists everything heard, with a Mine / Everyone filter once it knows which voice is yours. A bell on each one sets a **reminder**: a local notification at the due time when Echo can place it ("Wednesday noon", "tomorrow morning"), in an hour, or tomorrow morning. It repeats the commitment on the lock screen, and Forget my day cancels every reminder.
 5. **People.** Who the day mentions or speaks to, with the moments each name came up in (playable), the commitments that involve them, and a button to ask about them. Names come from the same on-device tagger as name masking, so a misheard word can slip in; "Not a person" hides it, and nothing is sent.
 6. **Follow-up questions.** A short question that leans on the last one ("Which of those is due first?") is understood as a follow-up for ten minutes. Echo carries the earlier *question* along, never the earlier answer, so what is sent is exactly the combined text, which the review sheet and the ledger show. A line under the field says what it was a follow-up to, with "Ask on its own" to undo it.
 7. **Citations you can hear.** Muse cites the snippets its answer comes from by label, and Echo maps each label back to the audio on the phone, so every claim plays its source. Answers suggest follow-up questions, and any answer or the day's summary can be **shared** as plain text through the system share sheet.
 8. **Ask out loud, from the phone or the watch.** Tap the mic and say the question. It is understood on the phone with Apple's on-device recognizer (the recording is deleted straight away, and audio never goes to Muse), shown back to you as heard, then answered like any typed question. The watch has four suggestions too. Answers can be **read aloud**, and are read back automatically after a spoken question (a switch in your profile turns that off).
 9. **History.** Every question and its answer is kept on the phone, newest first, with citations that still play, until you clear it. Open one to see it again, ask it again, or find it in the ledger. The watch shows the last eight. Forget my day removes the history too, and now also blanks Muse's replies in the ledger.
 10. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
+
+11. **Memory across days.** Each day is kept as its own day (30 days by default; 7, 90 or forever in the Ledger). Ask about any of them ("How much was the rent increase last week?", "What did the dentist say on Tuesday?"); with no day named, the newest fact wins, so a figure that was updated since still answers correctly. Today shows "a week ago today", and "Summarize my past week" is one Muse call over the saved daily summaries.
+12. **Voices.** The phone tells voices apart from the audio alone (a pure-Swift voiceprint, no model download), lets you name them and mark "This is me", and uses it where it matters: Promises has a Mine / Everyone filter, and "What did I promise?" is answered from your own voice only.
+13. **Where it happened.** Each moment is stamped with a coarse location (about 100 m). Name a place ("Home", "The office") and ask "Where was I when I promised that?"; a map shows the day. Places can be marked **never record**. There is no reverse geocoding, so nothing is looked up anywhere.
+14. **Privacy controls.** Say "this is off the record" and Echo keeps nothing until you say "back on the record" (or ten minutes pass): what is said in between is understood only long enough to hear the way back, then thrown away. **Forget the last 5, 10, 30 or 60 minutes** from the phone or the wrist; it removes the moments, their audio, their search entries, the history that cited them and the reminders for their promises. The watch can announce that it is listening (a buzz every ten minutes).
+15. **Catching things as they happen.** A promise you make appears on the watch as "Got it" with Keep / Dismiss (or as a notification with a "Remind me" button), a bell can also add it to **Calendar**, and "Draft the message" writes the follow-up from only that moment and the line before it, through the same review gate and ledger. Decisions ("we decided to go with the second vendor") are listed, and "Why did we...?" finds them. Before a meeting with someone Echo knows, a **briefing** says when you last spoke and what is owed either way. Each evening it can offer to write the day up as a journal entry.
+16. **Hey Echo.** A snippet that opens with "Hey Echo" is a command: the rest is answered on the watch and the command itself is never kept in memory.
+17. **Siri, Shortcuts, widgets.** "Ask Echo ...", "What did I promise in Echo", "Forget the last few minutes in Echo" (App Intents), a Promises widget for the Home and Lock Screen, a watch complication, and a Live Activity for a promise that is coming due.
+18. **On this phone, and in your language.** When Apple's on-device model is available, synthesis questions can be answered by it instead of Muse (a switch in the Ledger; the same minimal snippets, never sent, logged as "On-device model"), and any answer or moment can be translated on the device.
 
 ## What's real, simulated, and design-only
 
@@ -93,10 +115,16 @@ A slim bar sits at the top of every tab: your profile, where you are, and indica
 | Voice detection on the watch, chunking, AAC compression, streaming to the phone | **Real** (running in the watchOS simulator) |
 | Stage-2 speech check, on-device transcription, SQLite FTS5 + word-vector index, retriever, router, answers | **Real** |
 | Muse Spark calls (structured output, text-only snippets, ledger, error handling) | **Real**: live calls to `muse-spark-1.3` through the Meta Model API (the screenshots above are live answers), plus a mocked-network test suite. Without an API key in `Config/meta_api_key.txt` Echo falls back to a **labeled offline stub** |
-| The microphone | **Simulated**: a pre-recorded day (text-to-speech voices, 4 conversations) replayed as the mic. On a real watch this would be a background service, not a button |
+| The microphone | **Simulated in the demo**: two pre-recorded days (text-to-speech voices; last week's and today's) replayed as the mic through the same voice detector. The live microphone path and all-day background capture are **implemented but not run on hardware** (see below) |
 | Spoken questions | **Real from the recording onward**: the question is captured with an endpointer, compressed, sent from the watch, understood on-device, answered and kept. **Simulated** at the start: in the simulators a recorded question stands in for the mic (labelled on screen). The real-microphone path is implemented but has not been tried on hardware |
+| Memory across days, voices, places, off the record, forget-last-minutes, promises caught as they are said, drafts, decisions, journal, briefings, "Hey Echo" | **Real** and run end to end in the simulators (unit tests plus `Tools/e2e_check.sh`) |
+| Speaker recognition | **Real on the demo recordings** (eight voices come out as eight, about 96% of lines under the right voice, after the watch's compression). **Not verified on real people**: short, noisy, overlapping speech is much harder than synthetic voices |
+| Apple's on-device model for answers (Tier 1) | **Implemented, not runnable in the simulator** (its model assets are not installed there, so Echo uses Muse as before); needs a device that supports Apple Intelligence |
+| Live microphone and background capture on the watch (`AVAudioEngine`, a workout session that keeps the app running and saves nothing) | **Implemented, not verified on hardware** |
+| "Hey Echo" on a real microphone | The wake phrase is recognised from what the phone transcribes, and that is **verified end to end** on the recording; on a real microphone it is **not verified** (and it only works while Echo is listening) |
+| Siri and Shortcuts, widgets, watch complication, Live Activity | **Build and unit-tested** (the intents' answers, the shared snapshot); how they look on a Home Screen, a watch face and the Dynamic Island is **not verified** |
+| Notifications and Calendar events | The scheduling and the calendar writes are tested against fakes; a real notification firing and a real calendar are **not verified** |
 | Watch ↔ phone link | **Simulated hardware**: WatchConnectivity messages between two simulators |
-| Muse Glimmer on-device (Tier 1) | **Design only**: shown in the UI as not available, never run |
 
 ## Architecture
 
@@ -126,10 +154,10 @@ flowchart LR
 |---|---|
 | Recorded → kept by the watch → confirmed on the phone | 6:15 → 4:48 → 3:53 (38% of the day never stored) |
 | Stage 2 | 45 of 45 speech chunks kept, 11 of 11 noise chunks rejected (the noise is synthetic, so this flatters it) |
-| Transcription word error rate | 7.2% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
+| Transcription word error rate | 7.4% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 289 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud; plus an end-to-end script (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 431 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
 
 ## The privacy model
 
@@ -144,6 +172,10 @@ flowchart LR
 Echo calls `POST https://api.meta.ai/v1/chat/completions` with model `muse-spark-1.3`, a `developer` message with the rules, a `user` message with the question and time-labelled snippets, `reasoning_effort: "minimal"`, and a JSON-schema `response_format`. Snippets are labelled `S1`, `S2`… within the request (never the phone's own identifiers), and the answer comes back as structured data: an answer, items with a due date and the label of the snippet each came from, and follow-up questions. Echo maps each label back to the audio on the phone, so a citation plays its source. The prompt tells Muse that the transcripts are noisy speech recognition and to say so only when it actually corrected something. The same path produces the one-tap "Summarize my day" digest of conversations, action items and people.
 
 Two things the live API taught us, both now handled and tested: **reasoning tokens count against `max_completion_tokens`** (at 800 tokens Muse spent 798 thinking and returned an empty reply, so Echo uses a 3000-token budget and retries once with double if a reply is cut off), and `minimal` reasoning answers the real questions in about 6 s versus 11 s at `low`. If the account can't use the model the client falls back to 1.2 then 1.1, and if structured output is refused it retries once with the schema in the instructions.
+
+## Long-term memory, and why Echo doesn't embed a memory engine
+
+Echo's memory is SQLite on the phone: days of transcripts, an FTS5 index, word vectors, voices and places. We looked at open-source memory layers (Supermemory is MIT-licensed, so shipping it would be allowed) and decided against embedding one: it is a TypeScript, Cloudflare and Postgres service with no Swift SDK, its local mode is a separate server that needs its own embedding model and LLM, and a companion server would break "nothing leaves the phone". The useful ideas were rebuilt natively instead, with nothing copied: facts carry their day and the newest wins, each person has a page that persists across days, and old moments resurface ("a week ago today").
 
 ## Run it
 
@@ -191,6 +223,14 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | `Echo/Ledger/` | The privacy ledger and the cloud switch |
 | `Echo/Voice/` | Spoken questions: the mic flow, on-device understanding, what the phone does for the watch |
 | `Echo/History/` | The history of questions: storage, the list, the detail view |
+| `Echo/Days/`, `Echo/Search/DayScope.swift` | Memory across days: day ids, retention, resurfacing, "last week" style scoping |
+| `Echo/Speakers/` | Voiceprints (MFCC and pitch, pure Swift), the voice book, voice chips |
+| `Echo/Privacy/` | Off the record, forget the last minutes, the recording announcement |
+| `Echo/Proactive/` | Promises caught as they are said, drafts, the journal, briefings |
+| `Echo/Places/` | Coarse places, the map, "where was I" |
+| `Echo/Brain/` | The on-device model behind a protocol |
+| `Echo/Intents/`, `Echo/Widgets/` | Siri and Shortcuts, and what feeds the widgets |
+| `EchoWidgets/`, `EchoWatchWidgets/`, `WidgetShared/` | The widget and Live Activity extension, the watch complication, the snapshot they share |
 | `Shared/` | Code shared by both apps: voice detector, question recorder, speaker, wire format, clock, theme |
 | `EchoTests/` | Unit tests and the transcript fixture |
 | `Tools/` | Demo audio generator, calibration, simulator, demo and media scripts |
@@ -198,12 +238,12 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 
 ## Limitations and what's next
 
-- The microphone is simulated; a real watch needs a foreground session and `AVAudioEngine`, and WatchConnectivity file transfer in place of the simulator's message transport.
-- Muse Glimmer on-device (Tier 1) is a design, not an implementation.
+- The demo microphone is simulated. The live microphone path, the workout session that keeps the watch app running, and the move to WatchConnectivity file transfer for a day's audio are written for hardware but have only been built, not run.
+- Apple's on-device model (Tier 1) is wired in and tested with a fake model, but it cannot run in a simulator, so its answers have not been seen.
 - Retrieval uses averaged word vectors because sentence embeddings aren't available in the simulator; a sentence model would be the next upgrade. It does not use `sqlite-vec`.
 - Transcription quality on real, noisy speech is untested.
 - The router is rules, not a model; it is easy to explain and test, but a learned router could handle more phrasing.
-- Echo doesn't identify speakers, so Commitments lists promises heard rather than only the wearer's.
+- Voiceprints are computed from short chunks with a small hand-built feature set (MFCCs and pitch). They separate the demo's eight voices well, but real speech will confuse similar voices; a neural speaker model can replace it behind the same interface.
 - Name masking is best effort (it only masks names the on-device tagger recognizes) and is off by default.
 - Asking from the watch (by voice or a suggestion) needs the phone reachable; a question that needs Muse waits for approval on the phone when Review before sending is on. Recent still opens from the watch's cache when the phone is away.
 - Spoken questions: the microphone path (`AVAudioEngine`, on both devices) is written and shares the endpointer and the transcription with the recorded-question path, but only the recorded path has been run, because simulators have no microphone. Read aloud is untested on a real watch speaker.

@@ -129,9 +129,9 @@ struct VoiceTests {
         let url = repoRoot.appending(path: "Shared/Questions/q2.wav")   // 2.5 s of speech
         let task = Task { await recorder.record(.clip(url)) }
         // Wait until the speaker is actually heard (the meter moves), then stop, rather than guessing a time.
-        for _ in 0..<300 where recorder.level < 0.3 { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<600 where recorder.level < 0.3 { try await Task.sleep(for: .milliseconds(10)) }
         #expect(recorder.level >= 0.3, "speech was heard")
-        try await Task.sleep(for: .milliseconds(250))   // a moment of speech, as a person tapping stop would allow
+        try await Task.sleep(for: .milliseconds(600))   // a moment of speech, as a person tapping stop would allow
         recorder.stop()
         let clip = try await task.value.get()
         #expect(clip.seconds < 2.4, "it returned what had been said so far, not the whole question (\(clip.seconds) s)")

@@ -108,9 +108,11 @@ struct RootView: View {
     private func introduceVoice() async {
         await voices.load()
         if let mine = voices.suggestedMe ?? voices.voices.first {
-            await voices.rename(mine.id, to: profile.name)
+            // Marking "me" saves every voice, so it goes first: the rename must be the last write.
             await voices.setMe(mine.id)
+            await voices.rename(mine.id, to: profile.name)
         }
+        await voices.load()   // the app's own load may have finished with an older list in between
     }
 
     /// Gives the demo day's places their names.

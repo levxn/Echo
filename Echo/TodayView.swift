@@ -32,7 +32,11 @@ enum TodaySection: String, CaseIterable, Identifiable {
 final class TodayState {
     var section = TodaySection.initial(arguments: ProcessInfo.processInfo.arguments)
     /// Scrolls Today to an anchor ("sections", "todayTop"). Set by the demo driver only.
-    var scrollTarget: String?
+    var scrollTarget: String? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-today-scroll"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }()
     /// Opens (or closes) the draft sheet on the first promise. Set by the demo driver only.
     var draftOpen = false
 }
@@ -108,6 +112,11 @@ struct TodayView: View {
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.6)) { proxy.scrollTo("sections", anchor: .top) }
+                // `-today-scroll places` then scrolls on to a part of the section (screenshots).
+                if let target = state.scrollTarget {
+                    try? await Task.sleep(for: .milliseconds(2200))
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.6)) { proxy.scrollTo(target, anchor: .top) }
+                }
             }
         }
         }
