@@ -21,6 +21,7 @@ enum RootTab: String {
 struct RootView: View {
     let model: PipelineModel
     let link: PhoneLink
+    let voices: VoiceBookModel
 
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
@@ -37,9 +38,10 @@ struct RootView: View {
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: PipelineModel, link: PhoneLink) {
+    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel) {
         self.model = model
         self.link = link
+        self.voices = voices
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
         let client = MuseClientFactory.make()
@@ -69,7 +71,7 @@ struct RootView: View {
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
-                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders)
+                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices)
         }
     }
 
@@ -119,6 +121,7 @@ struct RootView: View {
         // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
         .onChange(of: model.session) { Task { await history.reload() } }
         .environment(speaker)
+        .environment(voices)
         .environment(reminders)
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
@@ -133,6 +136,7 @@ struct RootView: View {
                 _ = TextNormalizer.nameTokens(in: "Warm Up")
             }
             // Questions asked on the watch: answered here, shown here too, and logged like any other.
+            ask.mySpeakerID = { voices.me?.id }
             link.requests = WatchRequests(
                 transcriber: QuestionTranscriber(),
                 answer: { question, via in
@@ -151,6 +155,14 @@ struct RootView: View {
                 if profile.speakVoiceAnswers, let text = ask.spokenAnswer { speaker.speak(text) }
             }
             await model.purgeExpired()
+            // Dev hook: `-voice-me` says the voice heard most is the person's own, and names it after them (screenshots, the take).
+            if ProcessInfo.processInfo.arguments.contains("-voice-me") {
+                await voices.load()
+                if let mine = voices.suggestedMe ?? voices.voices.first {
+                    await voices.rename(mine.id, to: profile.name)
+                    await voices.setMe(mine.id)
+                }
+            }
             await history.reload()
             await ledger.reload()
             await digest.load()

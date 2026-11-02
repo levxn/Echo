@@ -84,6 +84,8 @@ struct MomentItem: Identifiable, Equatable {
     var duration: Double = 0   // seconds of speech, for the ribbon
     /// Still moving through the phone: it can't be played or deleted yet.
     var inFlight = false
+    /// Whose voice it is, when the phone could tell.
+    var speakerId = ""
     var isWorking: Bool { text == nil }
 }
 
@@ -106,7 +108,7 @@ struct MomentsLayout: Equatable {
     static func make(from chunks: [ChunkRecord]) -> MomentsLayout {
         let groups = EpisodeBuilder.build(from: chunks).map { episode in
             MomentGroup(id: Int(episode.start), title: episode.title, startLabel: episode.startLabel,
-                        items: episode.chunks.map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.transcript, duration: $0.duration) })
+                        items: episode.chunks.map { MomentItem(id: $0.id, timeLabel: $0.wallLabel, text: $0.transcript, duration: $0.duration, speakerId: $0.speakerId) })
         }
         let working = chunks
             .filter { [.received, .vad, .asr].contains($0.status) }

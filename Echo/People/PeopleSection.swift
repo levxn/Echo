@@ -14,14 +14,16 @@ struct PeopleSection: View {
     @State private var expanded: String?
     @State private var showAll = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(VoiceBookModel.self) private var voices
 
     private static let collapsedCount = 6
     private var visible: [Person] { Capped.visible(people, limit: Self.collapsedCount, showAll: showAll) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
+            VoicesStrip(model: voices, chunks: model.chunks, player: player)
             SectionHeader("People", meta: "\(people.count) named")
-            Label("Found on this phone, nothing sent. Names come from speech recognition, which can get one wrong or miss one. Echo doesn't tell speakers apart, so this lists people mentioned or spoken to.",
+            Label("Found on this phone, nothing sent. Names come from speech recognition, which can get one wrong or miss one. This lists people mentioned or spoken to; Voices above is who was talking.",
                   systemImage: "lock.fill")
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)

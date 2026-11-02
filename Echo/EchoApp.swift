@@ -6,6 +6,7 @@ struct EchoApp: App {
     @State private var model: PipelineModel
     @State private var link: PhoneLink
     @State private var pipeline: Pipeline
+    @State private var voices: VoiceBookModel
 
     init() {
         // Dev hook: `-reset-demo <token>` wipes the day (not the API key) before anything opens the database.
@@ -13,6 +14,9 @@ struct EchoApp: App {
         let model = PipelineModel()
         _model = State(initialValue: model)
         let pipeline = Pipeline(model: model)
+        let voices = VoiceBookModel(store: model.store)
+        pipeline.voices = voices
+        _voices = State(initialValue: voices)
         let link = PhoneLink(model: model)
         link.onChunkReceived = { pipeline.enqueue($0) }
         _pipeline = State(initialValue: pipeline)
@@ -21,8 +25,9 @@ struct EchoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(model: model, link: link).task {
+            RootView(model: model, link: link, voices: voices).task {
                 await model.load()
+                await voices.load()
                 let authorized = await OnDeviceASR.authorize()
                 Log.app.info("speech authorized: \(authorized)")
                 // Resume anything a previous launch left unprocessed.

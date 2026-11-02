@@ -9,29 +9,40 @@ struct PromisesSection: View {
     let player: ChunkPlayer
 
     @Environment(Reminders.self) private var reminders
+    @Environment(VoiceBookModel.self) private var voices
     @AppStorage("echo.promiseDone") private var doneRaw = ""
     @State private var showAll = false
+    @State private var onlyMine = false
     @State private var expanded: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let collapsedCount = 5
     private var done: Set<String> { Set(doneRaw.split(separator: "\n").map(String.init)) }
-    private var visible: [Promise] { Capped.visible(promises, limit: Self.collapsedCount, showAll: showAll) }
+    /// Once the phone knows which voice is the person's, the list can be narrowed to what they said themselves.
+    private var shown: [Promise] { onlyMine ? promises.filter { $0.speakerId == voices.me?.id } : promises }
+    private var visible: [Promise] { Capped.visible(shown, limit: Self.collapsedCount, showAll: showAll) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             SectionHeader("Commitments", meta: "\(promises.count) heard · \(promises.filter { done.contains($0.id) }.count) done")
-            Label("Found on this phone, nothing sent. Echo doesn't tell speakers apart, so these are commitments heard, not only yours.",
+            Label(voices.me != nil
+                  ? "Found on this phone, nothing sent. Voices are told apart here, so Mine lists only what you said."
+                  : "Found on this phone, nothing sent. These are commitments heard, not only yours. Say which voice is yours (People tab) to see just your own.",
                   systemImage: "lock.fill")
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if voices.me != nil {
+                EchoSegmented(segments: [.init(value: false, title: "Everyone"), .init(value: true, title: "Mine")], selection: $onlyMine)
+            }
+
             if let problem = reminders.problem { ReminderProblem(problem: problem) { reminders.problem = nil } }
 
             VStack(spacing: Spacing.sm) {
                 ForEach(visible) { promise in
-                    PromiseRow(promise: promise, isDone: done.contains(promise.id), isExpanded: expanded == promise.id,
+                    PromiseRow(promise: promise, voice: voices.voice(id: promise.speakerId),
+                               isDone: done.contains(promise.id), isExpanded: expanded == promise.id,
                                playing: player.playingID == promise.chunkID,
                                reminderAt: reminders.date(for: promise.id),
                                reminderOptions: ReminderOptions.options(due: promise.due, now: Date()),
@@ -42,7 +53,7 @@ struct PromisesSection: View {
                                onPlay: { if let chunk = model.record(id: promise.chunkID) { player.toggle(chunk) } })
                 }
             }
-            ShowMoreButton(total: promises.count, limit: Self.collapsedCount, isExpanded: $showAll)
+            ShowMoreButton(total: shown.count, limit: Self.collapsedCount, isExpanded: $showAll)
         }
         .task {
             // Dev hook: `-remind-first` sets a reminder on the first commitment, at its due time if it has one (screenshots).
@@ -61,6 +72,7 @@ struct PromisesSection: View {
 
 private struct PromiseRow: View {
     let promise: Promise
+    let voice: Voice?
     let isDone: Bool
     let isExpanded: Bool
     let playing: Bool
@@ -93,6 +105,7 @@ private struct PromiseRow: View {
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                         FlowLayout {
+                            if let voice { Chip(text: voice.isMe ? "You" : voice.display, icon: "waveform", tint: voice.isMe ? Palette.teal : Palette.violet, size: .compact) }
                             if promise.kind == .reminder { Chip(text: "Reminder", icon: "bell.fill", tint: Palette.amber, size: .compact) }
                             if let due = promise.due { Chip(text: due, icon: "clock", tint: Palette.teal, size: .compact) }
                             if let reminderAt {

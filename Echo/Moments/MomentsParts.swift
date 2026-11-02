@@ -199,6 +199,7 @@ struct MomentRowView: View {
     let onPlay: () -> Void
     let onDelete: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(VoiceBookModel.self) private var voices
 
     private var time: some View {
         Text(item.timeLabel)
@@ -215,6 +216,7 @@ struct MomentRowView: View {
         layout {
             time
                 .frame(width: typeSize.isAccessibilitySize ? nil : 44, alignment: .leading)
+            if let voice = voices.voice(id: item.speakerId) { VoiceDot(voice: voice) }
             if let text = item.text, item.inFlight {
                 // Transcribed, but not saved yet: shown, but not playable or deletable until it is.
                 Text(text)

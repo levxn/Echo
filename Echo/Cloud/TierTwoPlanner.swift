@@ -55,13 +55,16 @@ enum TierTwoPlanner {
     }
 
     static func plan(query: String, decision: RouteDecision, outcome: RetrievalOutcome, chunks: [ChunkRecord], model: String,
-                     maskNames: Bool = false, followUp: Bool = false, now: Date = Date()) -> TierTwoPlan {
+                     maskNames: Bool = false, followUp: Bool = false, now: Date = Date(), mySpeakerId: String? = nil) -> TierTwoPlan {
         // Whole-day questions are about today unless the question names other days ("last week"); the rest are chosen
         // by retrieval, which already looked at the days asked about.
         let today = DayID.today(now: now)
+        // "What did I promise?" is about what the person said themselves, once the phone knows which voice is theirs.
+        let ownCommitmentsOnly = decision.intent == .commitments && mySpeakerId != nil && isFirstPerson(query)
         let stored = chunks
             .filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
             .filter { decision.intent == .commitments || decision.intent == .summary ? (outcome.dayScope?.contains($0.dayId) ?? $0.isOn(today)) : true }
+            .filter { !ownCommitmentsOnly || $0.speakerId == mySpeakerId }
             .sorted { ($0.dayId, $0.wallStart) < ($1.dayId, $1.wallStart) }
         let selected: [ChunkRecord]
         let reason: String
@@ -82,7 +85,7 @@ enum TierTwoPlanner {
             }
             chosen.formUnion(context.map(\.id))
             selected = stored.filter { chosen.contains($0.id) }
-            reason = "\(cueMatched.count) moments with promises or plans (“I will”, “promise”, “tomorrow”…), plus the line before each for context"
+            reason = "\(cueMatched.count) moments with promises or plans (“I will”, “promise”, “tomorrow”…)\(ownCommitmentsOnly ? " in your voice" : ""), plus the line before each for context"
         case .summary:
             let dayCount = Set(stored.map(\.dayId)).count
             if dayCount > 1 {
@@ -131,6 +134,11 @@ enum TierTwoPlanner {
 
     private static func lexicalHits(_ outcome: RetrievalOutcome) -> [ChunkRecord] {
         outcome.hits.filter { !$0.matchedTerms.isEmpty }.map(\.chunk)
+    }
+
+    /// Is the question about the person themselves ("what did I promise", "what do I owe")?
+    static func isFirstPerson(_ query: String) -> Bool {
+        query.lowercased().range(of: #"\b(i|i'm|i've|i'll|my|me|mine)\b"#, options: .regularExpression) != nil
     }
 
     static func hasCue(_ text: String) -> Bool {

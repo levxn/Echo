@@ -11,6 +11,8 @@ final class Pipeline {
     static let spanPadding = 0.3
 
     private let model: PipelineModel
+    /// Tells voices apart (set by the app; tests that don't care leave it nil).
+    var voices: VoiceBookModel?
     private var pending: [ChunkRecord] = []
     private var running = false
 
@@ -48,6 +50,11 @@ final class Pipeline {
             let hi = min(chunk.duration, span.upperBound + Self.spanPadding)
             chunk.confirmedSeconds = max(0, hi - lo)
             chunk.status = .vad
+            // Whose voice is it? Worked out on the phone from the audio, off the main thread.
+            if let voices {
+                let print = await Task.detached(priority: .utility) { AudioDecoder.voicePrint(url: url) }.value
+                if let id = await voices.identify(chunkID: chunk.id, print: print) { chunk.speakerId = id }
+            }
             model.put(chunk)
         } catch {
             Log.pipe.error("stage 2 failed for chunk \(chunk.index): \(error.localizedDescription)")

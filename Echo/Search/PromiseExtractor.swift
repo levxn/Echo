@@ -15,6 +15,8 @@ struct Promise: Identifiable, Equatable {
     let due: String?
     /// What was said just before, which usually says who it was said to.
     let context: String?
+    /// Whose voice said it, when the phone could tell ("" otherwise).
+    var speakerId: String = ""
 }
 
 /// Finds commitments in the day's transcripts, entirely on the phone with plain rules (no model).
@@ -54,7 +56,7 @@ enum PromiseExtractor {
                     id: "\(chunk.id)#\(n)", chunkID: chunk.id, kind: kind,
                     timeLabel: chunk.stamp(), wallStart: chunk.wallStart, sentence: clause,
                     toWhom: kind == .commitment ? recipient(previous: previous?.transcript).flatMap { ProfileLogic.isSamePerson($0, as: userName) ? nil : $0 } : nil,
-                    due: due(in: clause), context: previous?.transcript))
+                    due: due(in: clause), context: previous?.transcript, speakerId: chunk.speakerId))
             }
         }
         return out

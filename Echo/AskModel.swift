@@ -67,6 +67,8 @@ final class AskModel {
     private(set) var followUpOf: String?
     /// Replaced in tests.
     var now: () -> Date = { Date() }
+    /// Which voice is the person's own, once they have said so (so "what did I promise" is about them).
+    var mySpeakerID: () -> String? = { nil }
     private var thread: Thread?
 
     /// The last question, kept so a short follow-up can lean on it.
@@ -150,7 +152,7 @@ final class AskModel {
 
         let chunks = await store.all()
         let plan = TierTwoPlanner.plan(query: effective, decision: decision, outcome: outcome, chunks: chunks, model: modelID,
-                                       maskNames: ledger.maskNames, followUp: context != nil)
+                                       maskNames: ledger.maskNames, followUp: context != nil, mySpeakerId: mySpeakerID())
         let localAnswer = AnswerExtractor.extract(from: outcome)
 
         guard ledger.cloudEnabled else {

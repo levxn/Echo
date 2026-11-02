@@ -24,6 +24,8 @@ struct ChunkRecord: Identifiable, Sendable, Equatable {
     var transcript: String?
     /// The calendar day this was said on ("2026-11-02"); empty for a moment stored before days existed.
     var dayId: String = ""
+    /// Whose voice it is ("" until the phone has told voices apart). See `SpeakerBook`.
+    var speakerId: String = ""
 
     var wallLabel: String { DemoClock.format(wallStart) }
 

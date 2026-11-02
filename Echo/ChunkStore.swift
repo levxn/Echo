@@ -39,6 +39,13 @@ actor ChunkStore {
             exec(db, "UPDATE chunk SET day_id = '\(DayID.today())'")
         }
         exec(db, "CREATE INDEX IF NOT EXISTS chunk_day ON chunk(day_id)")
+        if !columns.contains("speaker_id") { exec(db, "ALTER TABLE chunk ADD COLUMN speaker_id TEXT") }
+        if !columns.contains("voiceprint") { exec(db, "ALTER TABLE chunk ADD COLUMN voiceprint BLOB") }
+        exec(db, """
+        CREATE TABLE IF NOT EXISTS speaker (
+          id TEXT PRIMARY KEY, label TEXT, name TEXT, is_me INTEGER DEFAULT 0, centroid BLOB, count INTEGER, color INTEGER, created REAL
+        )
+        """)
         exec(db, "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(id UNINDEXED, text, tokenize='porter unicode61')")
         exec(db, """
         CREATE TABLE IF NOT EXISTS ledger (
@@ -85,13 +92,13 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         INSERT INTO chunk (id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-                           speech_conf, confirmed_seconds, transcript, day_id)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           speech_conf, confirmed_seconds, transcript, day_id, speaker_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET idx=excluded.idx, wall_start=excluded.wall_start,
           file_offset=excluded.file_offset, duration=excluded.duration, peak_db=excluded.peak_db,
           mean_db=excluded.mean_db, audio_file=excluded.audio_file, status=excluded.status,
           speech_conf=excluded.speech_conf, confirmed_seconds=excluded.confirmed_seconds,
-          transcript=excluded.transcript, day_id=excluded.day_id
+          transcript=excluded.transcript, day_id=excluded.day_id, speaker_id=excluded.speaker_id
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             Log.app.error("upsert prepare failed: \(String(cString: sqlite3_errmsg(self.db)))")
@@ -112,6 +119,7 @@ actor ChunkStore {
         sqlite3_bind_double(stmt, 11, c.confirmedSeconds)
         if let t = c.transcript { sqlite3_bind_text(stmt, 12, t, -1, transient) } else { sqlite3_bind_null(stmt, 12) }
         sqlite3_bind_text(stmt, 13, c.dayId, -1, transient)
+        sqlite3_bind_text(stmt, 14, c.speakerId, -1, transient)
         if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("upsert failed") }
     }
 
@@ -126,7 +134,7 @@ actor ChunkStore {
         let filter = day == nil ? "" : "WHERE day_id = ? OR day_id IS NULL OR day_id = ''"
         let sql = """
         SELECT id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-               speech_conf, confirmed_seconds, transcript, day_id FROM chunk \(filter) ORDER BY COALESCE(day_id, ''), idx
+               speech_conf, confirmed_seconds, transcript, day_id, speaker_id FROM chunk \(filter) ORDER BY COALESCE(day_id, ''), idx
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
@@ -141,7 +149,7 @@ actor ChunkStore {
                 meanDb: sqlite3_column_double(stmt, 6), audioFile: text(7) ?? "",
                 status: ChunkStatus(rawValue: text(8) ?? "") ?? .failed,
                 speechConfidence: sqlite3_column_type(stmt, 9) == SQLITE_NULL ? nil : sqlite3_column_double(stmt, 9),
-                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11), dayId: text(12) ?? ""
+                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11), dayId: text(12) ?? "", speakerId: text(13) ?? ""
             ))
         }
         return rows
@@ -235,6 +243,7 @@ actor ChunkStore {
         Self.exec(db, "DELETE FROM chunk_fts")
         Self.exec(db, "DELETE FROM day_digest")   // the digest summarizes the chunks; the ledger is an audit trail and stays
         Self.exec(db, "DELETE FROM ask_history")  // the questions and answers are about this day too
+        Self.exec(db, "DELETE FROM speaker")      // who sounded like whom is part of what was heard
         let files = (try? FileManager.default.contentsOfDirectory(at: chunksDirectory, includingPropertiesForKeys: nil)) ?? []
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
@@ -317,6 +326,86 @@ actor ChunkStore {
 
     func write(audio: Data, named file: String) throws {
         try audio.write(to: chunksDirectory.appending(path: file), options: .atomic)
+    }
+
+    // MARK: Voices
+
+    /// Remembers whose voice a moment is, with the voiceprint it was judged by.
+    func setVoice(chunkID: String, speakerID: String, print: Data?) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "UPDATE chunk SET speaker_id = ?, voiceprint = ? WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, speakerID, -1, t)
+        if let print { _ = print.withUnsafeBytes { sqlite3_bind_blob(stmt, 2, $0.baseAddress, Int32(print.count), t) } } else { sqlite3_bind_null(stmt, 2) }
+        sqlite3_bind_text(stmt, 3, chunkID, -1, t)
+        sqlite3_step(stmt)
+    }
+
+    /// Moves every moment of one voice to another (merging two voices that were the same person).
+    func reassignVoice(from old: String, to new: String) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "UPDATE chunk SET speaker_id = ? WHERE speaker_id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, new, -1, t)
+        sqlite3_bind_text(stmt, 2, old, -1, t)
+        sqlite3_step(stmt)
+    }
+
+    func saveSpeaker(_ s: Voice) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        let sql = "INSERT OR REPLACE INTO speaker (id, label, name, is_me, centroid, count, color, created) VALUES (?,?,?,?,?,?,?,?)"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, s.id, -1, t)
+        sqlite3_bind_text(stmt, 2, s.label, -1, t)
+        if let name = s.name { sqlite3_bind_text(stmt, 3, name, -1, t) } else { sqlite3_bind_null(stmt, 3) }
+        sqlite3_bind_int(stmt, 4, s.isMe ? 1 : 0)
+        let data = s.centroid.data
+        _ = data.withUnsafeBytes { sqlite3_bind_blob(stmt, 5, $0.baseAddress, Int32(data.count), t) }
+        sqlite3_bind_int(stmt, 6, Int32(s.count))
+        sqlite3_bind_int(stmt, 7, Int32(s.colorIndex))
+        sqlite3_bind_double(stmt, 8, s.created.timeIntervalSince1970)
+        sqlite3_step(stmt)
+    }
+
+    func speakers() -> [Voice] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id, label, name, is_me, centroid, count, color, created FROM speaker ORDER BY created", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [Voice] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let id = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }), let blob = sqlite3_column_blob(stmt, 4),
+                  let centroid = VoicePrint(data: Data(bytes: blob, count: Int(sqlite3_column_bytes(stmt, 4)))) else { continue }
+            out.append(Voice(id: id, label: sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? "",
+                               name: sqlite3_column_text(stmt, 2).map { String(cString: $0) }, isMe: sqlite3_column_int(stmt, 3) != 0,
+                               centroid: centroid, count: Int(sqlite3_column_int(stmt, 5)), colorIndex: Int(sqlite3_column_int(stmt, 6)),
+                               created: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 7))))
+        }
+        return out
+    }
+
+    /// Just the voice's row, after its moments were moved to another voice.
+    func deleteSpeakerRow(id: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM speaker WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
+
+    func deleteSpeaker(id: String) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for sql in ["DELETE FROM speaker WHERE id = ?", "UPDATE chunk SET speaker_id = '', voiceprint = NULL WHERE speaker_id = ?"] {
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(stmt, 1, id, -1, t)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
     }
 
     // MARK: Privacy ledger
