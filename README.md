@@ -11,7 +11,6 @@
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
 ![Tests](https://img.shields.io/badge/unit%20tests-289%20passing-34D399)
-![Hackathon](https://img.shields.io/badge/Meta%20Global%20AI%20Developer%20Hackathon-Indie%20track-5B8CFF)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
 

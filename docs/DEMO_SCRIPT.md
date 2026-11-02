@@ -22,7 +22,7 @@ ECHO_VIDEO_DIR=/tmp/echo-take Tools/compose_video.sh --trim-start auto --speed S
 - The watch simulator ignores the status bar override, so its clock shows the real time. The compose step crops it.
 - Close everything else on the Mac. Silence notifications.
 - Do one dry run of the narration out loud against the video.
-- The take uses your real key. If a Muse call fails, the card says why: fix the key and retake. Do not edit in the offline stub; it is labeled and judges will notice.
+- The take uses your real key. If a Muse call fails, the card says why: fix the key and retake. Do not edit in the offline stub; it is labeled and a viewer will notice.
 
 ## Shot list and narration
 
