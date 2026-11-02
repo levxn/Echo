@@ -26,12 +26,9 @@ struct EchoLogo: View {
     private var barWidth: CGFloat { height * LogoGeometry.barWidth }
     private var gap: CGFloat { height * LogoGeometry.gap }
     private var rowWidth: CGFloat { CGFloat(frame.levels.count) * barWidth + CGFloat(frame.levels.count - 1) * gap }
-    /// Where the tallest bar is, measured from the middle of the row.
-    private var peakX: CGFloat { CGFloat(LogoGeometry.peak) * (barWidth + gap) + barWidth / 2 - rowWidth / 2 }
 
     var body: some View {
         let sparkle = height * LogoGeometry.sparkleRadius * 2
-        let star = height * LogoGeometry.starRadius * 2
         ZStack {
             HStack(spacing: gap) {
                 ForEach(frame.levels.indices, id: \.self) { i in
@@ -42,24 +39,17 @@ struct EchoLogo: View {
             }
             .shadow(color: Palette.teal.opacity(0.75 * frame.glow), radius: height * 0.09)
 
+            // The "AI" sparkle: small, blue, in the top-right corner beside the bars.
             SparkleShape()
-                .fill(.white)
+                .fill(LinearGradient(colors: [Color(red: 0.72, green: 0.86, blue: 1.0), Palette.blue], startPoint: .top, endPoint: .bottom))
                 .frame(width: sparkle, height: sparkle)
-                .shadow(color: Palette.teal.opacity(0.9), radius: height * 0.08)
+                .shadow(color: Palette.blue.opacity(0.9), radius: height * 0.06)
                 .rotationEffect(.degrees(frame.sparkleDegrees))
                 .scaleEffect(max(0.0001, frame.sparkleScale))
                 .opacity(frame.sparkleScale > 0.001 ? 1 : 0)
-                .offset(x: peakX, y: -(height / 2 + height * LogoGeometry.sparkleLift))
-
-            SparkleShape()
-                .fill(Palette.teal.opacity(0.95))
-                .frame(width: star, height: star)
-                .shadow(color: Palette.teal.opacity(0.8), radius: height * 0.04)
-                .scaleEffect(max(0.0001, frame.starScale))
-                .opacity(frame.starScale > 0.001 ? 1 : 0)
-                .offset(x: peakX + height * 0.30, y: -(height / 2 + height * 0.40))
+                .offset(x: height * LogoGeometry.sparkleX, y: height * LogoGeometry.sparkleY)
         }
-        .frame(width: rowWidth + height * 0.7, height: height * 1.6)
+        .frame(width: rowWidth + height * 0.5, height: height * 1.3)
         .accessibilityHidden(true)
     }
 }

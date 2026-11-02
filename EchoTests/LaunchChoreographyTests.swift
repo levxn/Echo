@@ -5,10 +5,10 @@ import Testing
 struct LaunchChoreographyTests {
     private let steps = stride(from: 0.0, through: LaunchChoreography.total, by: 0.02).map { $0 }
 
-    @Test func theLogoIsEightUnevenBarsWithTheSparkleOnTheTallest() {
+    @Test func theLogoIsEightUnevenBars() {
         let levels = LogoGeometry.levels
         #expect(levels.count == 8)
-        #expect(levels.max() == 1 && levels[LogoGeometry.peak] == 1, "the tallest bar carries the sparkle")
+        #expect(levels.max() == 1 && levels[LogoGeometry.peak] == 1)
         #expect(Set(levels).count == levels.count, "no two bars are alike")
         #expect(levels != levels.reversed() && levels != levels.sorted() , "not a pyramid and not a staircase")
         #expect(levels.allSatisfy { $0 > 0 && $0 <= 1 })
@@ -22,11 +22,21 @@ struct LaunchChoreographyTests {
     }
 
     @Test func theBarsBounceIndependentlyAtFirst() {
-        let early = LaunchChoreography.frame(at: 0.6).levels
-        let later = LaunchChoreography.frame(at: 0.75).levels
+        let early = LaunchChoreography.frame(at: 0.9).levels
+        let later = LaunchChoreography.frame(at: 1.1).levels
         #expect(early != later, "they are moving")
         #expect(Set(early.map { ($0 * 1000).rounded() }).count > 4, "and not in step with one another")
         #expect(LaunchChoreography.frame(at: 0.0).levels.allSatisfy { $0 <= 0.2 }, "they start low")
+    }
+
+    @Test func theBarsMoveGentlyNotFrantically() {
+        // Between two frames a twentieth of a second apart no bar may jump by more than a few percent of its full height.
+        var biggest = 0.0
+        for t in stride(from: 0.0, through: LaunchChoreography.liveEnd, by: 0.05) {
+            let a = LaunchChoreography.frame(at: t).levels, b = LaunchChoreography.frame(at: t + 0.05).levels
+            biggest = max(biggest, zip(a, b).map { abs($0 - $1) }.max() ?? 0)
+        }
+        #expect(biggest < 0.10, "the fastest bar moved \(biggest) in 50 ms")
     }
 
     @Test func theMotionSettlesExactlyOntoTheLogo() {
@@ -46,11 +56,11 @@ struct LaunchChoreographyTests {
 
     @Test func theSparkleAppearsAfterTheBarsSlowDownAndEndsAtFullSize() {
         #expect(LaunchChoreography.frame(at: LaunchChoreography.sparkleStart - 0.01).sparkleScale == 0)
-        let mid = LaunchChoreography.frame(at: 1.45)
+        let mid = LaunchChoreography.frame(at: (LaunchChoreography.sparkleStart + LaunchChoreography.sparkleEnd) / 2)
         #expect(mid.sparkleScale > 0 && mid.sparkleDegrees < 0, "it spins in")
-        let done = LaunchChoreography.frame(at: LaunchChoreography.sparkleEnd + 0.2)
+        let done = LaunchChoreography.frame(at: LaunchChoreography.sparkleEnd + 0.1)
         #expect(abs(done.sparkleScale - 1) < 0.2 && done.sparkleDegrees == 0)
-        #expect(LaunchChoreography.frame(at: 1.3).starScale == 0 && LaunchChoreography.frame(at: 1.9).starScale > 0.9)
+        #expect(LaunchChoreography.sparkleStart < LaunchChoreography.settleEnd, "it arrives as the bars come to rest")
     }
 
     @Test func theAppIsRevealedByACircleThatGrowsFromNothingToEverything() {
@@ -61,7 +71,8 @@ struct LaunchChoreographyTests {
         #expect(zip(reveals, reveals.dropFirst()).allSatisfy { $0 <= $1 }, "it only grows")
         let end = LaunchChoreography.frame(at: LaunchChoreography.total)
         #expect(end.logoOpacity == 0 && end.logoScale > 1.2, "the logo has grown and gone")
-        #expect(end.bloom < 0.2 && LaunchChoreography.frame(at: 1.9).bloom > 0.5, "a flash of light on the way")
+        let middle = (LaunchChoreography.openStart + LaunchChoreography.total) / 2
+        #expect(end.bloom < 0.2 && LaunchChoreography.frame(at: middle).bloom > 0.5, "a flash of light on the way")
     }
 
     @Test func theAnimationIsTheSameEveryTime() {
@@ -79,7 +90,21 @@ struct LaunchChoreographyTests {
     @Test func theIdleLogoOnlyBreathesAroundTheLogoShape() {
         for t in stride(from: 0.0, through: 20.0, by: 0.5) {
             let f = LaunchChoreography.idle(at: t)
-            #expect(zip(f.levels, LogoGeometry.levels).allSatisfy { abs($0 - $1) <= 0.08 + 1e-9 } && f.sparkleScale > 0.9)
+            #expect(zip(f.levels, LogoGeometry.levels).allSatisfy { abs($0 - $1) <= 0.07 + 1e-9 } && f.sparkleScale > 0.85)
+        }
+    }
+
+    @Test func theSparkleSitsInTheTopRightCornerClearOfTheBars() {
+        let bw = LogoGeometry.barWidth, pitch = LogoGeometry.barWidth + LogoGeometry.gap
+        let rowHalf = (Double(LogoGeometry.levels.count) * bw + Double(LogoGeometry.levels.count - 1) * LogoGeometry.gap) / 2
+        let r = LogoGeometry.sparkleRadius
+        #expect(LogoGeometry.sparkleX > 0 && LogoGeometry.sparkleY < 0, "top right")
+        // For every bar the sparkle's lowest point is above the bar's top (y grows downwards from the middle).
+        for (i, level) in LogoGeometry.levels.enumerated() {
+            let center = Double(i) * pitch + bw / 2 - rowHalf
+            let overlapsHorizontally = abs(center - LogoGeometry.sparkleX) < (bw / 2 + r)
+            let barTop = -level / 2
+            if overlapsHorizontally { #expect(LogoGeometry.sparkleY + r <= barTop + 1e-9, "bar \(i) is clear of the sparkle") }
         }
     }
 }
