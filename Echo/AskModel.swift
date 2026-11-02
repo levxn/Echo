@@ -26,6 +26,8 @@ struct CloudResult {
     let plan: TierTwoPlan
     let answer: CloudAnswer
     let response: MuseResponse
+    /// True when the phone's own model wrote the answer, so nothing was sent anywhere.
+    var onDevice = false
 }
 
 struct CloudFailure {
@@ -72,6 +74,10 @@ final class AskModel {
     /// Where a moment happened, once known: a place's name, or nil if it has none (set by the app).
     enum Spot: Equatable { case named(String), unnamed }
     var spotFor: (ChunkRecord) -> Spot? = { _ in nil }
+    /// The phone's own language model, when it has one (set by the app).
+    var brain: (any LocalBrain)?
+    /// Whether to prefer it over Muse for broad questions.
+    var preferOnDevice: () -> Bool = { false }
     private var thread: Thread?
 
     /// The last question, kept so a short follow-up can lean on it.
@@ -161,6 +167,11 @@ final class AskModel {
                                        maskNames: ledger.maskNames, followUp: context != nil, mySpeakerId: mySpeakerID())
         let localAnswer = AnswerExtractor.extract(from: outcome)
 
+        // The phone's own model answers when asked to (or when the cloud is off), if it can run; otherwise the usual way.
+        if plan.canCall, let brain, brain.isAvailable, preferOnDevice() || !ledger.cloudEnabled,
+           await answerOnDevice(brain: brain, plan: plan, question: question, effective: effective, outcome: outcome, decision: decision,
+                                via: via, quiet: quiet, started: started, mine: mine, chunks: chunks) { return }
+
         guard ledger.cloudEnabled else {
             ledger.record(LedgerEntry(query: effective, tier: .cloud, reason: "Cloud is off, so nothing was sent."))
             guard mine == generation else { return }
@@ -224,6 +235,40 @@ final class AskModel {
         }
     }
 
+    /// Asks the on-device model. False if it couldn't answer (the caller carries on without it).
+    private func answerOnDevice(brain: any LocalBrain, plan: TierTwoPlan, question: String, effective: String, outcome: RetrievalOutcome,
+                                decision: RouteDecision, via: AskVia, quiet: Bool, started: Date, mine: Int, chunks: [ChunkRecord]) async -> Bool {
+        state = .searching(question)
+        let t0 = Date()
+        guard let raw = try? await brain.answer(developer: plan.request.developer, user: plan.request.user) else { return false }
+        guard mine == generation else { return true }
+        let answer = raw.restored(plan.masking)
+        let ms = Date().timeIntervalSince(t0) * 1000
+        var entry = LedgerEntry(query: effective, tier: .onDevice, reason: "Answered by the on-device model on this phone, so nothing was sent.")
+        entry.snippets = plan.snippets
+        entry.model = "on-device"
+        entry.leftDevice = false
+        entry.bodyBytes = 0
+        entry.maskedNames = plan.maskedCount
+        entry.latencyMs = ms
+        entry.status = .ok
+        ledger.record(entry)
+        let content = (try? String(data: JSONEncoder().encode(answer), encoding: .utf8)) ?? answer.answer
+        let response = MuseResponse(content: content, model: "On-device model", promptTokens: 0, completionTokens: 0, latencyMs: ms, isStub: false)
+        let local = RouteDecision(tier: .onDevice, reason: "Answered by the on-device model, so nothing left this phone.", signals: decision.signals, intent: decision.intent)
+        recent.removeAll { $0 == question }
+        recent.insert(question, at: 0)
+        state = .cloudAnswered(CloudResult(query: question, outcome: outcome, decision: local, plan: plan, answer: answer, response: response, onDevice: true))
+        if !quiet { Haptics.success() }
+        let items = answer.items.map { item in
+            AskDetail.Item(title: item.title, detail: item.detail, when: item.when, sourceTime: item.sourceTime,
+                           chunkID: CitationResolver.resolve(source: item.source, sourceTime: item.sourceTime, detail: item.detail + " " + item.title,
+                                                             snippets: plan.snippets, chunks: chunks)?.id)
+        }
+        await remember(question, via: via, source: .local, short: answer.answer, detail: AskDetail(kind: .cloud, headline: answer.answer, items: items), since: started)
+        return true
+    }
+
     /// The moment `rest` describes, and where it happened. False if nothing like it has a place, so the question goes the usual way.
     private func answerWhere(rest: String, question: String, effective: String, via: AskVia, quiet: Bool, started: Date, mine: Int) async -> Bool {
         let outcome = await retriever.search(rest)
@@ -268,7 +313,7 @@ final class AskModel {
             case .nothingMatched: return WatchAnswer(text: "Nothing in today's conversations matches that.", source: .none, milliseconds: milliseconds)
             }
         case .cloudAnswered(let r) where r.query == question:
-            return WatchAnswer(text: brief(r.answer.answer), source: r.response.isStub ? .stub : .muse, milliseconds: milliseconds)
+            return WatchAnswer(text: brief(r.answer.answer), source: r.onDevice ? .local : (r.response.isStub ? .stub : .muse), milliseconds: milliseconds)
         case .cloudFailed(let f) where f.query == question:
             return WatchAnswer(text: f.localAnswer.map { brief($0.headline) } ?? "Muse couldn't answer just now.", source: f.localAnswer == nil ? .none : .local, milliseconds: milliseconds)
         default:

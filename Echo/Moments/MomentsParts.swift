@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 // MARK: - Status banner
 
@@ -200,6 +201,7 @@ struct MomentRowView: View {
     let onDelete: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(VoiceBookModel.self) private var voices
+    @State private var translating = false
 
     private var time: some View {
         Text(item.timeLabel)
@@ -235,6 +237,7 @@ struct MomentRowView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 PlayButton(isPlaying: isPlaying, label: "Play the audio from \(item.timeLabel)", action: onPlay)
                 Menu {
+                    Button("Translate…", systemImage: "translate") { translating = true }
                     Button("Delete this moment", systemImage: "trash", role: .destructive, action: onDelete)
                 } label: {
                     Image(systemName: "ellipsis")
@@ -256,6 +259,7 @@ struct MomentRowView: View {
             }
         }
         .echoRow(vertical: Spacing.xs)
+        .translationPresentation(isPresented: $translating, text: item.text ?? "")
         .accessibilityElement(children: .contain)
     }
 }

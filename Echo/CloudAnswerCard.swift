@@ -12,13 +12,13 @@ struct CloudAnswerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            RouteStrip(active: .cloud)
+            RouteStrip(active: result.onDevice ? .local : .cloud)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Label(isStub ? "Stub preview · no API key" : "Answered by Muse Spark",
-                      systemImage: isStub ? "testtube.2" : "cloud.fill")
+                Label(result.onDevice ? "Answered by the on-device model" : (isStub ? "Stub preview · no API key" : "Answered by Muse Spark"),
+                      systemImage: result.onDevice ? "cpu" : (isStub ? "testtube.2" : "cloud.fill"))
                     .font(.echoLabel)
-                    .foregroundStyle(isStub ? Palette.amber : Palette.cloud)
+                    .foregroundStyle(result.onDevice ? Palette.local : (isStub ? Palette.amber : Palette.cloud))
                 Text(result.decision.reason)
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
@@ -35,7 +35,15 @@ struct CloudAnswerCard: View {
                                                   lines: result.answer.items.map { ShareText.item(title: $0.title, detail: $0.detail, when: $0.when, time: $0.sourceTime) }))
 
             // The privacy proof comes first, right under the answer, so it is on screen without scrolling.
-            SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")
+            if result.onDevice {
+                Label("Written on this phone. Nothing was sent, and it is logged in your Privacy Ledger.", systemImage: "lock.fill")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Palette.teal)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .id("sentPanel")
+            } else {
+                SentDisclosure(plan: result.plan, isStub: isStub, expand: expandSent).id("sentPanel")
+            }
 
             if !result.answer.items.isEmpty {
                 VStack(spacing: Spacing.sm) {
@@ -55,6 +63,7 @@ struct CloudAnswerCard: View {
     }
 
     private var footer: String {
+        if result.onDevice { return "On-device model · \(String(format: "%.1f", result.response.latencyMs / 1000)) s · Nothing left this phone" }
         if isStub { return "Stub: nothing was sent. Run Tools/set_api_key.sh to connect Muse Spark." }
         let r = result.response
         return "\(r.model) · \(r.promptTokens) in / \(r.completionTokens) out tokens · \(String(format: "%.1f", r.latencyMs / 1000)) s · Logged in your Privacy Ledger"

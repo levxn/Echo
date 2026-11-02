@@ -203,6 +203,8 @@ struct RootView: View {
             _ = TextNormalizer.nameTokens(in: "Warm Up")
         }
         // Questions asked on the watch: answered here, shown here too, and logged like any other.
+        ask.brain = SystemLocalBrain()
+        ask.preferOnDevice = { UserDefaults.standard.bool(forKey: OnDevicePreference.key) }
         ask.mySpeakerID = { voices.me?.id }
         ask.spotFor = { chunk in
             guard chunk.coordinate != nil else { return nil }

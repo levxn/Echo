@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 /// Plain text for the system share sheet. Nothing is shared unless the person taps Share, and it is not logged: it goes
 /// where they send it, not to Muse.
@@ -54,7 +55,28 @@ struct ShareAnswerButton: View {
     }
 }
 
-/// The two things to do with an answer you are looking at: hear it, or send it on.
+/// "Translate": Apple's own translation sheet, which runs on the phone once a language is downloaded.
+struct TranslateButton: View {
+    let text: String
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            Label("Translate", systemImage: "translate")
+                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .foregroundStyle(Palette.teal)
+                .padding(.horizontal, Spacing.lg)
+                .frame(minHeight: 44)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(EchoPressStyle())
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .translationPresentation(isPresented: $showing, text: text)
+        .accessibilityLabel("Translate this answer")
+    }
+}
+
+/// The things to do with an answer you are looking at: hear it, send it on, or translate it.
 struct AnswerActions: View {
     let speak: String
     let share: String
@@ -64,6 +86,7 @@ struct AnswerActions: View {
         FlowLayout {
             ReadAloudButton(text: speak, id: id)
             ShareAnswerButton(text: share)
+            TranslateButton(text: speak)
         }
     }
 }

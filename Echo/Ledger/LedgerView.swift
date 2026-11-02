@@ -17,6 +17,7 @@ struct LedgerView: View {
     @State private var forgetMinutes: Int?
     @State private var forgotten: String?
     @AppStorage(Retention.key) private var retentionDays = Retention.defaultDays
+    @AppStorage(OnDevicePreference.key) private var preferOnDevice = false
     @State private var showAllActivity = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -91,6 +92,13 @@ struct LedgerView: View {
                       caption: ledger.cloudEnabled ? "Broad questions go to Muse Spark as text. Audio never does."
                                                    : "Off: nothing is sent. Broad questions show the closest moments here.",
                       isOn: Bindable(ledger).cloudEnabled)
+            if SystemLocalBrain().isAvailable {
+                Divider().overlay(Palette.stroke)
+                ToggleRow(title: "Keep answers on this phone", systemImage: "cpu",
+                          caption: preferOnDevice ? "Broad questions are answered by this phone's own model, so nothing is sent. Muse is used only if it can't."
+                                                  : "Off: broad questions go to Muse Spark. With the cloud switched off, this phone's model answers instead.",
+                          isOn: $preferOnDevice, tint: Palette.local)
+            }
             Divider().overlay(Palette.stroke)
             ToggleRow(title: "Review before sending", systemImage: "eye",
                       caption: ledger.reviewBeforeSend ? "You see the exact text first, then choose Send or Don't send."
@@ -272,6 +280,7 @@ private struct EntryRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var badge: (text: String, symbol: String, tint: Color) {
+        if entry.tier == .onDevice { return ("On-device model", "cpu", Palette.local) }
         if entry.tier == .local { return ("On this phone", "iphone", Palette.local) }
         if entry.status == .pending { return ("Sending…", "paperplane", Palette.cloud) }
         if entry.isStub { return ("Stub · nothing sent", "testtube.2", Palette.amber) }
