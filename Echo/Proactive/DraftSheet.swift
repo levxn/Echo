@@ -78,7 +78,7 @@ struct DraftSheet: View {
         .onAppear { drafts.reset() }
         .task {
             // Dev hook: `-draft-run` writes the draft as soon as the sheet opens (screenshots).
-            if ProcessInfo.processInfo.arguments.contains("-draft-run") {
+            if ProcessInfo.processInfo.arguments.contains("-draft-run") || DemoFlags.autoDraft {
                 await drafts.generate(for: promise, tone: tone, channel: channel, chunks: chunks)
             }
         }

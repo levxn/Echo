@@ -288,9 +288,12 @@ final class WatchLink: NSObject, WCSessionDelegate {
         let source = (message[Wire.sourceKey] as? String).flatMap(WatchAnswer.Source.init) ?? .none
         let speak = message[Wire.speakKey] as? Bool ?? false
         Task { @MainActor in
-            self.wakeReply = WakeReply(question: question, text: text, source: source)
+            let reply = WakeReply(question: question, text: text, source: source)
+            self.wakeReply = reply
             WKInterfaceDevice.current().play(.notification)
             if speak { self.wakeSpeaker.speak(text) }
+            try? await Task.sleep(for: .seconds(15))
+            if self.wakeReply == reply { self.wakeReply = nil }   // left alone: it goes away by itself
         }
     }
 

@@ -117,11 +117,35 @@ for _ in $(seq 1 45); do sleep 2; [ "$(history_rows watchVoice)" -ge 1 ] && brea
 xcrun simctl spawn "$PHONE" log show --info --last 20m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact > /tmp/e2e_asklog.txt 2>/dev/null
 xcrun simctl spawn "$PHONE" log show --info --last 20m --predicate 'subsystem == "echo" AND eventMessage CONTAINS "watch ask"' --style compact > /tmp/e2e_watchlog.txt 2>/dev/null
 
+echo "7b/8 drafting a message and writing the evening's journal entry…"
+ledger_rows() { python3 -I -c "
+import sqlite3
+c=sqlite3.connect('file:$DB?mode=ro',uri=True)
+print(c.execute(\"select count(*) from ledger where kind='$1' and status in ('ok','error')\").fetchone()[0])" 2>/dev/null; }
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -tab today -today-section commitments -review off -draft-first -draft-run >/dev/null
+for _ in $(seq 1 30); do sleep 3; [ "$(ledger_rows draft)" -ge 1 ] && break; done
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+xcrun simctl launch "$PHONE" levtech.Echo -tab today -review off -journal-run >/dev/null
+for _ in $(seq 1 30); do sleep 3; [ "$(ledger_rows journal)" -ge 1 ] && break; done
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+
+echo "7c/8 forgetting the last ten minutes…"
+BEFORE=/tmp/e2e_before.sqlite
+cp "$DB" "$BEFORE"
+xcrun simctl launch "$PHONE" levtech.Echo -forget-recent 10 >/dev/null
+for _ in $(seq 1 20); do
+  sleep 3
+  xcrun simctl spawn "$PHONE" log show --info --last 60s --predicate 'subsystem == "echo" AND eventMessage CONTAINS "forget-recent"' --style compact 2>/dev/null | grep -q "forget-recent:" && break
+done
+sleep 2
+xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+
 echo "8/8 checking results…"
-python3 -I - "$DB" "$LIVE" "$Q1" "$Q2" "$Q3" "$Q4" "$Q5" <<'PY'
+python3 -I - "$BEFORE" "$LIVE" "$DB" "$Q1" "$Q2" "$Q3" "$Q4" "$Q5" <<'PY'
 import json, re, sqlite3, subprocess, sys
-db, live = sys.argv[1], sys.argv[2] == "1"
-questions = sys.argv[3:8]
+db, live, after_db = sys.argv[1], sys.argv[2] == "1", sys.argv[3]
+questions = sys.argv[4:9]
 manifest = json.load(open("Echo Watch App/Resources/demo_day.json"))
 lines = sum(len(s["lines"]) for s in manifest["scenes"])
 con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
@@ -146,7 +170,12 @@ check("every stored moment is indexed", emb == stored, f"{emb}/{stored} with emb
 prev_manifest = json.load(open("Echo Watch App/Resources/demo_day_prev.json"))
 prev_lines = sum(len(sc["lines"]) for sc in prev_manifest["scenes"])
 prev_stored = con.execute("select count(*) from chunk where status='stored' and day_id=?", (lastweek,)).fetchone()[0]
-check("memory: last week's day was kept alongside today's", prev_stored == prev_lines and stored == lines, f"{prev_stored}/{prev_lines} last week, {stored}/{lines} today")
+# in last week's late evening a "Hey Echo" command, an "off the record" stretch and its private talk are, by design, never kept
+def kept_in_memory(l):
+    t = l["text"].lower()
+    return not ("hey echo" in t or "off the record" in t or "back on the record" in t or "surprise party" in t)
+prev_kept = sum(1 for sc in prev_manifest["scenes"] for l in sc["lines"] if kept_in_memory(l))
+check("memory: last week's day was kept alongside today's", prev_stored == prev_kept and stored == lines, f"{prev_stored}/{prev_kept} last week, {stored}/{lines} today")
 days = [r[0] for r in con.execute("select distinct day_id from chunk order by 1")]
 check("memory: the two days are different days", days == [lastweek, today], str(days))
 
@@ -246,6 +275,44 @@ named = short_answer("How much was the rent increase last week?")
 check("memory: a question can name last week", "3%" in named or "three percent" in named.lower() or "increase" in named.lower(), named[:70] or "no answer")
 latest = short_answer("What did Mister Brennan say about the lease?")
 check("memory: with no day named, the newest fact wins", "December 31" in latest, latest[:70] or "no answer")
+
+# wake word: "Hey Echo, ..." is a command, answered and then forgotten
+heard = [r[0] or "" for r in con.execute("select transcript from chunk where status='stored'")]
+check("wake word: the command itself is not in memory", not any(re.search(r"hey,? echo", t, re.I) for t in heard), "kept" if any(re.search(r"hey,? echo", t, re.I) for t in heard) else "not stored")
+wake = con.execute("select question, source, short_answer from ask_history where via='wakeWord'").fetchall()
+check("wake word: its question was answered like any other", any(similar(w[0], "what did Mister Brennan say about the rent?") and w[2].strip() for w in wake),
+      f'heard "{wake[-1][0]}", {wake[-1][1]}' if wake else "no wake-word question in the history")
+
+# off the record: what was said in between was understood only to hear the way back, and never kept
+private = [t for t in heard if re.search(r"surprise|rooftop|chocolate", t, re.I)]
+fts_private = con.execute("select count(*) from chunk_fts where chunk_fts match 'rooftop OR surprise OR chocolate'").fetchone()[0]
+check("off the record: what was said while it was off is nowhere in memory", not private and fts_private == 0, f"{len(private)} moments, {fts_private} search entries")
+check("off the record: speech after 'back on the record' is kept again", any("lock the back door" in t.lower() for t in heard), "")
+
+# speakers: voices told apart on the phone
+voiced = con.execute("select count(*) from chunk where status='stored' and speaker_id is not null and speaker_id != ''").fetchone()[0]
+voices = con.execute("select count(distinct speaker_id) from chunk where status='stored' and speaker_id != ''").fetchone()[0]
+allstored = con.execute("select count(*) from chunk where status='stored'").fetchone()[0]
+check("voices: every moment has a voice, and about as many voices as people", voiced == allstored and 7 <= voices <= 12, f"{voiced}/{allstored} moments, {voices} voices")
+
+# places: each moment says roughly where it happened
+placed = con.execute("select count(*) from chunk where status='stored' and lat is not null").fetchone()[0]
+check("places: every moment is stamped with where it happened", placed == allstored, f"{placed}/{allstored}")
+
+# the proactive writing: a drafted message and the journal entry, each logged as its own kind
+kinds = {k: (n, ok) for k, n, ok in con.execute("select kind, count(*), sum(status='ok') from ledger group by kind")}
+for kind in ("draft", "journal"):
+    n, ok = kinds.get(kind, (0, 0))
+    check(f"proactive: a {kind} went through the ledger", n >= 1 and (not live or ok >= 1), f"{n} rows, {ok} ok")
+
+# forgetting the last ten minutes removed moments, their search entries and the history that cited them
+after = sqlite3.connect(f"file:{after_db}?mode=ro", uri=True)
+a_chunks = after.execute("select count(*) from chunk").fetchone()[0]
+b_chunks = con.execute("select count(*) from chunk").fetchone()[0]
+a_fts = after.execute("select count(*) from chunk_fts").fetchone()[0]
+a_stored = after.execute("select count(*) from chunk where status='stored'").fetchone()[0]
+check("forget: the last ten minutes were removed", 0 < b_chunks - a_chunks < b_chunks, f"{b_chunks} -> {a_chunks} moments")
+check("forget: search entries went with them", a_fts == a_stored, f"{a_fts} entries for {a_stored} stored moments")
 
 width = max(len(n) for _, n, _ in results)
 print()

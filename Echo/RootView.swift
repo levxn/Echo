@@ -104,6 +104,26 @@ struct RootView: View {
         return ok
     }
 
+    /// Says the voice heard most is the person's own, and names it after them.
+    private func introduceVoice() async {
+        await voices.load()
+        if let mine = voices.suggestedMe ?? voices.voices.first {
+            await voices.rename(mine.id, to: profile.name)
+            await voices.setMe(mine.id)
+        }
+    }
+
+    /// Gives the demo day's places their names.
+    private func introducePlaces() async {
+        await model.load()
+        await places.load()
+        let known: [(String, Coordinate)] = [("The office", .init(lat: 12.9716, lon: 77.5946)), ("The café", .init(lat: 12.9352, lon: 77.6245)),
+                                             ("Home", .init(lat: 12.9784, lon: 77.6408)), ("The clinic", .init(lat: 12.9279, lon: 77.6271))]
+        for cluster in PlaceLogic.clusters(from: model.chunks, places: places.places) where cluster.place == nil {
+            if let match = known.first(where: { $0.1.distance(to: cluster.coordinate) < 300 }) { await places.name(cluster, as: match.0) }
+        }
+    }
+
     /// Re-plans the briefings for meetings in the next day (when the person has turned them on).
     private func refreshBriefings() async {
         guard briefings.enabled else {
@@ -255,24 +275,10 @@ struct RootView: View {
             if profile.speakVoiceAnswers, let text = ask.spokenAnswer { speaker.speak(text) }
         }
         await model.purgeExpired()
-        // Dev hook: `-voice-me` says the voice heard most is the person's own, and names it after them (screenshots, the take).
-        if ProcessInfo.processInfo.arguments.contains("-voice-me") {
-            await voices.load()
-            if let mine = voices.suggestedMe ?? voices.voices.first {
-                await voices.rename(mine.id, to: profile.name)
-                await voices.setMe(mine.id)
-            }
-        }
-        // Dev hook: `-name-places` gives the demo day's places their names (screenshots, the take).
-        if ProcessInfo.processInfo.arguments.contains("-name-places") {
-            await model.load()
-            await places.load()
-            let known: [(String, Coordinate)] = [("The office", .init(lat: 12.9716, lon: 77.5946)), ("The café", .init(lat: 12.9352, lon: 77.6245)),
-                                                 ("Home", .init(lat: 12.9784, lon: 77.6408)), ("The clinic", .init(lat: 12.9279, lon: 77.6271))]
-            for cluster in PlaceLogic.clusters(from: model.chunks, places: places.places) where cluster.place == nil {
-                if let match = known.first(where: { $0.1.distance(to: cluster.coordinate) < 300 }) { await places.name(cluster, as: match.0) }
-            }
-        }
+        // Dev hooks: `-voice-me` says the voice heard most is the person's own, and `-name-places` names the demo day's places
+        // (screenshots, the take).
+        if ProcessInfo.processInfo.arguments.contains("-voice-me") { await introduceVoice() }
+        if ProcessInfo.processInfo.arguments.contains("-name-places") { await introducePlaces() }
         // Dev hook: `-forget-recent N` forgets the last N minutes once the day has loaded (end-to-end checks).
         if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-forget-recent"), i + 1 < ProcessInfo.processInfo.arguments.count,
            let minutes = Int(ProcessInfo.processInfo.arguments[i + 1]) {
@@ -295,7 +301,9 @@ struct RootView: View {
             await model.load()
             await DemoDriver(model: model, ask: ask, ledger: ledger, digest: digest, voice: voice, history: history,
                              today: today, player: player,
-                             startWatch: { link.sendDemoStart() },
+                             startWatch: { link.sendDemoStart(dayOffset: $0) },
+                             forget: { await forgetRecent(minutes: $0) },
+                             afterSync: { await introduceVoice(); await introducePlaces() },
                              watchQuickAsk: { link.sendDemoQuickAsk($0) },
                              watchVoiceAsk: { link.sendDemoVoiceAsk($0) },
                              setTab: { tab = $0 },

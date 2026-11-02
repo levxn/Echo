@@ -8,6 +8,8 @@ struct PromisesSection: View {
     var decisions: [Decision] = []
     let model: PipelineModel
     let player: ChunkPlayer
+    /// The demo driver opens the draft sheet by setting this.
+    var draftOpen = false
 
     @Environment(Reminders.self) private var reminders
     @Environment(CalendarLink.self) private var calendar
@@ -68,6 +70,7 @@ struct PromisesSection: View {
             if !decisions.isEmpty { DecisionsList(decisions: decisions, model: model, player: player) }
         }
         .sheet(item: $draftFor) { promise in DraftSheet(promise: promise, chunks: model.chunks) }
+        .onChange(of: draftOpen) { _, open in draftFor = open ? promises.first : nil }
         .task {
             // Dev hook: `-remind-first` sets a reminder on the first commitment, at its due time if it has one (screenshots).
             if ProcessInfo.processInfo.arguments.contains("-remind-first"), let first = promises.first, reminders.date(for: first.id) == nil,

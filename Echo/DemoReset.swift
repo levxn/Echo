@@ -37,3 +37,9 @@ enum DemoReset {
         defaults.set(true, forKey: "echo.cloudEnabled")   // the demo starts with the cloud switch on
     }
 }
+
+/// Switches the demo driver flips while it performs a take (the app never sets these itself).
+enum DemoFlags {
+    /// Write the draft as soon as the draft sheet opens.
+    static var autoDraft = false
+}

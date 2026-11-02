@@ -33,6 +33,8 @@ final class TodayState {
     var section = TodaySection.initial(arguments: ProcessInfo.processInfo.arguments)
     /// Scrolls Today to an anchor ("sections", "todayTop"). Set by the demo driver only.
     var scrollTarget: String?
+    /// Opens (or closes) the draft sheet on the first promise. Set by the demo driver only.
+    var draftOpen = false
 }
 
 /// The funnel, then the day as a summary, its commitments, or its conversations: one at a time, so each fits a screen.
@@ -180,7 +182,7 @@ struct TodayView: View {
             EmptyState(icon: "checkmark.circle", tint: Palette.teal, title: "No commitments heard yet",
                        message: "Things people say they will do, like \u{201C}I will send it Friday\u{201D}, are collected here as they are transcribed.")
         } else {
-            PromisesSection(promises: promises, decisions: decisions, model: model, player: player)
+            PromisesSection(promises: promises, decisions: decisions, model: model, player: player, draftOpen: state.draftOpen)
         }
     }
 
@@ -212,7 +214,7 @@ struct TodayView: View {
         } else {
             VStack(spacing: Spacing.xl) {
                 EpisodesSection(episodes: episodes)
-                PlacesSection(model: model)
+                PlacesSection(model: model).id("places")
             }
         }
     }

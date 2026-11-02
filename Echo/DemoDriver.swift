@@ -18,7 +18,11 @@ struct DemoDriver {
     let history: AskHistoryModel
     let today: TodayState
     let player: ChunkPlayer
-    let startWatch: () -> Void
+    let startWatch: (Int) -> Void
+    /// Forgets the last N minutes, as the "Forget" button does.
+    let forget: (Int) async -> Int
+    /// Once the day has arrived: the person's own voice is named, and the places get their names.
+    let afterSync: () async -> Void
     /// Asks the watch to run quick-ask preset N, as if tapped.
     let watchQuickAsk: (Int) -> Void
     /// Asks the watch to ask recorded question N by voice, as if its mic had been tapped.
@@ -93,13 +97,14 @@ struct DemoDriver {
 
     /// Starts the watch and confirms it began. After the phone app relaunches, WatchConnectivity needs several
     /// seconds before the watch counts as reachable, so wait for that first, and retry if the replay doesn't start.
-    private func startWatchReliably() async -> Bool {
+    private func startWatchReliably(dayOffset: Int = 0) async -> Bool {
+        let day = DayID.id(offset: dayOffset, from: model.now())
         for attempt in 1...4 {
             _ = await wait(timeout: 40) { model.watchReachable }
             mark("start-watch attempt \(attempt)")
-            startWatch()
-            // The replay announces itself by resetting the phone's day, so the session leaves "waiting".
-            if await wait(timeout: 15, { model.session != .waiting || !model.chunks.isEmpty }) { return true }
+            startWatch(dayOffset)
+            // The replay announces itself by starting a session for its day on the phone.
+            if await wait(timeout: 15, { model.activeDayId == day && model.session == .running }) { return true }
         }
         return false
     }
@@ -134,14 +139,20 @@ struct DemoDriver {
         await pause(3.5)
 
         setTab(.moments)
-        setCaption("The watch keeps only speech and streams it to the phone")
+        setCaption("The watch keeps only speech and streams it to the phone: last week's day first, then today's")
         await pause(1)
         mark("sync-begin")
-        let started = await startWatchReliably()
+        // Last week's recording first (kept as its own day), then today's.
+        let startedPrev = await startWatchReliably(dayOffset: -7)
+        let settledPrev = startedPrev ? await waitUntilSettled(timeout: 300) : false
+        let started = settledPrev ? await startWatchReliably() : false
         let settled = started ? await waitUntilSettled(timeout: 300) : false
         mark(settled ? "sync-end" : (started ? "sync-timeout" : "watch-never-started"))
+        await afterSync()
         setCaption("Checked, transcribed and indexed on the phone")
         await pause(2.5)
+        setCaption("It tells voices apart, and notes where each moment happened. All on the phone")
+        await pause(4)
 
         setTab(.today)
         setCaption("\(Int((model.savedFraction * 100).rounded()))% of the day was never stored")
@@ -149,6 +160,7 @@ struct DemoDriver {
 
         await question("When is the plumber coming?", caption: "Lookups are answered on the phone", hold: 4.5)
         await question("What did Mister Brennan say about the lease?", caption: "Matching words are highlighted, and the source audio is one tap away", hold: 4)
+        await question("How much was the rent increase last week?", caption: "Last week is remembered too: ask about any day", hold: 4.5)
         await voiceQuestion(clip: 3, caption: "Or tap the mic and ask out loud: understood on the phone, then answered on the phone", hold: 5)
         await question("What did I promise people today?", caption: "Synthesis goes to Muse Spark: text only, never audio", hold: 5)
         setCaption("Exactly the text that left the phone, and 0 bytes of audio")
@@ -173,6 +185,18 @@ struct DemoDriver {
             await pause(1)
         }
         await pause(3)
+        setCaption("Draft the message you promised: only that moment goes to Muse")
+        DemoFlags.autoDraft = true
+        today.draftOpen = true
+        _ = await wait(timeout: 40) { ledger.entries.contains { $0.kind == .draft && $0.status != .pending } }
+        await pause(6)
+        today.draftOpen = false
+        DemoFlags.autoDraft = false
+        await pause(1)
+        today.section = .day
+        today.scrollTarget = "places"
+        setCaption("Where it happened: kept on the phone, never sent")
+        await pause(5)
         today.scrollTarget = "todayTop"
         today.section = .summary
 
@@ -233,6 +257,13 @@ struct DemoDriver {
         await pause(5)
         ask.historyRequest = nil
         await pause(1)
+
+        setTab(.moments)
+        setCaption("Forget the last ten minutes, from the phone or the wrist")
+        await pause(2)
+        let gone = await forget(10)
+        Log.app.notice("demo-script: forgot \(gone)")
+        await pause(3)
 
         setTab(.ledger)
         ledger.focus = "yourData"
