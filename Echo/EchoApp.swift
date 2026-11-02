@@ -9,6 +9,7 @@ struct EchoApp: App {
     @State private var voices: VoiceBookModel
     @State private var privacy = RecordingPrivacy()
     @State private var watcher: PromiseWatcher
+    @State private var places: PlacesModel
 
     init() {
         // Dev hook: `-reset-demo <token>` wipes the day (not the API key) before anything opens the database.
@@ -22,6 +23,9 @@ struct EchoApp: App {
         let privacy = RecordingPrivacy()
         pipeline.privacy = privacy
         _privacy = State(initialValue: privacy)
+        let places = PlacesModel(store: model.store)
+        pipeline.places = places
+        _places = State(initialValue: places)
         let watcher = PromiseWatcher(model: model)
         pipeline.watcher = watcher
         _watcher = State(initialValue: watcher)
@@ -33,9 +37,10 @@ struct EchoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(model: model, link: link, voices: voices, privacy: privacy, watcher: watcher).task {
+            RootView(model: model, link: link, voices: voices, privacy: privacy, watcher: watcher, places: places).task {
                 await model.load()
                 await voices.load()
+                await places.load()
                 let authorized = await OnDeviceASR.authorize()
                 Log.app.info("speech authorized: \(authorized)")
                 // Resume anything a previous launch left unprocessed.

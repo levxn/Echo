@@ -94,13 +94,18 @@ final class WatchLink: NSObject, WCSessionDelegate {
         enqueuedTotal = 0
     }
 
-    /// Best-effort notice that the replay started or finished.
+    /// Tells the phone the recording started or finished. The phone files what follows under the day this names, so "started" is
+    /// retried until the phone answers (it may have only just opened); "finished" gets a few tries.
     func sendSession(state: String, recorded: Double, total: Double, count: Int = 0, dayOffset: Int = 0) async {
-        for _ in 0..<20 where !WCSession.default.isReachable { try? await Task.sleep(for: .milliseconds(250)) }
-        _ = try? await message([
-            Wire.typeKey: Wire.session, Wire.stateKey: state,
-            Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count, Wire.dayOffsetKey: dayOffset,
-        ])
+        let attempts = state == "started" ? 40 : 4
+        for _ in 0..<attempts {
+            for _ in 0..<20 where !WCSession.default.isReachable { try? await Task.sleep(for: .milliseconds(250)) }
+            if (try? await message([
+                Wire.typeKey: Wire.session, Wire.stateKey: state,
+                Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count, Wire.dayOffsetKey: dayOffset,
+            ])) != nil { return }
+            try? await Task.sleep(for: .milliseconds(750))
+        }
     }
 
     // MARK: Draining

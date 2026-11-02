@@ -11,6 +11,7 @@ struct PromisesSection: View {
 
     @Environment(Reminders.self) private var reminders
     @Environment(CalendarLink.self) private var calendar
+    @Environment(PlacesModel.self) private var places
     @Environment(VoiceBookModel.self) private var voices
     @AppStorage("echo.promiseDone") private var doneRaw = ""
     @State private var showAll = false
@@ -46,6 +47,7 @@ struct PromisesSection: View {
             VStack(spacing: Spacing.sm) {
                 ForEach(visible) { promise in
                     PromiseRow(promise: promise, voice: voices.voice(id: promise.speakerId),
+                               place: model.record(id: promise.chunkID).flatMap { places.label(for: $0) },
                                isDone: done.contains(promise.id), isExpanded: expanded == promise.id,
                                playing: player.playingID == promise.chunkID,
                                reminderAt: reminders.date(for: promise.id),
@@ -87,6 +89,7 @@ struct PromisesSection: View {
 private struct PromiseRow: View {
     let promise: Promise
     let voice: Voice?
+    let place: String?
     let isDone: Bool
     let isExpanded: Bool
     let playing: Bool
@@ -126,6 +129,7 @@ private struct PromiseRow: View {
                             if let voice { Chip(text: voice.isMe ? "You" : voice.display, icon: "waveform", tint: voice.isMe ? Palette.teal : Palette.violet, size: .compact) }
                             if promise.kind == .reminder { Chip(text: "Reminder", icon: "bell.fill", tint: Palette.amber, size: .compact) }
                             if let due = promise.due { Chip(text: due, icon: "clock", tint: Palette.teal, size: .compact) }
+                            if let place { Chip(text: place, icon: "mappin.circle.fill", tint: Palette.blue, size: .compact) }
                             if let calendarAt {
                                 Chip(text: "In Calendar \(calendarAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))", icon: "calendar",
                                      tint: Palette.blue, size: .compact)

@@ -36,6 +36,18 @@ VOICES = {
 }
 SAY_RATE = 165   # words per minute for `say`; a little slower than the default helps the recognizer
 
+# Where each scene happened (an imagined day around Bengaluru), so the replayed day has places to it. lat, lon.
+PLACES = {
+    "Morning standup": (12.9716, 77.5946),          # the office
+    "Lunch with Priya": (12.9352, 77.6245),         # a café
+    "Call with the landlord": (12.9784, 77.6408),    # home
+    "Family dinner": (12.9784, 77.6408),            # home
+    "Dentist": (12.9279, 77.6271),                  # the clinic
+    "Lease renewal call": (12.9784, 77.6408),       # home
+    "Vendor decision": (12.9716, 77.5946),          # the office
+    "Evening with Priya": (12.9352, 77.6245),       # the café
+}
+
 # (label, wall-clock "HH:MM", [(speaker, line), ...])
 SCENES = [
     ("Morning standup", "09:05", [
@@ -192,10 +204,11 @@ def main() -> None:
                 )
                 timeline.extend(pause(random.uniform(0.7, 1.6)))
             scene_end = len(timeline) / RATE
-            scenes_meta.append(
-                {"label": label, "wallClock": wall, "fileStart": round(scene_start, 2),
-                 "fileEnd": round(scene_end, 2), "lines": lines_meta}
-            )
+            scene = {"label": label, "wallClock": wall, "fileStart": round(scene_start, 2),
+                     "fileEnd": round(scene_end, 2), "lines": lines_meta}
+            if label in PLACES:
+                scene["place"] = {"lat": PLACES[label][0], "lon": PLACES[label][1]}
+            scenes_meta.append(scene)
             if scene_index < len(scenes) - 1:   # dead air between scenes, none after the last
                 timeline.extend(ambient(random.uniform(30, 45), bursts=4))
 

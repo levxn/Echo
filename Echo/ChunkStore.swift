@@ -41,6 +41,9 @@ actor ChunkStore {
         exec(db, "CREATE INDEX IF NOT EXISTS chunk_day ON chunk(day_id)")
         if !columns.contains("speaker_id") { exec(db, "ALTER TABLE chunk ADD COLUMN speaker_id TEXT") }
         if !columns.contains("voiceprint") { exec(db, "ALTER TABLE chunk ADD COLUMN voiceprint BLOB") }
+        if !columns.contains("lat") { exec(db, "ALTER TABLE chunk ADD COLUMN lat REAL") }
+        if !columns.contains("lon") { exec(db, "ALTER TABLE chunk ADD COLUMN lon REAL") }
+        exec(db, "CREATE TABLE IF NOT EXISTS place (id TEXT PRIMARY KEY, name TEXT, lat REAL, lon REAL, radius REAL, no_record INTEGER DEFAULT 0, created REAL)")
         exec(db, "CREATE TABLE IF NOT EXISTS journal (day_id TEXT PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
         exec(db, """
         CREATE TABLE IF NOT EXISTS speaker (
@@ -93,13 +96,13 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         INSERT INTO chunk (id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-                           speech_conf, confirmed_seconds, transcript, day_id, speaker_id)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           speech_conf, confirmed_seconds, transcript, day_id, speaker_id, lat, lon)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET idx=excluded.idx, wall_start=excluded.wall_start,
           file_offset=excluded.file_offset, duration=excluded.duration, peak_db=excluded.peak_db,
           mean_db=excluded.mean_db, audio_file=excluded.audio_file, status=excluded.status,
           speech_conf=excluded.speech_conf, confirmed_seconds=excluded.confirmed_seconds,
-          transcript=excluded.transcript, day_id=excluded.day_id, speaker_id=excluded.speaker_id
+          transcript=excluded.transcript, day_id=excluded.day_id, speaker_id=excluded.speaker_id, lat=excluded.lat, lon=excluded.lon
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             Log.app.error("upsert prepare failed: \(String(cString: sqlite3_errmsg(self.db)))")
@@ -121,6 +124,7 @@ actor ChunkStore {
         if let t = c.transcript { sqlite3_bind_text(stmt, 12, t, -1, transient) } else { sqlite3_bind_null(stmt, 12) }
         sqlite3_bind_text(stmt, 13, c.dayId, -1, transient)
         sqlite3_bind_text(stmt, 14, c.speakerId, -1, transient)
+        if let spot = c.coordinate { sqlite3_bind_double(stmt, 15, spot.lat); sqlite3_bind_double(stmt, 16, spot.lon) } else { sqlite3_bind_null(stmt, 15); sqlite3_bind_null(stmt, 16) }
         if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("upsert failed") }
     }
 
@@ -135,7 +139,7 @@ actor ChunkStore {
         let filter = day == nil ? "" : "WHERE day_id = ? OR day_id IS NULL OR day_id = ''"
         let sql = """
         SELECT id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-               speech_conf, confirmed_seconds, transcript, day_id, speaker_id FROM chunk \(filter) ORDER BY COALESCE(day_id, ''), idx
+               speech_conf, confirmed_seconds, transcript, day_id, speaker_id, lat, lon FROM chunk \(filter) ORDER BY COALESCE(day_id, ''), idx
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
@@ -150,7 +154,8 @@ actor ChunkStore {
                 meanDb: sqlite3_column_double(stmt, 6), audioFile: text(7) ?? "",
                 status: ChunkStatus(rawValue: text(8) ?? "") ?? .failed,
                 speechConfidence: sqlite3_column_type(stmt, 9) == SQLITE_NULL ? nil : sqlite3_column_double(stmt, 9),
-                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11), dayId: text(12) ?? "", speakerId: text(13) ?? ""
+                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11), dayId: text(12) ?? "", speakerId: text(13) ?? "",
+                coordinate: sqlite3_column_type(stmt, 14) == SQLITE_NULL ? nil : Coordinate(lat: sqlite3_column_double(stmt, 14), lon: sqlite3_column_double(stmt, 15))
             ))
         }
         return rows
@@ -301,6 +306,47 @@ actor ChunkStore {
 
     /// Removes a stored audio file by name (a moment that was heard but must not be kept).
     func removeAudio(named file: String) { try? FileManager.default.removeItem(at: chunksDirectory.appending(path: file)) }
+
+    // MARK: Places
+
+    func savePlace(_ p: Place) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO place (id, name, lat, lon, radius, no_record, created) VALUES (?,?,?,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, p.id, -1, t)
+        sqlite3_bind_text(stmt, 2, p.name, -1, t)
+        sqlite3_bind_double(stmt, 3, p.coordinate.lat)
+        sqlite3_bind_double(stmt, 4, p.coordinate.lon)
+        sqlite3_bind_double(stmt, 5, p.radius)
+        sqlite3_bind_int(stmt, 6, p.noRecord ? 1 : 0)
+        sqlite3_bind_double(stmt, 7, p.created.timeIntervalSince1970)
+        sqlite3_step(stmt)
+    }
+
+    func places() -> [Place] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id, name, lat, lon, radius, no_record, created FROM place ORDER BY created", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [Place] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            out.append(Place(id: sqlite3_column_text(stmt, 0).map { String(cString: $0) } ?? "", name: sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? "",
+                             coordinate: Coordinate(lat: sqlite3_column_double(stmt, 2), lon: sqlite3_column_double(stmt, 3)),
+                             radius: sqlite3_column_double(stmt, 4), noRecord: sqlite3_column_int(stmt, 5) != 0,
+                             created: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 6))))
+        }
+        return out
+    }
+
+    func deletePlace(id: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM place WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
+
+    func clearPlaces() { Self.exec(db, "DELETE FROM place") }
 
     // MARK: Journal
 

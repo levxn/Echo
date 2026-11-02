@@ -44,7 +44,11 @@
           "start": 37.81,
           "end": 41.88
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9279,
+        "lon": 77.6271
+      }
     },
     {
       "label": "Lease renewal call",
@@ -88,7 +92,11 @@
           "start": 104.79,
           "end": 107.17
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9784,
+        "lon": 77.6408
+      }
     },
     {
       "label": "Vendor decision",
@@ -132,7 +140,11 @@
           "start": 183.54,
           "end": 187.05
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9716,
+        "lon": 77.5946
+      }
     },
     {
       "label": "Evening with Priya",
@@ -176,7 +188,11 @@
           "start": 252.52,
           "end": 255.13
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9352,
+        "lon": 77.6245
+      }
     }
   ]
 }

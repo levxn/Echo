@@ -17,6 +17,8 @@ final class Pipeline {
     var privacy: RecordingPrivacy?
     /// Surfaces promises as they are said (set by the app).
     var watcher: PromiseWatcher?
+    /// Knows which places must not be recorded in (set by the app).
+    var places: PlacesModel?
     private var pending: [ChunkRecord] = []
     private var running = false
 
@@ -38,6 +40,16 @@ final class Pipeline {
     private func process(_ record: ChunkRecord) async {
         let url = await model.store.url(for: record.audioFile)
         var chunk = record
+
+        // A place marked "never record here": what was heard there is dropped before it is looked at, and its audio deleted.
+        if let places, places.isNoRecord(at: chunk.coordinate) {
+            chunk.status = .dropped
+            chunk.confirmedSeconds = 0
+            model.put(chunk)
+            await model.store.removeAudio(named: chunk.audioFile)
+            Log.pipe.info("chunk \(chunk.index) dropped: a place marked never record")
+            return
+        }
 
         // Stage 2: is there really speech in here, and where?
         do {

@@ -24,6 +24,7 @@ struct RootView: View {
     let voices: VoiceBookModel
     let privacy: RecordingPrivacy
     let watcher: PromiseWatcher
+    let places: PlacesModel
 
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
@@ -44,8 +45,9 @@ struct RootView: View {
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel, privacy: RecordingPrivacy, watcher: PromiseWatcher) {
+    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel, privacy: RecordingPrivacy, watcher: PromiseWatcher, places: PlacesModel) {
         self.watcher = watcher
+        self.places = places
         self.model = model
         self.link = link
         self.voices = voices
@@ -183,7 +185,7 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
             await refreshBriefings()
         }
-        .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings))
+        .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings, places: places))
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
@@ -202,6 +204,10 @@ struct RootView: View {
         }
         // Questions asked on the watch: answered here, shown here too, and logged like any other.
         ask.mySpeakerID = { voices.me?.id }
+        ask.spotFor = { chunk in
+            guard chunk.coordinate != nil else { return nil }
+            return places.label(for: chunk).map { .named($0) } ?? .unnamed
+        }
         link.requests = WatchRequests(
             transcriber: QuestionTranscriber(),
             answer: { question, via in
@@ -237,6 +243,16 @@ struct RootView: View {
             if let mine = voices.suggestedMe ?? voices.voices.first {
                 await voices.rename(mine.id, to: profile.name)
                 await voices.setMe(mine.id)
+            }
+        }
+        // Dev hook: `-name-places` gives the demo day's places their names (screenshots, the take).
+        if ProcessInfo.processInfo.arguments.contains("-name-places") {
+            await model.load()
+            await places.load()
+            let known: [(String, Coordinate)] = [("The office", .init(lat: 12.9716, lon: 77.5946)), ("The café", .init(lat: 12.9352, lon: 77.6245)),
+                                                 ("Home", .init(lat: 12.9784, lon: 77.6408)), ("The clinic", .init(lat: 12.9279, lon: 77.6271))]
+            for cluster in PlaceLogic.clusters(from: model.chunks, places: places.places) where cluster.place == nil {
+                if let match = known.first(where: { $0.1.distance(to: cluster.coordinate) < 300 }) { await places.name(cluster, as: match.0) }
             }
         }
         // Dev hook: `-forget-recent N` forgets the last N minutes once the day has loaded (end-to-end checks).
@@ -297,6 +313,7 @@ private struct ModelEnvironment: ViewModifier {
     let drafts: DraftModel
     let ledger: LedgerModel
     let briefings: BriefingCenter
+    let places: PlacesModel
 
     func body(content: Content) -> some View {
         content
@@ -308,5 +325,6 @@ private struct ModelEnvironment: ViewModifier {
             .environment(drafts)
             .environment(ledger)
             .environment(briefings)
+            .environment(places)
     }
 }

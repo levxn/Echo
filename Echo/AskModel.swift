@@ -69,6 +69,9 @@ final class AskModel {
     var now: () -> Date = { Date() }
     /// Which voice is the person's own, once they have said so (so "what did I promise" is about them).
     var mySpeakerID: () -> String? = { nil }
+    /// Where a moment happened, once known: a place's name, or nil if it has none (set by the app).
+    enum Spot: Equatable { case named(String), unnamed }
+    var spotFor: (ChunkRecord) -> Spot? = { _ in nil }
     private var thread: Thread?
 
     /// The last question, kept so a short follow-up can lean on it.
@@ -131,6 +134,9 @@ final class AskModel {
         expandSent = false
         query = question
         state = .searching(question)
+
+        // "Where was I when…?" is answered from where the watch was when it heard that, on this phone.
+        if let rest = WhereQuestion.rest(of: question), await answerWhere(rest: rest, question: question, effective: effective, via: via, quiet: quiet, started: started, mine: mine) { return }
 
         let outcome = await retriever.search(effective)
         let decision = Router.route(query: effective, outcome: outcome)
@@ -216,6 +222,28 @@ final class AskModel {
                            detail: noteDetail("Muse couldn't answer: \(error.localizedDescription)", local: localAnswer), since: started)
             Log.pipe.error("ask \"\(question)\" failed: \(error.localizedDescription)")
         }
+    }
+
+    /// The moment `rest` describes, and where it happened. False if nothing like it has a place, so the question goes the usual way.
+    private func answerWhere(rest: String, question: String, effective: String, via: AskVia, quiet: Bool, started: Date, mine: Int) async -> Bool {
+        let outcome = await retriever.search(rest)
+        guard let hit = outcome.hits.first(where: { $0.chunk.coordinate != nil }), let spot = spotFor(hit.chunk) else { return false }
+        let headline: String
+        switch spot {
+        case .named(let name): headline = "You were at \(name)."
+        case .unnamed: headline = "You were at a place you haven't named yet. You can name it under Places on Today."
+        }
+        let answer = Answer(headline: headline, headlineChunk: hit.chunk, sources: [hit], highlightTerms: outcome.knownTerms)
+        let decision = RouteDecision(tier: .local, reason: "Worked out from where the watch was when it heard that, on this phone.", signals: ["where"])
+        ledger.record(LedgerEntry(query: effective, tier: .local, reason: decision.reason))
+        guard mine == generation else { return true }
+        recent.removeAll { $0 == question }
+        recent.insert(question, at: 0)
+        state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: answer))
+        if !quiet { Haptics.soft() }
+        await remember(question, via: via, source: .local, short: headline,
+                       detail: AskDetail(kind: .local, headline: headline, sourceChunkIDs: [hit.chunk.id], terms: outcome.knownTerms), since: started)
+        return true
     }
 
     /// Answers a question from the watch in a sentence or two. Runs the normal Ask flow (so the phone shows the

@@ -26,6 +26,8 @@ struct ChunkRecord: Identifiable, Sendable, Equatable {
     var dayId: String = ""
     /// Whose voice it is ("" until the phone has told voices apart). See `SpeakerBook`.
     var speakerId: String = ""
+    /// Where the watch was when it heard this (coarse), when it knew.
+    var coordinate: Coordinate? = nil
 
     var wallLabel: String { DemoClock.format(wallStart) }
 

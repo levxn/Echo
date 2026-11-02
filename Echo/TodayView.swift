@@ -210,7 +210,10 @@ struct TodayView: View {
             EmptyState(icon: "text.bubble", tint: Palette.blue, title: "No conversations yet",
                        message: "Conversations appear here as a timeline once they have been transcribed.")
         } else {
-            EpisodesSection(episodes: episodes)
+            VStack(spacing: Spacing.xl) {
+                EpisodesSection(episodes: episodes)
+                PlacesSection(model: model)
+            }
         }
     }
 }

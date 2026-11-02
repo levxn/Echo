@@ -11,6 +11,8 @@ nonisolated struct ChunkMeta: Codable, Sendable, Equatable {
     let peakDb: Double
     let meanDb: Double
     let sampleCount: Int
+    /// Where the watch was when it heard this (coarse), when it knew.
+    var coordinate: Coordinate? = nil
 }
 
 nonisolated enum Wire {

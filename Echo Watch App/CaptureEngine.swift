@@ -28,6 +28,7 @@ final class CaptureEngine {
 
     init(link: WatchLink) { self.link = link }
 
+    private let location = WatchLocation()
     private var lastAnnounce = Date()
 
     /// When the phone says to announce recording, the watch buzzes as it starts and every ten minutes after, so people
@@ -71,6 +72,10 @@ final class CaptureEngine {
             return
         }
         let clock = DemoClock(manifest: manifest)
+        // A recording that says where it happened is replayed with those places; otherwise the watch's own location is used.
+        let scripted = manifest.scenes.contains { $0.place != nil }
+        if !scripted { location.start() }
+        defer { if !scripted { location.stop() } }
         let vad = EnergyVAD()
         let frame = vad.config.frameSamples
         totalSeconds = Double(samples.count) / Double(rate)
@@ -87,7 +92,8 @@ final class CaptureEngine {
                 id: UUID().uuidString, index: index,
                 wallStart: clock.wallSeconds(forOffset: seg.startSeconds),
                 fileOffset: seg.startSeconds, duration: seg.duration, sampleRate: seg.sampleRate,
-                peakDb: seg.peakDb, meanDb: seg.meanDb, sampleCount: seg.samples.count
+                peakDb: seg.peakDb, meanDb: seg.meanDb, sampleCount: seg.samples.count,
+                coordinate: (scripted ? manifest.place(atOffset: seg.startSeconds) : location.latest)?.coarse()
             )
             index += 1
             captured += 1

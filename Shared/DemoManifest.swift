@@ -15,6 +15,8 @@ nonisolated struct DemoManifest: Codable, Sendable {
         let fileStart: Double
         let fileEnd: Double
         let lines: [Line]
+        /// Where this scene happened, so the replayed day has a place to it like a real one would.
+        var place: Coordinate? = nil
 
         /// Seconds since midnight for the scene's "HH:MM" wall-clock label.
         var wallSeconds: Double {
@@ -33,6 +35,12 @@ nonisolated struct DemoManifest: Codable, Sendable {
     }
 
     /// True when `[start, end)` in file seconds overlaps any scripted line.
+    /// Where the recording was at `offset` seconds in: the scene it falls in, or the nearest one.
+    func place(atOffset offset: Double) -> Coordinate? {
+        func gap(_ s: Scene) -> Double { offset < s.fileStart ? s.fileStart - offset : (offset > s.fileEnd ? offset - s.fileEnd : 0) }
+        return scenes.min { gap($0) < gap($1) }?.place
+    }
+
     func overlapsSpeech(start: Double, end: Double) -> Bool {
         scenes.contains { scene in
             scene.lines.contains { $0.start < end && $0.end > start }

@@ -68,7 +68,11 @@
           "start": 63.66,
           "end": 66.13
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9716,
+        "lon": 77.5946
+      }
     },
     {
       "label": "Lunch with Priya",
@@ -148,7 +152,11 @@
           "start": 157.74,
           "end": 161.38
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9352,
+        "lon": 77.6245
+      }
     },
     {
       "label": "Call with the landlord",
@@ -228,7 +236,11 @@
           "start": 265.18,
           "end": 269.33
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9784,
+        "lon": 77.6408
+      }
     },
     {
       "label": "Family dinner",
@@ -302,7 +314,11 @@
           "start": 369.08,
           "end": 372.12
         }
-      ]
+      ],
+      "place": {
+        "lat": 12.9784,
+        "lon": 77.6408
+      }
     }
   ]
 }

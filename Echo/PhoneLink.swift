@@ -109,7 +109,8 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         let record = ChunkRecord(
             id: meta.id, index: meta.index, wallStart: meta.wallStart, fileOffset: meta.fileOffset,
             duration: meta.duration, peakDb: meta.peakDb, meanDb: meta.meanDb, audioFile: file,
-            status: .received, speechConfidence: nil, confirmedSeconds: 0, transcript: nil, dayId: model.activeDayId
+            status: .received, speechConfidence: nil, confirmedSeconds: 0, transcript: nil, dayId: model.activeDayId,
+            coordinate: meta.coordinate
         )
         model.put(record)
         onChunkReceived?(record)
