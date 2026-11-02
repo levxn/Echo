@@ -5,10 +5,12 @@ import SwiftUI
 /// who and when where known, and the source audio one tap away.
 struct PromisesSection: View {
     let promises: [Promise]
+    var decisions: [Decision] = []
     let model: PipelineModel
     let player: ChunkPlayer
 
     @Environment(Reminders.self) private var reminders
+    @Environment(CalendarLink.self) private var calendar
     @Environment(VoiceBookModel.self) private var voices
     @AppStorage("echo.promiseDone") private var doneRaw = ""
     @State private var showAll = false
@@ -37,7 +39,8 @@ struct PromisesSection: View {
                 EchoSegmented(segments: [.init(value: false, title: "Everyone"), .init(value: true, title: "Mine")], selection: $onlyMine)
             }
 
-            if let problem = reminders.problem { ReminderProblem(problem: problem) { reminders.problem = nil } }
+            if let problem = reminders.problem { ReminderProblem(message: problem.message, needsSettings: problem == .notAllowed) { reminders.problem = nil } }
+            if let problem = calendar.problem { ReminderProblem(message: problem.message, needsSettings: problem == .notAllowed) { calendar.problem = nil } }
 
             VStack(spacing: Spacing.sm) {
                 ForEach(visible) { promise in
@@ -46,6 +49,9 @@ struct PromisesSection: View {
                                playing: player.playingID == promise.chunkID,
                                reminderAt: reminders.date(for: promise.id),
                                reminderOptions: ReminderOptions.options(due: promise.due, now: Date()),
+                               calendarAt: calendar.date(for: promise.id),
+                               calendarOptions: ReminderOptions.calendarOptions(due: promise.due, now: Date()),
+                               onCalendar: { option in Task { if await calendar.add(promise, at: option.date) { Haptics.success() } } },
                                onRemind: { option in Task { if await reminders.schedule(promise, at: option.date) { Haptics.success() } } },
                                onCancelReminder: { reminders.cancel(promise.id) },
                                onToggleDone: { toggleDone(promise.id) },
@@ -54,6 +60,8 @@ struct PromisesSection: View {
                 }
             }
             ShowMoreButton(total: shown.count, limit: Self.collapsedCount, isExpanded: $showAll)
+
+            if !decisions.isEmpty { DecisionsList(decisions: decisions, model: model, player: player) }
         }
         .task {
             // Dev hook: `-remind-first` sets a reminder on the first commitment, at its due time if it has one (screenshots).
@@ -78,6 +86,9 @@ private struct PromiseRow: View {
     let playing: Bool
     let reminderAt: Date?
     let reminderOptions: [ReminderOption]
+    let calendarAt: Date?
+    let calendarOptions: [ReminderOption]
+    let onCalendar: (ReminderOption) -> Void
     let onRemind: (ReminderOption) -> Void
     let onCancelReminder: () -> Void
     let onToggleDone: () -> Void
@@ -108,6 +119,10 @@ private struct PromiseRow: View {
                             if let voice { Chip(text: voice.isMe ? "You" : voice.display, icon: "waveform", tint: voice.isMe ? Palette.teal : Palette.violet, size: .compact) }
                             if promise.kind == .reminder { Chip(text: "Reminder", icon: "bell.fill", tint: Palette.amber, size: .compact) }
                             if let due = promise.due { Chip(text: due, icon: "clock", tint: Palette.teal, size: .compact) }
+                            if let calendarAt {
+                                Chip(text: "In Calendar \(calendarAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))", icon: "calendar",
+                                     tint: Palette.blue, size: .compact)
+                            }
                             if let reminderAt {
                                 Chip(text: "Reminder \(reminderAt.formatted(.dateTime.weekday(.abbreviated).hour().minute()))", icon: "bell.badge.fill",
                                      tint: Palette.amber, size: .compact)
@@ -147,6 +162,12 @@ private struct PromiseRow: View {
             ForEach(reminderOptions) { option in
                 Button(option.title) { onRemind(option) }
             }
+            if !calendarOptions.isEmpty {
+                Divider()
+                Section("Add to Calendar") {
+                    ForEach(calendarOptions) { option in Button(option.title) { onCalendar(option) } }
+                }
+            }
             if reminderAt != nil {
                 Divider()
                 Button("Remove the reminder", role: .destructive, action: onCancelReminder)
@@ -163,19 +184,65 @@ private struct PromiseRow: View {
     }
 }
 
-/// Why a reminder couldn't be set, with the way out.
+/// What was decided, in the days Echo remembers: the sentence, when it was said, and the audio.
+private struct DecisionsList: View {
+    let decisions: [Decision]
+    let model: PipelineModel
+    let player: ChunkPlayer
+    @State private var showAll = false
+
+    private static let collapsedCount = 3
+    private var newestFirst: [Decision] { decisions.reversed() }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader("Decisions", meta: "\(decisions.count) made", style: .overline)
+            ForEach(Capped.visible(newestFirst, limit: Self.collapsedCount, showAll: showAll)) { decision in
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.blue)
+                        .padding(.top, 3)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text(decision.sentence)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Palette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(decision.timeLabel)
+                            .font(Font.echoMeta.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    PlayButton(isPlaying: player.playingID == decision.chunkID, label: "Play the audio from \(decision.timeLabel)") {
+                        if let chunk = model.record(id: decision.chunkID) { player.toggle(chunk) }
+                    }
+                }
+                .echoRow()
+                .accessibilityElement(children: .contain)
+            }
+            ShowMoreButton(total: decisions.count, limit: Self.collapsedCount, isExpanded: $showAll)
+        }
+        .padding(.top, Spacing.sm)
+    }
+
+}
+
+/// Why a reminder or an event couldn't be set, with the way out.
 private struct ReminderProblem: View {
-    let problem: Reminders.Problem
+    let message: String
+    let needsSettings: Bool
     let onDismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Label(problem.message, systemImage: "bell.slash.fill")
+            Label(message, systemImage: "exclamationmark.triangle.fill")
                 .font(.footnote)
                 .foregroundStyle(Palette.amber)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Spacing.sm) {
-                if problem == .notAllowed {
+                if needsSettings {
                     EchoButton(title: "Open Settings", systemImage: "gearshape.fill", style: .prominent, tint: Palette.teal) {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }

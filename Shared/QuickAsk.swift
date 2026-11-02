@@ -22,6 +22,11 @@ extension Wire {
     static let itemsKey = "items"
     static let speakKey = "speak"
     static let announceKey = "announce"      // phone -> watch (application context): buzz every 10 minutes while listening
+    static let promiseCaught = "promise.caught" // phone -> watch: a promise was just heard
+    static let keepPromise = "promise.keep"     // watch -> phone: remind me about it
+    static let idKey = "id"
+    static let textKey = "text"
+    static let dueKey = "due"
     static let forget = "forget"             // watch -> phone: forget the last N minutes
     static let minutesKey = "minutes"
 }

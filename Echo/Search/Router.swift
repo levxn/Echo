@@ -33,6 +33,7 @@ enum Router {
         (#"\baction items?\b"#, "action items", .commitments), (#"\bto-?dos?\b"#, "to-do", .commitments),
         (#"\btomorrow\b"#, "tomorrow", .commitments), (#"\bwhat should i\b"#, "what should I", .commitments),
         (#"\bremind\b"#, "remind", .commitments),
+        (#"\bwhy did (?:we|i) (?:decide|choose|pick|go|agree)\b"#, "why we decided", .general),
     ]
 
     static let coverageThreshold = 0.66
@@ -43,7 +44,7 @@ enum Router {
         let markers = matched.map(\.label)
         if !markers.isEmpty {
             // Commitments is the more specific intent, so it wins when both kinds of marker appear.
-            let intent: Intent = matched.contains { $0.intent == .commitments } ? .commitments : .summary
+            let intent: Intent = matched.contains { $0.intent == .commitments } ? .commitments : (matched.allSatisfy { $0.intent == .general } ? .general : .summary)
             return RouteDecision(tier: .cloud,
                                  reason: "This needs synthesis across your day (“\(markers[0])”), which is more than a lookup.",
                                  signals: markers, intent: intent)

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import os
 import WatchConnectivity
+import WatchKit
 
 /// Lets exactly one of several racing callbacks (reply, error, timeout) resume a continuation.
 private final class Once: @unchecked Sendable {
@@ -40,6 +41,15 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     /// Called when the phone asks the watch to ask recorded question N by voice (the demo driver does this).
     var onRemoteVoiceAsk: ((Int) -> Void)?
+
+    /// A promise the phone just heard the wearer make, shown as "Got it" until they keep it or it times out.
+    struct CaughtPromise: Identifiable, Equatable {
+        let id: String
+        let text: String
+        let due: String
+    }
+    var caught: CaughtPromise?
+    private var caughtGeneration = 0
 
     private struct Pending {
         let encoded: Data
@@ -144,6 +154,14 @@ final class WatchLink: NSObject, WCSessionDelegate {
         VoiceReply(dictionary: await request([Wire.typeKey: Wire.transcribe, Wire.audioKey: clip.audio], timeout: timeout))
     }
 
+    /// Asks the phone for a reminder about the promise shown. True if it was set.
+    nonisolated func keep(promise id: String, timeout: TimeInterval = 10) async -> Bool {
+        guard let reply = await request([Wire.typeKey: Wire.keepPromise, Wire.idKey: id], timeout: timeout) else { return false }
+        return reply[Wire.okKey] as? Bool == true
+    }
+
+    func dismissCaught() { caught = nil }
+
     /// Asks the phone to forget the last `minutes` of what was heard. Returns how many moments it forgot (nil if it can't be reached).
     nonisolated func forget(minutes: Int, timeout: TimeInterval = 15) async -> Int? {
         guard let reply = await request([Wire.typeKey: Wire.forget, Wire.minutesKey: minutes], timeout: timeout),
@@ -218,6 +236,17 @@ final class WatchLink: NSObject, WCSessionDelegate {
         case Wire.demoQuickAsk:
             let index = message[Wire.presetKey] as? Int ?? 0
             Task { @MainActor in self.onRemoteQuickAsk?(index) }
+        case Wire.promiseCaught:
+            guard let id = message[Wire.idKey] as? String, let text = message[Wire.textKey] as? String else { return }
+            let due = message[Wire.dueKey] as? String ?? ""
+            Task { @MainActor in
+                self.caught = CaughtPromise(id: id, text: text, due: due)
+                self.caughtGeneration += 1
+                let mine = self.caughtGeneration
+                WKInterfaceDevice.current().play(.notification)
+                try? await Task.sleep(for: .seconds(9))
+                if self.caughtGeneration == mine { self.caught = nil }   // it was neither kept nor dismissed
+            }
         case Wire.demoVoiceAsk:
             let index = message[Wire.presetKey] as? Int ?? 1
             Task { @MainActor in self.onRemoteVoiceAsk?(index) }

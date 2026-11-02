@@ -53,6 +53,15 @@ struct ProfileSheet: View {
                 .echoCard()
 
                 VStack(alignment: .leading, spacing: Spacing.md) {
+                    SectionHeader("Promises")
+                    ToggleRow(title: "Catch promises as I say them", systemImage: "checkmark.circle.fill",
+                              caption: "When you say you will do something, your watch shows “Got it” and you can tap Keep for a reminder.",
+                              isOn: $profile.catchPromises, tint: Palette.teal)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .echoCard()
+
+                VStack(alignment: .leading, spacing: Spacing.md) {
                     SectionHeader("Where your data lives")
                     fact("lock.fill", Palette.teal, "On this phone", "Transcripts, audio and search never leave it. Audio is never sent anywhere.")
                     fact("cloud.fill", Palette.cloud, "Only when you ask a broad question",

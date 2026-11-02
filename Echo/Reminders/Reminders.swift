@@ -8,6 +8,15 @@ protocol NotificationScheduling: AnyObject {
     func ensureAuthorized() async -> Bool
     func add(id: String, title: String, body: String, at date: Date) async throws
     func remove(ids: [String])
+    /// Shows something right now with a "Remind me" button (a promise just heard, when the watch isn't there).
+    func postCaught(id: String, body: String) async
+    /// Told when the person taps a button on such a notification: the action and the promise id.
+    func onAction(_ handler: @escaping @MainActor (String, String) -> Void)
+}
+
+extension NotificationScheduling {
+    func postCaught(id: String, body: String) async {}
+    func onAction(_ handler: @escaping @MainActor (String, String) -> Void) {}
 }
 
 /// Local notifications through `UNUserNotificationCenter`. Nothing leaves the phone.
@@ -42,6 +51,33 @@ final class SystemNotifications: NSObject, NotificationScheduling, UNUserNotific
 
     func remove(ids: [String]) { center.removePendingNotificationRequests(withIdentifiers: ids) }
 
+    static let caughtCategory = "echo.caught"
+    static let remindAction = "echo.remind"
+    private var actionHandler: (@MainActor (String, String) -> Void)?
+
+    func onAction(_ handler: @escaping @MainActor (String, String) -> Void) {
+        actionHandler = handler
+        let remind = UNNotificationAction(identifier: Self.remindAction, title: "Remind me", options: [])
+        center.setNotificationCategories([UNNotificationCategory(identifier: Self.caughtCategory, actions: [remind], intentIdentifiers: [])])
+    }
+
+    func postCaught(id: String, body: String) async {
+        guard await ensureAuthorized() else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Echo · you said you would"
+        content.body = body
+        content.categoryIdentifier = Self.caughtCategory
+        content.userInfo = ["promise": id]
+        try? await center.add(UNNotificationRequest(identifier: "echo.caught.\(id)", content: content,
+                                                     trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)))
+    }
+
+    /// The person tapped "Remind me" on a promise notification.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard response.actionIdentifier == Self.remindAction, let id = response.notification.request.content.userInfo["promise"] as? String else { return }
+        await MainActor.run { actionHandler?(response.actionIdentifier, id) }
+    }
+
     /// A reminder that fires while Echo is open still shows.
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound]
@@ -70,7 +106,7 @@ final class Reminders {
 
     private(set) var scheduled: [String: Date] = [:]
     var problem: Problem?
-    private let scheduler: any NotificationScheduling
+    let scheduler: any NotificationScheduling
     private let defaults: UserDefaults
     private let now: () -> Date
 

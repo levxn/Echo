@@ -15,6 +15,8 @@ final class Pipeline {
     var voices: VoiceBookModel?
     /// Honors "off the record" (set by the app; tests that don't care leave it nil).
     var privacy: RecordingPrivacy?
+    /// Surfaces promises as they are said (set by the app).
+    var watcher: PromiseWatcher?
     private var pending: [ChunkRecord] = []
     private var running = false
 
@@ -95,6 +97,7 @@ final class Pipeline {
 
         chunk.status = .stored
         model.put(chunk)
+        watcher?.chunkStored(chunk)
     }
 
     private func index(chunkID: String, text: String) async {

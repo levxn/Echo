@@ -23,12 +23,14 @@ struct RootView: View {
     let link: PhoneLink
     let voices: VoiceBookModel
     let privacy: RecordingPrivacy
+    let watcher: PromiseWatcher
 
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
     @State private var voice = VoiceAskModel()
     @State private var speaker = Speaker()
     @State private var reminders = Reminders()
+    @State private var calendarLink = CalendarLink()
     @State private var ledger: LedgerModel
     @State private var digest: DigestModel
     @State private var player: ChunkPlayer
@@ -39,7 +41,8 @@ struct RootView: View {
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel, privacy: RecordingPrivacy) {
+    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel, privacy: RecordingPrivacy, watcher: PromiseWatcher) {
+        self.watcher = watcher
         self.model = model
         self.link = link
         self.voices = voices
@@ -82,10 +85,19 @@ struct RootView: View {
         return gone.count
     }
 
+    /// Sets a reminder for a promise the watch (or a notification) just showed: at its due time, or in an hour.
+    private func keepPromise(id: String) async -> Bool {
+        guard let promise = PromiseExtractor.extract(from: model.chunks, userName: profile.name).first(where: { $0.id == id }),
+              let option = ReminderOptions.options(due: promise.due, now: Date()).first else { return false }
+        let ok = await reminders.schedule(promise, at: option.date)
+        if ok { Haptics.success() }
+        return ok
+    }
+
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
-                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices)
+                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices, calendar: calendarLink)
         }
     }
 
@@ -138,6 +150,7 @@ struct RootView: View {
         .environment(voices)
         .environment(privacy)
         .environment(reminders)
+        .environment(calendarLink)
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
         // Large text is fully supported up to the first accessibility size; beyond it these dense cards
@@ -163,7 +176,15 @@ struct RootView: View {
                 },
                 history: { history.recentForWatch() },
                 speakVoiceAnswers: { profile.speakVoiceAnswers },
-                forgetRecent: { await forgetRecent(minutes: $0) })
+                forgetRecent: { await forgetRecent(minutes: $0) },
+                keepPromise: { await keepPromise(id: $0) })
+            // A promise just heard: the watch shows "Got it"; with no watch nearby it is a notification with a Remind me button.
+            watcher.isEnabled = { profile.catchPromises }
+            watcher.myVoice = { voices.me?.id }
+            watcher.onCaught = { promise in
+                if !link.sendPromiseCaught(promise) { Task { await reminders.scheduler.postCaught(id: promise.id, body: promise.sentence) } }
+            }
+            reminders.scheduler.onAction { _, id in Task { _ = await keepPromise(id: id) } }
             privacy.onAnnounceChanged = { link.sendSettings(announce: $0) }
             link.sendSettings(announce: privacy.announce)
             // Spoken answers and recorded moments take turns, and a voice question's answer is read back if the person wants.

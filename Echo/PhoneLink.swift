@@ -23,6 +23,17 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         WCSession.default.activate()
     }
 
+    /// Tells the watch a promise was just heard. False if the watch can't be reached right now.
+    @discardableResult
+    func sendPromiseCaught(_ promise: Promise) -> Bool {
+        guard WCSession.isSupported(), WCSession.default.isReachable else { return false }
+        WCSession.default.sendMessage([Wire.typeKey: Wire.promiseCaught, Wire.idKey: promise.id, Wire.textKey: promise.sentence,
+                                       Wire.dueKey: promise.due ?? ""], replyHandler: nil) { error in
+            Log.link.error("couldn't tell the watch about a promise: \(error.localizedDescription)")
+        }
+        return true
+    }
+
     /// Tells the watch whether to announce that it is listening. Delivered whenever the watch next wakes, even if it is away now.
     func sendSettings(announce: Bool) {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }

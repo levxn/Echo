@@ -40,6 +40,7 @@ final class ProfileStore {
     static let nameKey = "echo.profileName"
     static let colorKey = "echo.profileColor"
     static let speakKey = "echo.speakVoiceAnswers"
+    static let catchKey = "echo.catchPromises"
     /// Whose day this is until they type their own name.
     static let defaultName = "Levin"
 
@@ -50,6 +51,10 @@ final class ProfileStore {
     }
     var colorIndex: Int {
         didSet { defaults.set(colorIndex, forKey: Self.colorKey) }
+    }
+    /// When you say you will do something, the watch shows "Got it" and offers a reminder. On unless turned off.
+    var catchPromises: Bool {
+        didSet { defaults.set(catchPromises, forKey: Self.catchKey) }
     }
     /// Read answers aloud when the question was spoken. On unless turned off.
     var speakVoiceAnswers: Bool {
@@ -66,6 +71,7 @@ final class ProfileStore {
         let stored = defaults.object(forKey: Self.colorKey) as? Int ?? 0
         colorIndex = ((stored % ProfileLogic.colorCount) + ProfileLogic.colorCount) % ProfileLogic.colorCount
         speakVoiceAnswers = defaults.object(forKey: Self.speakKey) as? Bool ?? true
+        catchPromises = defaults.object(forKey: Self.catchKey) as? Bool ?? true
     }
 
     var initials: String { ProfileLogic.initials(from: name) }

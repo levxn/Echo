@@ -12,6 +12,8 @@ struct WatchRequests {
     var speakVoiceAnswers: () -> Bool = { false }
     /// Forgets the last N minutes of what was heard; says how many moments went.
     var forgetRecent: (Int) async -> Int = { _ in 0 }
+    /// Sets a reminder for a promise the watch just showed; says whether it worked.
+    var keepPromise: (String) async -> Bool = { _ in false }
 
     /// Nil when the message isn't one of these, so the caller can try something else.
     func handle(_ message: [String: Any]) async -> [String: Any]? {
@@ -34,6 +36,10 @@ struct WatchRequests {
 
         case Wire.history:
             return [Wire.okKey: true, Wire.itemsKey: history().prefix(HistoryCache.limit).map(\.dictionary)]
+
+        case Wire.keepPromise:
+            guard let id = message[Wire.idKey] as? String else { return [Wire.okKey: false] }
+            return [Wire.okKey: await keepPromise(id)]
 
         case Wire.forget:
             let minutes = min(120, max(1, message[Wire.minutesKey] as? Int ?? 10))

@@ -28,6 +28,7 @@ struct EchoWatchApp: App {
                 AskWatchView(ask: quickAsk, link: link).tag(1)
             }
             .tabViewStyle(.verticalPage)
+            .sheet(item: Bindable(link).caught) { promise in CaughtPromiseView(promise: promise, link: link) }
             .task {
                 // Dev convenience: `simctl launch ... -autostart <token>` begins the replay without a
                 // tap. The token makes it one-shot: the system may relaunch the app with the same

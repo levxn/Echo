@@ -8,6 +8,7 @@ struct EchoApp: App {
     @State private var pipeline: Pipeline
     @State private var voices: VoiceBookModel
     @State private var privacy = RecordingPrivacy()
+    @State private var watcher: PromiseWatcher
 
     init() {
         // Dev hook: `-reset-demo <token>` wipes the day (not the API key) before anything opens the database.
@@ -21,6 +22,9 @@ struct EchoApp: App {
         let privacy = RecordingPrivacy()
         pipeline.privacy = privacy
         _privacy = State(initialValue: privacy)
+        let watcher = PromiseWatcher(model: model)
+        pipeline.watcher = watcher
+        _watcher = State(initialValue: watcher)
         let link = PhoneLink(model: model)
         link.onChunkReceived = { pipeline.enqueue($0) }
         _pipeline = State(initialValue: pipeline)
@@ -29,7 +33,7 @@ struct EchoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(model: model, link: link, voices: voices, privacy: privacy).task {
+            RootView(model: model, link: link, voices: voices, privacy: privacy, watcher: watcher).task {
                 await model.load()
                 await voices.load()
                 let authorized = await OnDeviceASR.authorize()

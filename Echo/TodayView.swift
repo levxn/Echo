@@ -47,6 +47,7 @@ struct TodayView: View {
 
     @State private var episodes: [Episode] = []
     @State private var promises: [Promise] = []
+    @State private var decisions: [Decision] = []
     @State private var heardPeople: [Person] = []
     @AppStorage(PeopleIgnore.key) private var ignoredPeople = ""
     @State private var focusedSections = false
@@ -83,6 +84,7 @@ struct TodayView: View {
         .onChange(of: model.storedCount, initial: true) {
             episodes = EpisodeBuilder.build(from: model.todayChunks)
             promises = PromiseExtractor.extract(from: model.todayChunks, userName: profile.name)
+            decisions = DecisionExtractor.extract(from: model.chunks, now: model.now())
             if model.storedCount == 0 { digest.reset() }
             refreshPeople()
         }
@@ -172,11 +174,11 @@ struct TodayView: View {
 
     @ViewBuilder
     private var commitments: some View {
-        if promises.isEmpty {
+        if promises.isEmpty && decisions.isEmpty {
             EmptyState(icon: "checkmark.circle", tint: Palette.teal, title: "No commitments heard yet",
                        message: "Things people say they will do, like \u{201C}I will send it Friday\u{201D}, are collected here as they are transcribed.")
         } else {
-            PromisesSection(promises: promises, model: model, player: player)
+            PromisesSection(promises: promises, decisions: decisions, model: model, player: player)
         }
     }
 
