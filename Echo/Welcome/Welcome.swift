@@ -7,7 +7,7 @@ nonisolated enum Welcome {
 
     /// Flags the system adds itself ("-NSDocumentRevisionsDebugMode", "-AppleLanguages") don't count.
     static func hasDeveloperFlags(_ arguments: [String]) -> Bool {
-        arguments.dropFirst().contains { $0.hasPrefix("-") && !$0.hasPrefix("-NS") && !$0.hasPrefix("-Apple") && !$0.hasPrefix("-com.apple") && $0 != "-show-welcome" && $0 != "-welcome-page" }
+        arguments.dropFirst().contains { $0.hasPrefix("-") && !$0.hasPrefix("-NS") && !$0.hasPrefix("-Apple") && !$0.hasPrefix("-com.apple") && $0 != "-show-welcome" && $0 != "-welcome-page" && $0 != "-launch-mark" && $0 != "-launch-mark-freeze" }
     }
 
     static func isPending(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) -> Bool {
@@ -21,6 +21,7 @@ nonisolated enum Welcome {
 
     /// The launch mark plays on an ordinary launch that isn't the welcome.
     static func showsLaunchMark(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) -> Bool {
-        !hasDeveloperFlags(arguments) && !isPending(arguments: arguments, defaults: defaults)
+        if arguments.contains("-launch-mark") { return true }   // developer hook: see the animation on a launch with flags
+        return !hasDeveloperFlags(arguments) && !isPending(arguments: arguments, defaults: defaults)
     }
 }

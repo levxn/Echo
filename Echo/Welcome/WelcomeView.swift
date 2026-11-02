@@ -70,7 +70,7 @@ struct WelcomeView: View {
                     .frame(height: 108)
                     .accessibilityHidden(true)
             } else {
-                EchoMark(height: 108)
+                IdleLogo(height: 100)
             }
             VStack(spacing: Spacing.md) {
                 Text(card.title)
