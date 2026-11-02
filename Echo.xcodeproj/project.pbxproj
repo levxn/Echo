@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		9749D08D309605B800D25995 /* Echo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9749D08C309605B800D25995 /* Echo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9749D0D1000000000000A00A /* EchoWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9749D0D1000000000000A001 /* EchoWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9749D0D1000000000000A017 /* EchoWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9749D0D1000000000000A00E /* EchoWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +48,20 @@
 			remoteGlobalIDString = 9749D08B309605B800D25995;
 			remoteInfo = "Echo Watch App";
 		};
+		9749D0D1000000000000A00C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D0D1000000000000A003;
+			remoteInfo = EchoWidgets;
+		};
+		9749D0D1000000000000A019 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9749D061309605B700D25995 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9749D0D1000000000000A010;
+			remoteInfo = EchoWatchWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -60,6 +76,28 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9749D0D1000000000000A00B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9749D0D1000000000000A00A /* EchoWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0D1000000000000A018 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9749D0D1000000000000A017 /* EchoWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +107,8 @@
 		9749D08C309605B800D25995 /* Echo Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Echo Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9749D09B309605B800D25995 /* Echo Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Echo Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Echo Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D0D1000000000000A001 /* EchoWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EchoWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9749D0D1000000000000A00E /* EchoWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EchoWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -105,6 +145,21 @@
 		9749D0C100000000000000A1 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		9749D0D1000000000000A002 /* EchoWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EchoWidgets;
+			sourceTree = "<group>";
+		};
+		9749D0D1000000000000A00F /* EchoWatchWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EchoWatchWidgets;
+			sourceTree = "<group>";
+		};
+		9749D0D1000000000000A01B /* WidgetShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetShared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -152,6 +207,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9749D0D1000000000000A005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0D1000000000000A012 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -164,6 +233,9 @@
 				9749D090309605B800D25995 /* Echo Watch App */,
 				9749D09E309605B800D25995 /* Echo Watch AppTests */,
 				9749D0A8309605B800D25995 /* Echo Watch AppUITests */,
+				9749D0D1000000000000A002 /* EchoWidgets */,
+				9749D0D1000000000000A00F /* EchoWatchWidgets */,
+				9749D0D1000000000000A01B /* WidgetShared */,
 				9749D0C100000000000000A1 /* Shared */,
 				9749D06A309605B700D25995 /* Products */,
 			);
@@ -178,6 +250,8 @@
 				9749D08C309605B800D25995 /* Echo Watch App.app */,
 				9749D09B309605B800D25995 /* Echo Watch AppTests.xctest */,
 				9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */,
+				9749D0D1000000000000A001 /* EchoWidgets.appex */,
+				9749D0D1000000000000A00E /* EchoWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -193,15 +267,18 @@
 				9749D066309605B700D25995 /* Frameworks */,
 				9749D067309605B700D25995 /* Resources */,
 				9749D0B2309605B900D25995 /* Embed Watch Content */,
+				9749D0D1000000000000A00B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				9749D08F309605B800D25995 /* PBXTargetDependency */,
+				9749D0D1000000000000A00D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9749D06B309605B700D25995 /* Echo */,
 				9749D0C100000000000000A1 /* Shared */,
+				9749D0D1000000000000A01B /* WidgetShared */,
 			);
 			name = Echo;
 			packageProductDependencies = (
@@ -263,14 +340,17 @@
 				9749D088309605B800D25995 /* Sources */,
 				9749D089309605B800D25995 /* Frameworks */,
 				9749D08A309605B800D25995 /* Resources */,
+				9749D0D1000000000000A018 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				9749D0D1000000000000A01A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9749D090309605B800D25995 /* Echo Watch App */,
 				9749D0C100000000000000A1 /* Shared */,
+				9749D0D1000000000000A01B /* WidgetShared */,
 			);
 			name = "Echo Watch App";
 			packageProductDependencies = (
@@ -325,6 +405,52 @@
 			productReference = 9749D0A5309605B800D25995 /* Echo Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		9749D0D1000000000000A003 /* EchoWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0D1000000000000A007 /* Build configuration list for PBXNativeTarget "EchoWidgets" */;
+			buildPhases = (
+				9749D0D1000000000000A004 /* Sources */,
+				9749D0D1000000000000A005 /* Frameworks */,
+				9749D0D1000000000000A006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9749D0D1000000000000A002 /* EchoWidgets */,
+				9749D0D1000000000000A01B /* WidgetShared */,
+			);
+			name = EchoWidgets;
+			packageProductDependencies = (
+			);
+			productName = EchoWidgets;
+			productReference = 9749D0D1000000000000A001 /* EchoWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		9749D0D1000000000000A010 /* EchoWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9749D0D1000000000000A014 /* Build configuration list for PBXNativeTarget "EchoWatchWidgets" */;
+			buildPhases = (
+				9749D0D1000000000000A011 /* Sources */,
+				9749D0D1000000000000A012 /* Frameworks */,
+				9749D0D1000000000000A013 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9749D0D1000000000000A00F /* EchoWatchWidgets */,
+				9749D0D1000000000000A01B /* WidgetShared */,
+			);
+			name = EchoWatchWidgets;
+			packageProductDependencies = (
+			);
+			productName = EchoWatchWidgets;
+			productReference = 9749D0D1000000000000A00E /* EchoWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -357,6 +483,12 @@
 						CreatedOnToolsVersion = 26.1.1;
 						TestTargetID = 9749D08B309605B800D25995;
 					};
+					9749D0D1000000000000A003 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					9749D0D1000000000000A010 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = 9749D064309605B700D25995 /* Build configuration list for PBXProject "Echo" */;
@@ -379,6 +511,8 @@
 				9749D08B309605B800D25995 /* Echo Watch App */,
 				9749D09A309605B800D25995 /* Echo Watch AppTests */,
 				9749D0A4309605B800D25995 /* Echo Watch AppUITests */,
+				9749D0D1000000000000A003 /* EchoWidgets */,
+				9749D0D1000000000000A010 /* EchoWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -420,6 +554,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9749D0A3309605B800D25995 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0D1000000000000A006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0D1000000000000A013 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -471,6 +619,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9749D0D1000000000000A004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9749D0D1000000000000A011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -498,6 +660,16 @@
 			isa = PBXTargetDependency;
 			target = 9749D08B309605B800D25995 /* Echo Watch App */;
 			targetProxy = 9749D0A6309605B800D25995 /* PBXContainerItemProxy */;
+		};
+		9749D0D1000000000000A00D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D0D1000000000000A003 /* EchoWidgets */;
+			targetProxy = 9749D0D1000000000000A00C /* PBXContainerItemProxy */;
+		};
+		9749D0D1000000000000A01A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9749D0D1000000000000A010 /* EchoWatchWidgets */;
+			targetProxy = 9749D0D1000000000000A019 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -623,6 +795,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Entitlements/Echo Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HG8YQX7SSX;
@@ -657,6 +830,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Entitlements/Echo Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HG8YQX7SSX;
@@ -692,6 +866,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/Echo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HG8YQX7SSX;
@@ -700,6 +875,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Echo listens when you tap the microphone to ask a question. The audio is turned into text on this phone and is never sent to Muse.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo turns your conversations and spoken questions into text on this device, so your day stays searchable and private.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -729,6 +905,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/Echo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = HG8YQX7SSX;
@@ -737,6 +914,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Echo;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Echo listens when you tap the microphone to ask a question. The audio is turned into text on this phone and is never sent to Muse.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Echo turns your conversations and spoken questions into text on this device, so your day stays searchable and private.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -946,6 +1124,132 @@
 			};
 			name = Release;
 		};
+		9749D0D1000000000000A008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/EchoWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EchoWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9749D0D1000000000000A009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/EchoWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EchoWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9749D0D1000000000000A015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/EchoWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EchoWatchWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.watchkitapp.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		9749D0D1000000000000A016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Entitlements/EchoWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG8YQX7SSX;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EchoWatchWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Echo;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = levtech.Echo.watchkitapp.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1008,6 +1312,24 @@
 			buildConfigurations = (
 				9749D0C0309605B900D25995 /* Debug */,
 				9749D0C1309605B900D25995 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0D1000000000000A007 /* Build configuration list for PBXNativeTarget "EchoWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0D1000000000000A008 /* Debug */,
+				9749D0D1000000000000A009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9749D0D1000000000000A014 /* Build configuration list for PBXNativeTarget "EchoWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9749D0D1000000000000A015 /* Debug */,
+				9749D0D1000000000000A016 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

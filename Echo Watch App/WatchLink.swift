@@ -1,3 +1,4 @@
+import WidgetKit
 import Foundation
 import Observation
 import os
@@ -218,6 +219,11 @@ final class WatchLink: NSObject, WCSessionDelegate {
     /// The phone's settings that the watch acts on (announce recording).
     nonisolated private func apply(context: [String: Any]) {
         if let announce = context[Wire.announceKey] as? Bool { UserDefaults.standard.set(announce, forKey: "echo.announce") }
+        // The complication reads its promises from the App Group; the phone sends them here because the two devices don't share one.
+        if let data = context[Wire.widgetKey] as? Data, let snapshot = WidgetSnapshot.decode(data) {
+            snapshot.save()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {

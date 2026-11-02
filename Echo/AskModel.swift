@@ -78,6 +78,8 @@ final class AskModel {
     var brain: (any LocalBrain)?
     /// Whether to prefer it over Muse for broad questions.
     var preferOnDevice: () -> Bool = { false }
+    /// True when there is no screen to show the review sheet on (Siri, Shortcuts): a question that would need Muse is not sent then.
+    var headless = false
     private var thread: Thread?
 
     /// The last question, kept so a short follow-up can lean on it.
@@ -192,10 +194,10 @@ final class AskModel {
         }
 
         if ledger.reviewBeforeSend, !isStub {
-            let approved = await ledger.gate.confirm(plan: plan, query: effective, kind: .ask)
+            let approved = headless ? false : await ledger.gate.confirm(plan: plan, query: effective, kind: .ask)
             guard mine == generation else { return }
             if !approved {
-                var entry = LedgerEntry(query: effective, tier: .cloud, reason: "You chose not to send this.")
+                var entry = LedgerEntry(query: effective, tier: .cloud, reason: headless ? "Review before send is on and there was no screen to review on, so nothing was sent." : "You chose not to send this.")
                 entry.snippets = plan.snippets
                 ledger.record(entry)
                 state = .answered(AskResult(query: question, outcome: outcome, decision: decision, answer: localAnswer, note: .declined))

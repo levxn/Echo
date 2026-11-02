@@ -35,9 +35,17 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     }
 
     /// Tells the watch whether to announce that it is listening. Delivered whenever the watch next wakes, even if it is away now.
-    func sendSettings(announce: Bool) {
+    func sendSettings(announce: Bool) { sendContext([Wire.announceKey: announce]) }
+
+    /// The complication's data: the same application context, so it arrives whenever the watch next wakes.
+    func sendWidget(_ snapshot: Data) { sendContext([Wire.widgetKey: snapshot]) }
+
+    /// An application context replaces the previous one, so everything the watch should know is kept together and re-sent.
+    private var context: [String: Any] = [:]
+    private func sendContext(_ patch: [String: Any]) {
+        context.merge(patch) { _, new in new }
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
-        try? WCSession.default.updateApplicationContext([Wire.announceKey: announce])
+        try? WCSession.default.updateApplicationContext(context)
     }
 
     /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.

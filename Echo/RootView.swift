@@ -185,6 +185,7 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
             await refreshBriefings()
         }
+        .modifier(WidgetSync(model: model, reminders: reminders, profile: profile, voices: voices, link: link))
         .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings, places: places))
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
@@ -228,6 +229,13 @@ struct RootView: View {
         watcher.myVoice = { voices.me?.id }
         watcher.onCaught = { promise in
             if !link.sendPromiseCaught(promise) { Task { await reminders.scheduler.postCaught(id: promise.id, body: promise.sentence) } }
+        }
+        // Siri and Shortcuts use these same live models while the app is running.
+        IntentHub.shared.ask = { question in await ask.quickAnswer(question, via: .typed) }
+        IntentHub.shared.forget = { await forgetRecent(minutes: $0) }
+        IntentHub.shared.promises = {
+            let done = Set((UserDefaults.standard.string(forKey: DayWiper.promiseDoneKey) ?? "").split(separator: "\n").map(String.init))
+            return IntentAnswers.promises(chunks: model.chunks, userName: profile.name, myVoice: voices.me?.id, done: done, today: DayID.today(now: model.now()))
         }
         reminders.scheduler.onAction { _, id in Task { _ = await keepPromise(id: id) } }
         privacy.onAnnounceChanged = { link.sendSettings(announce: $0) }

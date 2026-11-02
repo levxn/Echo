@@ -22,6 +22,7 @@ nonisolated enum Wire {
     static let recordedKey = "recorded"  // seconds of audio the watch has processed so far
     static let totalKey = "total"        // seconds in the whole recording
     static let dayOffsetKey = "dayOffset" // with "started": which day this recording is for (0 = today, -7 = a week ago)
+    static let widgetKey = "widget"      // phone -> watch (application context): the encoded WidgetSnapshot for the complication
     static let okKey = "ok"
 
     /// `sendMessageData` accepts 64 KB and rejects 80 KB in the simulator; stay safely under.
