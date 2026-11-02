@@ -1,6 +1,6 @@
 {
   "sampleRate": 16000,
-  "duration": 256.21,
+  "duration": 327.21,
   "scenes": [
     {
       "label": "Dentist",
@@ -192,6 +192,48 @@
       "place": {
         "lat": 12.9352,
         "lon": 77.6245
+      }
+    },
+    {
+      "label": "Late evening",
+      "wallClock": "21:05",
+      "fileStart": 299.47,
+      "fileEnd": 327.21,
+      "lines": [
+        {
+          "speaker": "Levin",
+          "text": "Hey Echo, what did Mister Brennan say about the rent?",
+          "start": 299.47,
+          "end": 302.73
+        },
+        {
+          "speaker": "Levin",
+          "text": "Priya, this is off the record, so please keep it between the two of us.",
+          "start": 303.7,
+          "end": 307.95
+        },
+        {
+          "speaker": "Priya",
+          "text": "I am planning a surprise party for Maya. The cake is chocolate and the venue is the rooftop terrace.",
+          "start": 309.24,
+          "end": 314.69
+        },
+        {
+          "speaker": "Levin",
+          "text": "She will love it, I am sure of that. Okay, we are back on the record now.",
+          "start": 315.66,
+          "end": 320.44
+        },
+        {
+          "speaker": "Levin",
+          "text": "I will lock the back door before bed tonight, and switch off all the lights.",
+          "start": 321.97,
+          "end": 326.02
+        }
+      ],
+      "place": {
+        "lat": 12.9784,
+        "lon": 77.6408
       }
     }
   ]

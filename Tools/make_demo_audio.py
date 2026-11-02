@@ -46,6 +46,7 @@ PLACES = {
     "Lease renewal call": (12.9784, 77.6408),       # home
     "Vendor decision": (12.9716, 77.5946),          # the office
     "Evening with Priya": (12.9352, 77.6245),       # the café
+    "Late evening": (12.9784, 77.6408),             # home
 }
 
 # (label, wall-clock "HH:MM", [(speaker, line), ...])
@@ -140,6 +141,15 @@ SCENES_PREV = [
         ("Levin", "Great. I will book the flights this weekend once you confirm the dates."),
         ("Priya", "Perfect. We should also work out who will drive from the airport."),
         ("Levin", "I can drive. I will rent a small car."),
+    ]),
+    # Exercises the wake word ("Hey Echo" is a command, answered on the watch and kept out of memory) and "off the record"
+    # (what Priya says in the middle is understood only to hear the way back, then thrown away).
+    ("Late evening", "21:05", [
+        ("Levin", "Hey Echo, what did Mister Brennan say about the rent?"),
+        ("Levin", "Priya, this is off the record, so please keep it between the two of us."),
+        ("Priya", "I am planning a surprise party for Maya. The cake is chocolate and the venue is the rooftop terrace."),
+        ("Levin", "She will love it, I am sure of that. Okay, we are back on the record now."),
+        ("Levin", "I will lock the back door before bed tonight, and switch off all the lights."),
     ]),
 ]
 

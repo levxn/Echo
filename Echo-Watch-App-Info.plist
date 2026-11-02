@@ -6,6 +6,10 @@
 	<string>Echo listens when you tap the microphone to ask a question, and to capture conversations for your private memory. Audio is turned into text on your phone and is never sent to Muse.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Echo notes roughly where you were when it heard something, so you can ask where you were. It stays on your devices and is never sent to Muse.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Echo uses a workout session only to keep listening while your wrist is down. It reads nothing from Health.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Echo needs permission to run that session. It never saves a workout to Health.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

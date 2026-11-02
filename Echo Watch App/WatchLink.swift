@@ -50,6 +50,16 @@ final class WatchLink: NSObject, WCSessionDelegate {
         let due: String
     }
     var caught: CaughtPromise?
+
+    /// The answer to a question that began "Hey Echo", shown until the wearer dismisses it.
+    struct WakeReply: Identifiable, Equatable {
+        let id = UUID()
+        let question: String
+        let text: String
+        let source: WatchAnswer.Source
+    }
+    var wakeReply: WakeReply?
+    let wakeSpeaker = Speaker()
     private var caughtGeneration = 0
 
     private struct Pending {
@@ -97,13 +107,13 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     /// Tells the phone the recording started or finished. The phone files what follows under the day this names, so "started" is
     /// retried until the phone answers (it may have only just opened); "finished" gets a few tries.
-    func sendSession(state: String, recorded: Double, total: Double, count: Int = 0, dayOffset: Int = 0) async {
+    func sendSession(state: String, recorded: Double, total: Double, count: Int = 0, dayOffset: Int = 0, live: Bool = false) async {
         let attempts = state == "started" ? 40 : 4
         for _ in 0..<attempts {
             for _ in 0..<20 where !WCSession.default.isReachable { try? await Task.sleep(for: .milliseconds(250)) }
             if (try? await message([
                 Wire.typeKey: Wire.session, Wire.stateKey: state,
-                Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count, Wire.dayOffsetKey: dayOffset,
+                Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count, Wire.dayOffsetKey: dayOffset, Wire.liveKey: live,
             ])) != nil { return }
             try? await Task.sleep(for: .milliseconds(750))
         }
@@ -258,10 +268,29 @@ final class WatchLink: NSObject, WCSessionDelegate {
                 try? await Task.sleep(for: .seconds(9))
                 if self.caughtGeneration == mine { self.caught = nil }   // it was neither kept nor dismissed
             }
+        case Wire.wakeAnswer:
+            handleWake(message)
         case Wire.demoVoiceAsk:
             let index = message[Wire.presetKey] as? Int ?? 1
             Task { @MainActor in self.onRemoteVoiceAsk?(index) }
         default: break
+        }
+    }
+
+    /// Answers that were waiting while the watch was away arrive here.
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        if userInfo[Wire.typeKey] as? String == Wire.wakeAnswer { handleWake(userInfo) }
+    }
+
+    nonisolated private func handleWake(_ message: [String: Any]) {
+        guard let text = message[Wire.textKey] as? String else { return }
+        let question = message[Wire.questionKey] as? String ?? ""
+        let source = (message[Wire.sourceKey] as? String).flatMap(WatchAnswer.Source.init) ?? .none
+        let speak = message[Wire.speakKey] as? Bool ?? false
+        Task { @MainActor in
+            self.wakeReply = WakeReply(question: question, text: text, source: source)
+            WKInterfaceDevice.current().play(.notification)
+            if speak { self.wakeSpeaker.speak(text) }
         }
     }
 

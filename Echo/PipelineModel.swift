@@ -92,10 +92,13 @@ final class PipelineModel {
     func setReachable(_ value: Bool) { watchReachable = value }
 
     /// A new capture session for `dayId` (today unless the watch says otherwise). That day starts clean; other days stay.
-    func sessionStarted(total: Double, dayId: String? = nil) async {
+    /// A watch that listens live starts a session every time it resumes, and what it already heard today must stay (`keepExisting`).
+    func sessionStarted(total: Double, dayId: String? = nil, keepExisting: Bool = false) async {
         let day = dayId ?? DayID.today(now: now())
-        await store.deleteDay(day)
-        chunks.removeAll { $0.isOn(day) }
+        if !keepExisting {
+            await store.deleteDay(day)
+            chunks.removeAll { $0.isOn(day) }
+        }
         activeDayId = day
         await purgeExpired()
         recordedSeconds = 0

@@ -29,6 +29,9 @@ extension Wire {
     static let dueKey = "due"
     static let forget = "forget"             // watch -> phone: forget the last N minutes
     static let minutesKey = "minutes"
+    static let liveKey = "live"              // watch -> phone, with a session start: listening live, so keep what is already there
+    static let wakeAnswer = "wake.answer"    // phone -> watch: the answer to a question that began "Hey Echo"
+    static let sourceKey = "source"
 }
 
 /// A question the watch can ask without a keyboard.

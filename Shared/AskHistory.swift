@@ -2,7 +2,7 @@ import Foundation
 
 /// How a question was asked.
 nonisolated enum AskVia: String, Codable, Sendable, CaseIterable {
-    case typed, suggestion, voice, watch, watchVoice
+    case typed, suggestion, voice, watch, watchVoice, wakeWord
 
     var isVoice: Bool { self == .voice || self == .watchVoice }
 
@@ -14,6 +14,7 @@ nonisolated enum AskVia: String, Codable, Sendable, CaseIterable {
         case .voice: "By voice"
         case .watch: "From the watch"
         case .watchVoice: "From the watch, by voice"
+        case .wakeWord: "Said \"Hey Echo\""
         }
     }
 }

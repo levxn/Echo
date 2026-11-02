@@ -13,10 +13,10 @@ struct ContentView: View {
 
     private var title: String {
         switch engine.phase {
-        case .idle: "Ready"
+        case .idle: engine.problem ?? "Ready"
         case .running: "Listening"
         case .paused: "Paused"
-        case .finished: "Day captured"
+        case .finished: engine.wasLive ? "Stopped" : "Day captured"
         }
     }
 
@@ -101,16 +101,16 @@ struct ContentView: View {
 
     private var buttonTitle: String {
         switch engine.phase {
-        case .running: "Pause"
+        case .running: engine.isLive ? "Stop" : "Pause"
         case .paused: "Resume"
-        case .idle: "Start day"
-        case .finished: "Replay"
+        case .idle: CaptureEngine.listensLive() ? "Start listening" : "Start day"
+        case .finished: CaptureEngine.listensLive() ? "Listen again" : "Replay"
         }
     }
 
     private var buttonSymbol: String {
         switch engine.phase {
-        case .running: "pause.fill"
+        case .running: engine.isLive ? "stop.fill" : "pause.fill"
         case .paused: "play.fill"
         case .idle: "play.fill"
         case .finished: "arrow.counterclockwise"
@@ -119,16 +119,16 @@ struct ContentView: View {
 
     private var buttonLabel: String {
         switch engine.phase {
-        case .running: "Pause listening"
+        case .running: engine.isLive ? "Stop listening" : "Pause listening"
         case .paused: "Resume listening"
-        case .idle: "Start the day"
-        case .finished: "Replay the day"
+        case .idle: CaptureEngine.listensLive() ? "Start listening" : "Start the day"
+        case .finished: CaptureEngine.listensLive() ? "Listen again" : "Replay the day"
         }
     }
 
     private func primaryAction() {
         switch engine.phase {
-        case .idle, .finished: engine.start()
+        case .idle, .finished: engine.begin()
         case .running, .paused: engine.togglePause()
         }
     }

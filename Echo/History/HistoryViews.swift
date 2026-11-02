@@ -37,6 +37,7 @@ extension AskVia {
         case .voice: "mic.fill"
         case .watch: "applewatch"
         case .watchVoice: "applewatch.radiowaves.left.and.right"
+        case .wakeWord: "waveform.badge.mic"
         }
     }
 }

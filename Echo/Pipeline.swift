@@ -19,6 +19,9 @@ final class Pipeline {
     var watcher: PromiseWatcher?
     /// Knows which places must not be recorded in (set by the app).
     var places: PlacesModel?
+    /// Told a question that began "Hey Echo" (set by the app, which answers it on the watch).
+    var onWakeQuestion: ((String) -> Void)?
+    private var wakeGate = WakeWordGate()
     private var pending: [ChunkRecord] = []
     private var running = false
 
@@ -92,6 +95,20 @@ final class Pipeline {
                 await model.store.removeAudio(named: chunk.audioFile)
                 Log.pipe.info("chunk \(chunk.index) dropped: off the record")
                 return
+            }
+            // "Hey Echo, ...": a command, not conversation. It is answered and then forgotten: nothing of it is kept.
+            if let onWakeQuestion {
+                let outcome = wakeGate.decide(transcript: text, now: model.now())
+                if outcome != .conversation {
+                    if case .question(let q) = outcome { onWakeQuestion(q) }
+                    chunk.status = .dropped
+                    chunk.transcript = nil
+                    chunk.confirmedSeconds = 0
+                    model.put(chunk)
+                    await model.store.removeAudio(named: chunk.audioFile)
+                    Log.pipe.info("chunk \(chunk.index) dropped: a command to Echo")
+                    return
+                }
             }
             chunk.transcript = text
             chunk.status = .asr

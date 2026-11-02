@@ -230,6 +230,14 @@ struct RootView: View {
         watcher.onCaught = { promise in
             if !link.sendPromiseCaught(promise) { Task { await reminders.scheduler.postCaught(id: promise.id, body: promise.sentence) } }
         }
+        // "Hey Echo, ...": answered like any question, and the answer goes to the watch.
+        link.wakeQuestion = { question in
+            Task {
+                var reply = await ask.quickAnswer(question, via: .wakeWord)
+                reply.speak = profile.speakVoiceAnswers
+                link.sendWakeAnswer(question: question, answer: reply)
+            }
+        }
         // Siri and Shortcuts use these same live models while the app is running.
         IntentHub.shared.ask = { question in await ask.quickAnswer(question, via: .typed) }
         IntentHub.shared.forget = { await forgetRecent(minutes: $0) }

@@ -3,9 +3,9 @@ import Observation
 import os
 import WatchKit
 
-/// Replays the bundled demo day through the stage-1 VAD as if it were a live microphone,
-/// and hands each speech segment to the link. In a production build the frame source would be
-/// an AVAudioEngine tap; everything after `push(frame)` stays the same.
+/// Hands each speech segment to the link. On a watch it listens to the microphone (all day, kept running by a workout session);
+/// in a simulator it replays a bundled day through the same stage-1 VAD as if it were the microphone. Everything after
+/// the detector is the same either way.
 @MainActor
 @Observable
 final class CaptureEngine {
@@ -25,8 +25,25 @@ final class CaptureEngine {
 
     let link: WatchLink
     private var task: Task<Void, Never>?
+    private let microphone = MicrophoneSource()
+    private let keepAlive: any BackgroundKeepAlive = WorkoutBackgroundCapture()
+    /// Why the microphone couldn't be used, to show on the watch.
+    private(set) var problem: String?
 
     init(link: WatchLink) { self.link = link }
+
+    /// A real watch listens to its microphone; a simulator replays the recorded day (`-live-mic` forces the microphone there).
+    static func listensLive(arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
+        #if targetEnvironment(simulator)
+        return arguments.contains("-live-mic")
+        #else
+        return true
+        #endif
+    }
+
+    private var liveSegmenter: LiveSegmenter?
+    private var liveOrigin = Date()
+    private var index = 0
 
     private let location = WatchLocation()
     private var lastAnnounce = Date()
@@ -44,6 +61,11 @@ final class CaptureEngine {
     /// 0 = a day for today; -7 = the recording of a week ago (a different day, kept alongside today's on the phone).
     private var dayOffset = 0
 
+    /// The primary button: listen live, or replay the day.
+    func begin(dayOffset: Int = 0) {
+        if Self.listensLive() && dayOffset == 0 { startLive() } else { start(dayOffset: dayOffset) }
+    }
+
     func start(dayOffset: Int = 0) {
         guard phase == .idle || phase == .finished else { return }
         self.dayOffset = dayOffset
@@ -55,11 +77,96 @@ final class CaptureEngine {
 
     func togglePause() {
         switch phase {
+        case .running where isLive: stopLive()
         case .running: phase = .paused
         case .paused: phase = .running
         default: break
         }
     }
+
+    // MARK: Listening live
+
+    func startLive() {
+        guard phase == .idle || phase == .finished || phase == .paused, liveSegmenter == nil else { return }
+        captured = 0; keptSeconds = 0; recordedSeconds = 0; progress = 0; problem = nil
+        link.resetCounters()
+        phase = .running
+        task = Task { await runLive() }
+    }
+
+    private func runLive() async {
+        let segmenter = LiveSegmenter()
+        liveSegmenter = segmenter
+        liveOrigin = Date()
+        let stayingAwake = await keepAlive.begin()
+        Log.app.info("listening live; background capture \(stayingAwake ? "on" : "off")")
+        // Segments arrive on the audio thread; they are passed to the main actor in order.
+        let (segments, continuation) = AsyncStream<SpeechSegment>.makeStream()
+        liveContinuation = continuation
+        do {
+            try await microphone.start { samples in
+                for segment in segmenter.push(samples) { continuation.yield(segment) }
+            }
+        } catch {
+            liveContinuation = nil
+            problem = (error as? MicrophoneSource.Failure) == .denied ? "Microphone is off for Echo" : "Microphone unavailable"
+            continuation.finish()
+            liveSegmenter = nil
+            await keepAlive.end()
+            phase = .idle
+            return
+        }
+        await link.sendSession(state: "started", recorded: 0, total: 0, dayOffset: 0, live: true)
+        announceIfDue(starting: true)
+        location.start()
+        let origin = liveOrigin
+
+        let meter = Task { @MainActor in
+            while !Task.isCancelled {
+                speaking = segmenter.isSpeaking
+                level = segmenter.level
+                recordedSeconds = Date().timeIntervalSince(origin)
+                link.recordedSoFar = recordedSeconds
+                announceIfDue()
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+        for await segment in segments { emitLive(segment) }
+        meter.cancel()
+        // Listening stopped: whatever was being said is kept too.
+        if let last = segmenter.finish() { emitLive(last) }
+        location.stop()
+        speaking = false; level = 0
+        liveSegmenter = nil
+        await keepAlive.end()
+        phase = .finished
+        await link.sendSession(state: "finished", recorded: recordedSeconds, total: recordedSeconds, count: link.enqueuedTotal)
+    }
+
+    private var liveContinuation: AsyncStream<SpeechSegment>.Continuation?
+
+    private func emitLive(_ seg: SpeechSegment) {
+        let wall = LiveClock.wallSeconds(origin: liveOrigin, offset: seg.startSeconds)
+        let meta = ChunkMeta(id: UUID().uuidString, index: LiveClock.index(wallSeconds: wall), wallStart: wall, fileOffset: seg.startSeconds,
+                             duration: seg.duration, sampleRate: seg.sampleRate, peakDb: seg.peakDb, meanDb: seg.meanDb,
+                             sampleCount: seg.samples.count, coordinate: location.latest?.coarse())
+        captured += 1
+        keptSeconds += seg.duration
+        link.enqueue(meta, samples: seg.samples)
+    }
+
+    func stopLive() {
+        guard liveSegmenter != nil else { return }
+        microphone.stop()
+        liveContinuation?.finish()   // ends the stream of segments, which finishes the session above
+        liveContinuation = nil
+    }
+
+    /// True once the last capture was from the microphone (for the title after it stops).
+    var wasLive: Bool { CaptureEngine.listensLive() }
+
+    /// True while listening to the microphone (as opposed to replaying a day).
+    var isLive: Bool { liveSegmenter != nil }
 
     private func run() async {
         let name = dayOffset < 0 ? "demo_day_prev" : "demo_day"
@@ -85,7 +192,7 @@ final class CaptureEngine {
         let tickSeconds = 0.05
         let framesPerTick = max(1, Int((tickSeconds * speed) / (Double(frame) / Double(rate))))
         var cursor = 0
-        var index = 0
+        index = 0
 
         func emit(_ seg: SpeechSegment) {
             let meta = ChunkMeta(

@@ -34,6 +34,21 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         return true
     }
 
+    /// Set by the app: answers a question that began "Hey Echo" and sends the answer to the watch.
+    var wakeQuestion: ((String) -> Void)?
+
+    /// Shows the watch the answer to a question that began "Hey Echo". Queued for later if the watch isn't reachable now.
+    func sendWakeAnswer(question: String, answer: WatchAnswer) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        let message: [String: Any] = [Wire.typeKey: Wire.wakeAnswer, Wire.questionKey: question, Wire.textKey: answer.text,
+                                      Wire.sourceKey: answer.source.rawValue, Wire.speakKey: answer.speak]
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: nil) { error in Log.link.error("couldn't send the answer to the watch: \(error.localizedDescription)") }
+        } else {
+            WCSession.default.transferUserInfo(message)
+        }
+    }
+
     /// Tells the watch whether to announce that it is listening. Delivered whenever the watch next wakes, even if it is away now.
     func sendSettings(announce: Bool) { sendContext([Wire.announceKey: announce]) }
 
@@ -86,7 +101,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         let total = message[Wire.totalKey] as? Double ?? 0
         if message[Wire.stateKey] as? String == "started" {
             let offset = message[Wire.dayOffsetKey] as? Int ?? 0
-            await model.sessionStarted(total: total, dayId: DayID.id(offset: offset, from: model.now()))
+            await model.sessionStarted(total: total, dayId: DayID.id(offset: offset, from: model.now()), keepExisting: message[Wire.liveKey] as? Bool ?? false)
         } else {
             model.sessionFinished(recorded: recorded, expectedChunks: message[Wire.countKey] as? Int ?? 0)
         }

@@ -31,6 +31,7 @@ struct EchoApp: App {
         _watcher = State(initialValue: watcher)
         let link = PhoneLink(model: model)
         link.onChunkReceived = { pipeline.enqueue($0) }
+        pipeline.onWakeQuestion = { [link] question in link.wakeQuestion?(question) }
         _pipeline = State(initialValue: pipeline)
         _link = State(initialValue: link)
     }
