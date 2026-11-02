@@ -1,6 +1,6 @@
 <div align="center">
 
-# Echo
+<h1><img src="docs/media/icon.png" alt="Echo app icon" width="40" align="top">&nbsp;Echo</h1>
 
 ### A private memory for your day
 
