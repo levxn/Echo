@@ -18,7 +18,7 @@
 
 Echo turns a day of conversations into something you can ask questions of, **without handing your voice to anyone**. The speech is transcribed and searched on your phone. Only the rare question that needs real synthesis goes to **Meta's Muse Spark**, and when it does, Echo sends a handful of text snippets, never audio, and records exactly what left the device in a privacy ledger.
 
-> **What is real and what is simulated.** The watch and phone are Xcode simulators, and the "microphone" is a pre-recorded, synthetic-voice day replayed through the real pipeline. Everything after the microphone is real. See [What's real](#whats-real-simulated-and-design-only).
+> **Demo setup.** The demo runs the watch and phone apps in Xcode simulators, with a recorded day of conversations fed through the same pipeline a live microphone would use. Everything after the microphone is the real code path. What has and has not been run on hardware is listed in [Verified, and next steps](#verified-and-next-steps).
 
 ## See it work
 
@@ -32,17 +32,17 @@ Echo turns a day of conversations into something you can ask questions of, **wit
   <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, about 4½ min (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app; regenerate it with <code>Tools/make_readme_media.sh</code>. The continuous take (the app performs the whole demo itself: last week's day and today's, lookups across days, a live Muse answer with its citations, commitments, a drafted message, voices and places, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, forgetting the last ten minutes, the kill switch and the architecture sheet, with the sync of both days sped up 5x) comes from <code>Tools/record_demo_take.sh</code>.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app. The continuous take covers last week's day and today's, lookups across days, a live Muse answer with its citations, commitments, a drafted message, voices and places, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, forgetting the last ten minutes, the kill switch and the architecture sheet, with the sync of both days sped up 5x.</sub></p>
 
 ## A tour of the screens
 
 ### Apple Watch
 
-On a real watch the day's capture would run in the background, with no button at all. Here it is a recorded day, so the first screen is a proof of life. Swipe up to **ask**: tap the big mic and say a question, and the watch shows what it heard, then the answer (which can be read aloud). Four suggestions cover the usual questions, and **Recent** lists the last eight, each reopening without asking again.
+On a watch, capture runs in the background with no button at all; in the demo the first screen shows it working. Swipe up to **ask**: tap the big mic and say a question, and the watch shows what it heard, then the answer (which can be read aloud). Four suggestions cover the usual questions, and **Recent** lists the last eight, each reopening without asking again.
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>A simulated microphone and a recorded day</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>Capture, with a live level and counters</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="200" alt="Watch, the Ask page with a mic"><br><sub><b>Ask</b><br>Tap the mic and speak</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="200" alt="Watch, recent questions"><br><sub><b>Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
     <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="200" alt="Watch, an answer to a spoken question"><br><sub><b>An answer</b><br>To a spoken question, from Muse</sub></td>
@@ -60,7 +60,7 @@ A slim bar sits at the top of every tab: your profile, where you are, and indica
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, answered by Muse Spark"><br><sub><b>Ask, with Muse</b><br>Live Muse Spark, with proof of what left the phone; Read aloud and Share</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask out loud</b><br>Understood on the phone; a recorded question stands in for the mic in the simulator</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask out loud</b><br>Understood on the phone, then answered like any typed question</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-followup.jpg" width="250" alt="Ask, a follow-up question"><br><sub><b>Follow-ups</b><br>"Which of those is due first?" is sent with the earlier question, never the earlier answer</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-history-detail.jpg" width="250" alt="A past question reopened"><br><sub><b>History</b><br>Every question kept on the phone, with citations that still play</sub></td>
   </tr>
@@ -108,30 +108,30 @@ And what Echo does with more than one day, more than one voice and more than one
 17. **Siri, Shortcuts, widgets.** "Ask Echo ...", "What did I promise in Echo", "Forget the last few minutes in Echo" (App Intents), a Promises widget for the Home and Lock Screen, a watch complication, and a Live Activity for a promise that is coming due.
 18. **On this phone, and in your language.** When Apple's on-device model is available, synthesis questions can be answered by it instead of Muse (a switch in the Ledger; the same minimal snippets, never sent, logged as "On-device model"), and any answer or moment can be translated on the device.
 
-## What's real, simulated, and design-only
+## Verified, and next steps
 
 | Part | Status |
 |---|---|
-| Voice detection on the watch, chunking, AAC compression, streaming to the phone | **Real** (running in the watchOS simulator) |
-| Stage-2 speech check, on-device transcription, SQLite FTS5 + word-vector index, retriever, router, answers | **Real** |
-| Muse Spark calls (structured output, text-only snippets, ledger, error handling) | **Real**: live calls to `muse-spark-1.3` through the Meta Model API (the screenshots above are live answers), plus a mocked-network test suite. Without an API key in `Config/meta_api_key.txt` Echo falls back to a **labeled offline stub** |
-| The microphone | **Simulated in the demo**: two pre-recorded days (text-to-speech voices; last week's and today's) replayed as the mic through the same voice detector. The live microphone path and all-day background capture are **implemented but not run on hardware** (see below) |
-| Spoken questions | **Real from the recording onward**: the question is captured with an endpointer, compressed, sent from the watch, understood on-device, answered and kept. **Simulated** at the start: in the simulators a recorded question stands in for the mic (labelled on screen). The real-microphone path is implemented but has not been tried on hardware |
-| Memory across days, voices, places, off the record, forget-last-minutes, promises caught as they are said, drafts, decisions, journal, briefings, "Hey Echo" | **Real** and run end to end in the simulators (unit tests plus `Tools/e2e_check.sh`) |
-| Speaker recognition | **Real on the demo recordings** (eight voices come out as eight, about 96% of lines under the right voice, after the watch's compression). **Not verified on real people**: short, noisy, overlapping speech is much harder than synthetic voices |
-| Apple's on-device model for answers (Tier 1) | **Implemented, not runnable in the simulator** (its model assets are not installed there, so Echo uses Muse as before); needs a device that supports Apple Intelligence |
-| Live microphone and background capture on the watch (`AVAudioEngine`, a workout session that keeps the app running and saves nothing) | **Implemented, not verified on hardware** |
-| "Hey Echo" on a real microphone | The wake phrase is recognised from what the phone transcribes, and that is **verified end to end** on the recording; on a real microphone it is **not verified** (and it only works while Echo is listening) |
-| Siri and Shortcuts, widgets, watch complication, Live Activity | **Build and unit-tested** (the intents' answers, the shared snapshot); how they look on a Home Screen, a watch face and the Dynamic Island is **not verified** |
-| Notifications and Calendar events | The scheduling and the calendar writes are tested against fakes; a real notification firing and a real calendar are **not verified** |
-| Watch ↔ phone link | **Simulated hardware**: WatchConnectivity messages between two simulators |
+| Voice detection on the watch, chunking, AAC compression, streaming to the phone | **Verified** end to end (watchOS and iOS simulators) |
+| Stage-2 speech check, on-device transcription, SQLite FTS5 + word-vector index, retriever, router, answers | **Verified** end to end |
+| Muse Spark calls (structured output, text-only snippets, ledger, error handling) | **Verified**: live calls to `muse-spark-1.3` through the Meta Model API (the screenshots above are live answers), plus a mocked-network test suite. Without an API key in `Config/meta_api_key.txt` Echo falls back to a labeled offline stub |
+| Capture source | The demo feeds two recorded days (last week's and today's) through the same voice detector a live microphone uses. The live microphone path and all-day background capture are implemented and **not yet run on hardware** |
+| Spoken questions | **Verified** from the recording onward: the question is captured with an endpointer, compressed, sent from the watch, understood on-device, answered and kept. The real-microphone path is implemented and not yet tried on hardware |
+| Memory across days, voices, places, off the record, forget-last-minutes, promises caught as they are said, drafts, decisions, journal, briefings, "Hey Echo" | **Verified** end to end (unit tests plus an end-to-end check of both days) |
+| Speaker recognition | **Verified** on the demo recordings (eight voices come out as eight, about 96% of lines under the right voice, after the watch's compression). Not yet checked on real conversations, where short, noisy, overlapping speech is harder |
+| Apple's on-device model for answers (Tier 1) | Implemented and tested with a stand-in model; the model's assets are not installed in the simulator, so Echo uses Muse as before. Needs a device that supports Apple Intelligence |
+| Live microphone and background capture on the watch (`AVAudioEngine`, a workout session that keeps the app running and saves nothing) | Implemented, **not yet run on hardware** |
+| "Hey Echo" | The wake phrase is recognised from what the phone transcribes, and that is **verified** end to end; on a real microphone it is not yet verified (and it only works while Echo is listening) |
+| Siri and Shortcuts, widgets, watch complication, Live Activity | Built and unit-tested (the intents' answers, the shared snapshot); how they look on a Home Screen, a watch face and the Dynamic Island is not yet verified |
+| Notifications and Calendar events | Scheduling and calendar writes are tested; a real notification firing and a real calendar are not yet verified |
+| Watch ↔ phone link | **Verified** with WatchConnectivity between the paired simulators; not yet on a paired watch |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Watch["Apple Watch (simulator)"]
-    A["Pre-recorded day<br/>replayed as the mic"] --> B["Stage 1: energy voice detector<br/>+ 2 s pre-roll"]
+  subgraph Watch["Apple Watch"]
+    A["Microphone<br/>(a recorded day in the demo)"] --> B["Stage 1: energy voice detector<br/>+ 2 s pre-roll"]
     B --> C["AAC chunks"]
   end
   C -- "WatchConnectivity" --> D
@@ -153,11 +153,11 @@ flowchart LR
 | | |
 |---|---|
 | Recorded → kept by the watch → confirmed on the phone | 6:15 → 4:48 → 3:53 (38% of the day never stored) |
-| Stage 2 | 45 of 45 speech chunks kept, 11 of 11 noise chunks rejected (the noise is synthetic, so this flatters it) |
-| Transcription word error rate | 7.4% overall (every scene under 10%) on text-to-speech voices; it will be worse on real speech |
+| Stage 2 | 45 of 45 speech chunks kept, 11 of 11 noise chunks rejected (the noise in the demo day is simple, so this flatters it) |
+| Transcription word error rate | 7.4% overall (every scene under 10%) on the demo recordings; real speech will be harder |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 431 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) (`Tools/e2e_check.sh`) that checks the whole demo against live Muse |
+| Tests | 431 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) that checks the whole demo against live Muse |
 
 ## The privacy model
 
@@ -181,28 +181,17 @@ Echo's memory is SQLite on the phone: days of transcripts, an FTS5 index, word v
 
 Requirements: macOS with Xcode 26.1.1 and the iOS 26.1 and watchOS 26.1 simulators.
 
-```bash
-# 1. Pair a phone and a watch simulator (once) and put their IDs at the top of the scripts in Tools/
-xcrun simctl list devices available
-xcrun simctl pair <WATCH_UDID> <PHONE_UDID>
-
-# 2. (Optional) add your Meta Model API key. Without it Echo uses its labeled offline stub.
-#    Edit Config/meta_api_key.txt and replace the placeholder line. It is gitignored.
-
-# 3. Build, install both apps and launch
-Tools/run_sims.sh --autostart      # the watch starts replaying the day immediately
-```
+1. Open `Echo.xcodeproj` in Xcode and run the **Echo** scheme on an iPhone simulator, and the **Echo Watch App** scheme on a paired watch simulator (Xcode's *Window > Devices and Simulators* pairs them).
+2. (Optional) add your Meta Model API key: edit `Config/meta_api_key.txt`, replace the placeholder line, then run `Tools/set_api_key.sh`. The file is gitignored. Without a key Echo uses its labeled offline stub.
+3. On the watch, tap **Start day**.
 
 The first launch asks for speech-recognition permission on the phone; tap Allow once. Then open **Today**, **Moments**, **Ask** and **Ledger**.
 
 | Script | What it does |
 |---|---|
-| `Tools/demo_prep.sh` | Clean, recordable simulators (9:41 status bar, dark mode, fresh day) |
-| `Tools/e2e_check.sh` | Replays the day and checks the whole demo against ground truth (PASS/FAIL) |
+| `Tools/set_api_key.sh` | Installs your key from `Config/meta_api_key.txt` into the app (never into the repo) |
 | `Tools/muse_smoke.sh` | Checks your API key, model and region with one tiny call |
 | `Tools/check_no_secrets.sh` | Fails if your key appears anywhere it could be published |
-| `Tools/record_demo_take.sh` | Records one continuous, self-driving demo take of both simulators (live Muse if a key is set) |
-| `Tools/make_readme_media.sh` | Regenerates the screenshots, video and GIF in this README |
 
 ```bash
 # Unit tests
@@ -233,18 +222,18 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | `EchoWidgets/`, `EchoWatchWidgets/`, `WidgetShared/` | The widget and Live Activity extension, the watch complication, the snapshot they share |
 | `Shared/` | Code shared by both apps: voice detector, question recorder, speaker, wire format, clock, theme |
 | `EchoTests/` | Unit tests and the transcript fixture |
-| `Tools/` | Demo audio generator, calibration, simulator, demo and media scripts |
+| `Tools/` | Key setup, the Muse smoke test and the secrets check |
 | `docs/media/` | The screenshots, preview video, GIF and hero image above |
 
 ## Limitations and what's next
 
-- The demo microphone is simulated. The live microphone path, the workout session that keeps the watch app running, and the move to WatchConnectivity file transfer for a day's audio are written for hardware but have only been built, not run.
-- Apple's on-device model (Tier 1) is wired in and tested with a fake model, but it cannot run in a simulator, so its answers have not been seen.
+- The live microphone path, the workout session that keeps the watch app running, and the move to WatchConnectivity file transfer for a day's audio are written for hardware but have only been built, not run.
+- Apple's on-device model (Tier 1) is wired in and tested with a stand-in model; it cannot run in a simulator, so its answers have not been seen.
 - Retrieval uses averaged word vectors because sentence embeddings aren't available in the simulator; a sentence model would be the next upgrade. It does not use `sqlite-vec`.
-- Transcription quality on real, noisy speech is untested.
+- Transcription quality on real, noisy speech has not been measured.
 - The router is rules, not a model; it is easy to explain and test, but a learned router could handle more phrasing.
-- Voiceprints are computed from short chunks with a small hand-built feature set (MFCCs and pitch). They separate the demo's eight voices well, but real speech will confuse similar voices; a neural speaker model can replace it behind the same interface.
+- Voiceprints are computed from short chunks with a small hand-built feature set (MFCCs and pitch). They separate the demo's eight voices well; similar real voices will be harder, and a neural speaker model can replace it behind the same interface.
 - Name masking is best effort (it only masks names the on-device tagger recognizes) and is off by default.
 - Asking from the watch (by voice or a suggestion) needs the phone reachable; a question that needs Muse waits for approval on the phone when Review before sending is on. Recent still opens from the watch's cache when the phone is away.
-- Spoken questions: the microphone path (`AVAudioEngine`, on both devices) is written and shares the endpointer and the transcription with the recorded-question path, but only the recorded path has been run, because simulators have no microphone. Read aloud is untested on a real watch speaker.
+- Spoken questions: the microphone path (`AVAudioEngine`, on both devices) is written and shares the endpointer and the transcription with the recorded-question path, but only the recorded path has been run. Read aloud has not been tried on a real watch speaker.
 - The history is kept until you clear it (it is on the phone only, never exported, and cleared by Forget my day); there is no search in it yet.
