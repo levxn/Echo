@@ -1,7 +1,41 @@
 import SwiftUI
 
-/// The Echo logo: uneven sound bars inside a shiny ring tilted 45 degrees, its back half behind the bars and its front half in front.
-/// `frame` says how it looks right now, so the same view is the finished logo, the idling one and every moment of the launch animation.
+/// A band that follows an ellipse (half-axes `a` and `b`) and changes thickness along it. With `b` at 0 it is a flat streak.
+struct OrbitBand: Shape {
+    var a: CGFloat
+    var b: CGFloat
+    var thetaRange: ClosedRange<Double> = 0...(2 * .pi)
+    var width: (Double) -> CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let steps = 140
+        var outer: [CGPoint] = [], inner: [CGPoint] = []
+        for k in 0...steps {
+            let theta = thetaRange.lowerBound + (thetaRange.upperBound - thetaRange.lowerBound) * Double(k) / Double(steps)
+            let p = CGPoint(x: a * CGFloat(cos(theta)), y: b * CGFloat(sin(theta)))
+            var n = CGPoint(x: b * CGFloat(cos(theta)), y: a * CGFloat(sin(theta)))     // the ellipse's outward direction
+            let length = hypot(n.x, n.y)
+            n = length < 0.0001 ? CGPoint(x: 0, y: 1) : CGPoint(x: n.x / length, y: n.y / length)
+            let half = width(theta) / 2
+            outer.append(CGPoint(x: c.x + p.x + n.x * half, y: c.y + p.y + n.y * half))
+            inner.append(CGPoint(x: c.x + p.x - n.x * half, y: c.y + p.y - n.y * half))
+        }
+        // One connected outline: out along the outer edge, back along the inner edge. (Two `addLines` calls would be two
+        // separate shapes, each closed with a straight chord.)
+        var path = Path()
+        guard let first = outer.first else { return path }
+        path.move(to: first)
+        for point in outer.dropFirst() { path.addLine(to: point) }
+        for point in inner.reversed() { path.addLine(to: point) }
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The Echo logo: uneven sound bars inside a glossy orbit tilted 45 degrees. The orbit is a hairline behind the bars and swells into a
+/// bright, thick sweep where it passes in front of them. `frame` says how it looks right now, so the same view is the finished
+/// logo, the idling one and every moment of the launch animation.
 struct EchoLogo: View {
     var height: CGFloat = 120
     var frame: LaunchFrame = LaunchChoreography.idle(at: 0)
@@ -13,15 +47,7 @@ struct EchoLogo: View {
         AngularGradient(colors: [Palette.teal, .white, Palette.violet, Palette.teal], center: .center, angle: .degrees(360 * frame.shine))
     }
 
-    private func arc(from: CGFloat, to: CGFloat, width: CGFloat, size: CGSize) -> some View {
-        Ellipse()
-            .trim(from: from, to: to)
-            .stroke(gradient, style: StrokeStyle(lineWidth: width, lineCap: .butt))
-            .frame(width: size.width, height: size.height)
-            .rotationEffect(.degrees(frame.ringDegrees))
-    }
-
-    /// The glint: a point on the front half of the ring that travels once round each cycle.
+    /// The glint: a point on the front of the orbit that travels once round each cycle.
     private func glintOffset(a: CGFloat, b: CGFloat) -> CGSize {
         let theta = Double.pi * frame.shine
         let x = Double(a) * cos(theta), y = Double(b) * sin(theta)
@@ -30,13 +56,19 @@ struct EchoLogo: View {
     }
 
     var body: some View {
+        let box = height * 2.1
         let a = height * frame.ringHalfWidth, b = height * LogoGeometry.ringB * frame.ringOpen
-        let size = CGSize(width: max(1, 2 * a), height: max(0.5, 2 * b))
-        let stroke = height * LogoGeometry.ringWidth
         let glintStrength = frame.ringOpen > 0.9 ? sin(.pi * frame.shine) : 0
-        ZStack {
-            arc(from: 0.5, to: 1, width: stroke * 0.8, size: size)          // the back of the ring, behind the bars
-                .opacity(0.45 * frame.ringOpacity)
+        func band(range: ClosedRange<Double> = 0...(2 * .pi), _ w: @escaping (Double) -> Double) -> some View {
+            OrbitBand(a: a, b: b, thetaRange: range) { CGFloat(w($0)) * height }
+                .fill(gradient)
+                .frame(width: box, height: box)
+                .rotationEffect(.degrees(frame.ringDegrees))
+        }
+        return ZStack {
+            // The whole orbit, dim, behind the bars.
+            band { LogoGeometry.width(at: $0) }
+                .opacity(0.5 * frame.ringOpacity)
             HStack(spacing: gap) {
                 ForEach(frame.levels.indices, id: \.self) { i in
                     Capsule()
@@ -45,9 +77,16 @@ struct EchoLogo: View {
                 }
             }
             .shadow(color: Palette.teal.opacity(0.75 * frame.glow), radius: height * 0.09)
-            arc(from: 0, to: 0.5, width: stroke, size: size)                 // the front of the ring, across the bars
+            // The bright front of the orbit, across the bars, thinning into the back at both ends.
+            band(range: 0...Double.pi) { LogoGeometry.frontWidth(at: $0) }
                 .shadow(color: Palette.teal.opacity(0.8 * frame.glow), radius: height * 0.06)
                 .opacity(frame.ringOpacity)
+            // A thin white highlight down the middle of the front gives it a polished, glassy look.
+            OrbitBand(a: a, b: b, thetaRange: 0.25...(Double.pi - 0.25)) { CGFloat(LogoGeometry.frontWidth(at: $0)) * height * 0.22 }
+                .fill(.white.opacity(0.9))
+                .frame(width: box, height: box)
+                .rotationEffect(.degrees(frame.ringDegrees))
+                .opacity(frame.ringOpacity * frame.ringOpen)
             Circle()
                 .fill(.white)
                 .frame(width: height * 0.07, height: height * 0.07)
@@ -56,7 +95,7 @@ struct EchoLogo: View {
                 .offset(glintOffset(a: a, b: b))
                 .opacity(glintStrength * frame.ringOpacity)
         }
-        .frame(width: height * 2.1, height: height * 2.1)
+        .frame(width: box, height: box)
         .accessibilityHidden(true)
     }
 }
@@ -115,7 +154,7 @@ struct LaunchMark: View {
             // The screen the logo sits on. The app shows through a circle that grows from the logo's centre.
             ZStack {
                 Palette.background
-                AuroraBackground(calm: true)
+                AuroraBackground(calm: true, fps: 15)
                 RadialGradient(colors: [Palette.teal.opacity(0.55), .clear], center: .center, startRadius: 0, endRadius: 260)
                     .scaleEffect(1 + 1.6 * frame.bloom)
                     .opacity(frame.bloom)
@@ -132,7 +171,6 @@ struct LaunchMark: View {
             Circle()
                 .strokeBorder(AngularGradient(colors: [.white, Palette.teal, Palette.blue, .white], center: .center), lineWidth: 5)
                 .frame(width: reach * frame.reveal, height: reach * frame.reveal)
-                .blur(radius: 1.5)
                 .shadow(color: Palette.teal.opacity(0.8), radius: 14)
                 .opacity(frame.reveal > 0.001 && frame.reveal < 0.999 ? 0.9 * (1 - frame.reveal) + 0.1 : 0)
         }

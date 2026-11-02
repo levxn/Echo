@@ -12,10 +12,21 @@ nonisolated enum LogoGeometry {
     /// The ring's long and short half-axes, its stroke, and its tilt (counter-clockwise on screen).
     static let ringA = 1.05
     static let ringB = 0.50
-    static let ringWidth = 0.05
+    /// The orbit is thickest where it passes in front of the bars and thins to a hairline behind them.
+    static let ringWidth = 0.085
     static let ringDegrees = -45.0
     /// The shortest a bar can be: a dot in a line.
     static let floor = 0.07
+
+    /// How thick the orbit is at angle `theta` round it (0 to 2 pi; pi/2 is the middle of the front). Never zero, so the back stays a hairline.
+    static func width(at theta: Double) -> Double {
+        ringWidth * (0.16 + 0.84 * pow(0.5 + 0.5 * sin(theta), 1.4))
+    }
+
+    /// The bright front layer: the same orbit over the front half only, tapering to nothing at both ends so it melts into the dim back.
+    static func frontWidth(at theta: Double) -> Double {
+        theta < 0 || theta > .pi ? 0 : width(at: theta) * pow(sin(theta), 0.55)
+    }
 }
 
 /// What is on screen at one instant of the launch animation.
@@ -42,17 +53,18 @@ nonisolated struct LaunchFrame: Equatable {
 /// back into a line; the line opens into a tilted ring while the bars rise again inside it; a glint travels round the ring; then
 /// a ring of light opens onto the app.
 nonisolated enum LaunchChoreography {
+    // The phases overlap on purpose: something is always moving, so there is no moment where the animation seems to stop.
     static let lineEnd = 0.4            // the line has drawn out
-    static let emergeStart = 0.4        // the bars start to grow out of it
-    static let liveStart = 1.1          // they are fully alive
-    static let collapseStart = 2.0      // and now they fall back into a line
-    static let collapseEnd = 2.7
-    static let ringStart = 2.7          // the line opens into the ring
-    static let ringEnd = 3.5
-    static let riseStart = 2.9          // while the bars rise again, middle first
-    static let riseDuration = 0.8
-    static let openStart = 4.0
-    static let total = 4.7
+    static let emergeStart = 0.25       // the bars start to grow out of it while it is still finishing
+    static let liveStart = 1.0          // they are fully alive
+    static let collapseStart = 1.75     // and now they fall back into a line
+    static let collapseEnd = 2.4
+    static let ringStart = 2.3          // the line opens into the orbit as the bars finish falling
+    static let ringEnd = 3.1
+    static let riseStart = 2.4          // while the bars rise again, middle first
+    static let riseDuration = 0.7
+    static let openStart = 3.35         // and the opening begins just as they arrive
+    static let total = 4.25
     /// With Reduce Motion the finished logo is shown briefly, then fades.
     static let reducedTotal = 0.6
 
@@ -91,6 +103,7 @@ nonisolated enum LaunchChoreography {
         let rowHalf = LogoGeometry.rowHalf
         let ring = easeInOutCubic((t - ringStart) / (ringEnd - ringStart))
         let halfWidth: Double = t < ringStart ? rowHalf * easeOutCubic(t / lineEnd) : lerp(rowHalf, LogoGeometry.ringA, ring)
+        let open = clamp((t - openStart) / (total - openStart))
         // The line shows at first, fades as the bars take over, comes back as they fall, and is the ring after that.
         let opacity: Double
         if t < emergeStart { opacity = min(1, t / 0.12) }
@@ -98,20 +111,22 @@ nonisolated enum LaunchChoreography {
         else if t < collapseStart { opacity = 0 }
         else if t < collapseEnd { opacity = smooth((t - collapseStart) / (collapseEnd - collapseStart)) }
         else { opacity = 1 }
-        let open = clamp((t - openStart) / (total - openStart))
-        let shine = t < ringStart ? 0 : ((t - ringStart) / 1.6).truncatingRemainder(dividingBy: 1)
+        let shine = t < ringStart ? 0 : ((t - ringStart) / 1.4).truncatingRemainder(dividingBy: 1)
         return LaunchFrame(
             levels: levels,
             ringHalfWidth: halfWidth,
             ringOpen: ring,
-            ringDegrees: LogoGeometry.ringDegrees * ring,
+            // The orbit tilts into place, then keeps turning as it opens onto the app.
+            ringDegrees: LogoGeometry.ringDegrees * ring - 28 * easeOutCubic(open),
             ringOpacity: opacity,
             shine: shine,
             glow: 0.45 + 0.4 * (levels.max() ?? 0),
-            logoScale: 1 + 0.3 * easeInOutCubic(open),
-            logoOpacity: 1 - clamp((open - 0.1) / 0.6),
-            reveal: easeInOutCubic(open),
-            bloom: sin(.pi * clamp(open * 1.4)))
+            // A slow push-in all the way through, so the logo is never still, then it rushes toward you as the app opens.
+            logoScale: 1 + 0.06 * clamp(t / openStart) + 0.4 * easeOutCubic(open),
+            logoOpacity: 1 - clamp((open - 0.12) / 0.5),
+            // Fast at the start (it takes over from the orbit's own motion) and settling at the end.
+            reveal: easeOutCubic(open),
+            bloom: sin(.pi * clamp(open * 1.3)))
     }
 
     /// The finished logo, for Reduce Motion: nothing moves and nothing expands.
