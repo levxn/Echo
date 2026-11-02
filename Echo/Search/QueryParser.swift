@@ -20,6 +20,8 @@ nonisolated struct ParsedQuery: Sendable {
     /// Normalized content words with any time phrase removed.
     let contentTokens: [String]
     let timeWindow: TimeWindow?
+    /// The days the question is about, when it names them ("yesterday", "last week").
+    var dayScope: DayScope? = nil
 }
 
 /// Splits a question into content words and an optional time anchor. Time anchors only *boost* results;
@@ -35,9 +37,14 @@ nonisolated enum QueryParser {
         ("dinner", 17.5, 21, "dinnertime"), ("evening", 17, 22, "the evening"), ("tonight", 18, 24, "tonight"),
     ]
 
-    static func parse(_ query: String) -> ParsedQuery {
+    static func parse(_ query: String, now: Date = Date(), calendar: Calendar = .current) -> ParsedQuery {
         var text = query.lowercased()
         var window: TimeWindow?
+        var scope: DayScope?
+        if let found = DayScope.parse(text, now: now, calendar: calendar) {
+            scope = found.scope
+            text = found.remainder
+        }
 
         let ns = text as NSString
         if let m = clock.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)) {
@@ -56,6 +63,6 @@ nonisolated enum QueryParser {
                 text = text.replacingOccurrences(of: p.word, with: " ")
             }
         }
-        return ParsedQuery(raw: query, contentTokens: TextNormalizer.contentTokens(text), timeWindow: window)
+        return ParsedQuery(raw: query, contentTokens: TextNormalizer.contentTokens(text), timeWindow: window, dayScope: scope)
     }
 }

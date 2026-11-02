@@ -19,7 +19,7 @@ struct MomentsView: View {
     }()
 
     var body: some View {
-        let layout = MomentsLayout.make(from: model.chunks)
+        let layout = MomentsLayout.make(from: model.sessionChunks)
         let defaults = MomentsLayout.openGroups(layout, settled: model.isSettled, mode: Self.expandMode)
         ScrollViewReader { proxy in
             ScrollView {

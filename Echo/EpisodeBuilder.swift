@@ -24,13 +24,15 @@ enum EpisodeBuilder {
     static func build(from chunks: [ChunkRecord], gap: Double = gapSeconds) -> [Episode] {
         let stored = chunks
             .filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
-            .sorted { $0.wallStart < $1.wallStart }
+            .sorted { ($0.dayId, $0.wallStart) < ($1.dayId, $1.wallStart) }
         guard !stored.isEmpty else { return [] }
 
+        // A conversation never spans two days, however close their clock times are.
         var groups: [[ChunkRecord]] = [[stored[0]]]
         for chunk in stored.dropFirst() {
             let previous = groups[groups.count - 1].last!
-            if chunk.wallStart - (previous.wallStart + previous.duration) > gap { groups.append([chunk]) } else { groups[groups.count - 1].append(chunk) }
+            if chunk.dayId != previous.dayId || chunk.wallStart - (previous.wallStart + previous.duration) > gap { groups.append([chunk]) }
+            else { groups[groups.count - 1].append(chunk) }
         }
 
         // Term frequencies per conversation, then document frequency across conversations.

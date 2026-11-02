@@ -17,6 +17,8 @@ struct RetrievalOutcome {
     /// Query terms that never occur (e.g. a name that was never said); ignored when judging confidence.
     let unknownTerms: [String]
     let timeWindow: TimeWindow?
+    /// The days the question asked about, if it said ("last week"); nil means every day.
+    var dayScope: DayScope? = nil
     let hits: [Hit]
     /// Rarity-weighted share of the known terms covered by the top three hits together.
     let coverage: Double
@@ -32,18 +34,24 @@ struct RetrievalOutcome {
 /// word vectors, merged with reciprocal-rank fusion, plus a soft boost for chunks inside a time anchor.
 struct Retriever {
     let store: ChunkStore
+    /// Replaced in tests.
+    var now: Date = Date()
 
     static let rrfK = 60.0
     static let keywordWeight = 1.0
     static let semanticWeight = 0.7
     static let semanticDepth = 10
     static let timeBoost = 0.02
+    /// When several days are remembered, a newer one's match counts a little more: close scores go to the latest fact.
+    static let recencyBoost = 0.03
 
     func search(_ query: String, limit: Int = 5) async -> RetrievalOutcome {
         let clock = ContinuousClock()
         let started = clock.now
-        let parsed = QueryParser.parse(query)
-        let corpus = await store.all().filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
+        let parsed = QueryParser.parse(query, now: now)
+        let corpus = await store.all().filter {
+            $0.status == .stored && !($0.transcript ?? "").isEmpty && (parsed.dayScope?.contains($0.dayId) ?? true)
+        }
         let byID = Dictionary(uniqueKeysWithValues: corpus.map { ($0.id, $0) })
 
         // Which chunks contain each query term, straight from FTS5 so matching agrees with ranking.
@@ -77,6 +85,13 @@ struct Retriever {
             scores[row.id, default: 0] += Self.semanticWeight / (Self.rrfK + Double(rank + 1))
         }
 
+        // Newer days win close calls.
+        let dayOrder = Array(Set(corpus.map(\.dayId))).sorted()
+        if dayOrder.count > 1 {
+            let rank = Dictionary(uniqueKeysWithValues: dayOrder.enumerated().map { ($1, Double($0) / Double(dayOrder.count - 1)) })
+            for id in scores.keys { if let c = byID[id] { scores[id]! *= 1 + Self.recencyBoost * (rank[c.dayId] ?? 1) } }
+        }
+
         let window = parsed.timeWindow
         func inWindow(_ c: ChunkRecord) -> Bool { window?.overlaps(start: c.wallStart, duration: c.duration) ?? false }
 
@@ -90,7 +105,8 @@ struct Retriever {
         }
 
         let ranked = scores.sorted { a, b in
-            a.value != b.value ? a.value > b.value : (byID[a.key]?.index ?? 0) < (byID[b.key]?.index ?? 0)
+            a.value != b.value ? a.value > b.value
+                : ((byID[a.key]?.dayId ?? "", byID[a.key]?.index ?? 0) < (byID[b.key]?.dayId ?? "", byID[b.key]?.index ?? 0))
         }.prefix(limit)
 
         let hits: [Hit] = ranked.compactMap { id, score in
@@ -114,7 +130,7 @@ struct Retriever {
         let elapsed = started.duration(to: clock.now)
         let ms = Double(elapsed.components.seconds) * 1000 + Double(elapsed.components.attoseconds) / 1e15
 
-        return RetrievalOutcome(query: query, knownTerms: known, unknownTerms: unknown, timeWindow: window,
+        return RetrievalOutcome(query: query, knownTerms: known, unknownTerms: unknown, timeWindow: window, dayScope: parsed.dayScope,
                                 hits: hits, coverage: coverage, headlineWeights: headlineWeights,
                                 corpusSize: corpus.count, elapsedMs: ms)
     }

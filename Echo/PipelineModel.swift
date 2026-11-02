@@ -7,8 +7,11 @@ import Observation
 final class PipelineModel {
     enum Session { case waiting, running, finished }
 
+    /// Every moment from every day, oldest day first.
     private(set) var chunks: [ChunkRecord] = []
     private(set) var session: Session = .waiting
+    /// The day the watch is capturing (or last captured). New moments are stamped with it.
+    private(set) var activeDayId: String
     private(set) var recordedSeconds = 0.0
     private(set) var totalSeconds = 0.0
     private(set) var watchReachable = false
@@ -17,11 +20,14 @@ final class PipelineModel {
 
     let store: ChunkStore
     private let defaults: UserDefaults
+    /// Replaced in tests.
+    var now: () -> Date = { Date() }
 
     /// `store` and `defaults` are injectable so tests can use a temporary folder and their own settings; the app uses its own.
     init(store: ChunkStore = ChunkStore(), defaults: UserDefaults = .standard) {
         self.store = store
         self.defaults = defaults
+        activeDayId = defaults.string(forKey: Key.day) ?? DayID.today()
     }
 
     /// The replay's totals survive app restarts, so the funnel still reads correctly afterwards.
@@ -30,17 +36,27 @@ final class PipelineModel {
         static let total = "echo.totalSeconds"
         static let finished = "echo.sessionFinished"
         static let expected = "echo.expectedChunks"
+        static let day = "echo.activeDay"
     }
+
+    // MARK: Which day
+
+    /// The moments of the day being captured: what the funnel and the Moments tab are about.
+    var sessionChunks: [ChunkRecord] { chunks.filter { $0.isOn(activeDayId) } }
+    /// Today's moments: what Today, its summary, commitments and people show.
+    var todayChunks: [ChunkRecord] { let today = DayID.today(now: now()); return chunks.filter { $0.isOn(today) } }
+    func chunks(on day: String) -> [ChunkRecord] { chunks.filter { $0.isOn(day) } }
 
     // MARK: Funnel (recorded -> watch kept -> phone confirmed)
 
-    var watchKeptSeconds: Double { chunks.reduce(0) { $0 + $1.duration } }
-    var phoneConfirmedSeconds: Double { chunks.reduce(0) { $0 + $1.confirmedSeconds } }
-    var arrivedCount: Int { chunks.count }
-    var checkedCount: Int { chunks.filter { $0.status != .received }.count }
-    var transcribedCount: Int { chunks.filter { $0.status == .asr || $0.status == .stored }.count }
+    var watchKeptSeconds: Double { sessionChunks.reduce(0) { $0 + $1.duration } }
+    var phoneConfirmedSeconds: Double { sessionChunks.reduce(0) { $0 + $1.confirmedSeconds } }
+    var arrivedCount: Int { sessionChunks.count }
+    var checkedCount: Int { sessionChunks.filter { $0.status != .received }.count }
+    var transcribedCount: Int { sessionChunks.filter { $0.status == .asr || $0.status == .stored }.count }
+    /// Moments kept from every day (a question can be about any of them).
     var storedCount: Int { chunks.filter { $0.status == .stored }.count }
-    var droppedCount: Int { chunks.filter { $0.status == .dropped }.count }
+    var droppedCount: Int { sessionChunks.filter { $0.status == .dropped }.count }
     /// Chunks still moving through the pipeline.
     var pendingCount: Int { chunks.filter { $0.status == .received || $0.status == .vad }.count }
     /// Snippets the watch says it sent that have not arrived yet.
@@ -70,18 +86,31 @@ final class PipelineModel {
         d.set(totalSeconds, forKey: Key.total)
         d.set(session == .finished, forKey: Key.finished)
         d.set(expectedChunks, forKey: Key.expected)
+        d.set(activeDayId, forKey: Key.day)
     }
 
     func setReachable(_ value: Bool) { watchReachable = value }
 
-    func sessionStarted(total: Double) async {
-        await store.reset()
-        chunks = []
+    /// A new capture session for `dayId` (today unless the watch says otherwise). That day starts clean; other days stay.
+    func sessionStarted(total: Double, dayId: String? = nil) async {
+        let day = dayId ?? DayID.today(now: now())
+        await store.deleteDay(day)
+        chunks.removeAll { $0.isOn(day) }
+        activeDayId = day
+        await purgeExpired()
         recordedSeconds = 0
         expectedChunks = 0
         totalSeconds = total
         session = .running
         persistSession()
+    }
+
+    /// Forgets days older than the retention setting (30 days unless the person chose otherwise).
+    func purgeExpired() async {
+        let days = defaults.object(forKey: Retention.key) as? Int ?? Retention.defaultDays
+        guard let cutoff = Retention.cutoff(days: days, now: now()) else { return }
+        await store.purge(before: cutoff)
+        chunks.removeAll { !$0.dayId.isEmpty && $0.dayId < cutoff }
     }
 
     func sessionFinished(recorded: Double, expectedChunks: Int = 0) {
@@ -111,7 +140,7 @@ final class PipelineModel {
     func put(_ record: ChunkRecord) {
         if let i = chunks.firstIndex(where: { $0.id == record.id }) { chunks[i] = record } else {
             chunks.append(record)
-            chunks.sort { $0.index < $1.index }
+            chunks.sort { ($0.dayId, $0.index) < ($1.dayId, $1.index) }
         }
         Task { await store.upsert(record) }
     }

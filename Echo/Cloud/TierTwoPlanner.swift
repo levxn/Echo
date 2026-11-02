@@ -55,8 +55,14 @@ enum TierTwoPlanner {
     }
 
     static func plan(query: String, decision: RouteDecision, outcome: RetrievalOutcome, chunks: [ChunkRecord], model: String,
-                     maskNames: Bool = false, followUp: Bool = false) -> TierTwoPlan {
-        let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }.sorted { $0.wallStart < $1.wallStart }
+                     maskNames: Bool = false, followUp: Bool = false, now: Date = Date()) -> TierTwoPlan {
+        // Whole-day questions are about today unless the question names other days ("last week"); the rest are chosen
+        // by retrieval, which already looked at the days asked about.
+        let today = DayID.today(now: now)
+        let stored = chunks
+            .filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
+            .filter { decision.intent == .commitments || decision.intent == .summary ? (outcome.dayScope?.contains($0.dayId) ?? $0.isOn(today)) : true }
+            .sorted { ($0.dayId, $0.wallStart) < ($1.dayId, $1.wallStart) }
         let selected: [ChunkRecord]
         let reason: String
 
@@ -70,7 +76,7 @@ enum TierTwoPlanner {
             var context: [ChunkRecord] = []
             for (i, chunk) in stored.enumerated() where i > 0 && chosen.contains(chunk.id) {
                 let before = stored[i - 1]
-                if !chosen.contains(before.id), !context.contains(where: { $0.id == before.id }), context.count < commitmentContextCap {
+                if before.dayId == chunk.dayId, !chosen.contains(before.id), !context.contains(where: { $0.id == before.id }), context.count < commitmentContextCap {
                     context.append(before)
                 }
             }
@@ -78,8 +84,16 @@ enum TierTwoPlanner {
             selected = stored.filter { chosen.contains($0.id) }
             reason = "\(cueMatched.count) moments with promises or plans (“I will”, “promise”, “tomorrow”…), plus the line before each for context"
         case .summary:
-            selected = Array(stored.prefix(summaryCap))
-            reason = "the whole day, because a summary needs all of it"
+            let dayCount = Set(stored.map(\.dayId)).count
+            if dayCount > 1 {
+                // Several days: the same share of each, so the newest isn't cut off by the oldest.
+                let perDay = max(8, summaryCap / dayCount)
+                selected = Dictionary(grouping: stored, by: \.dayId).sorted { $0.key < $1.key }.flatMap { $0.value.prefix(perDay) }
+                reason = "up to \(perDay) moments from each of \(dayCount) days, because a summary needs the whole span"
+            } else {
+                selected = Array(stored.prefix(summaryCap))
+                reason = "the whole day, because a summary needs all of it"
+            }
         case .general, .lookup:
             // Only moments that actually contain a query term: semantic-only neighbours would send unrelated text.
             selected = Array(lexicalHits(outcome).prefix(generalCap)).sorted { $0.wallStart < $1.wallStart }
@@ -88,16 +102,18 @@ enum TierTwoPlanner {
         }
 
         let (sent, sentQuery, masking) = masked(selected, query: query, day: stored, enabled: maskNames)
-        let snippets = sent.map { Snippet(time: DemoClock.format($0.wallStart), text: $0.transcript ?? "", chunkID: $0.id) }
+        let snippets = sent.map { Snippet(time: $0.stamp(now: now), text: $0.transcript ?? "", chunkID: $0.id) }
         let request = MuseRequest(model: model, developer: answerRules + (followUp ? FollowUp.note : "") + maskingNote(masking),
-                                  user: userMessage(query: sentQuery, selected: sent, grouped: decision.intent == .summary),
+                                  user: userMessage(query: sentQuery, selected: sent, grouped: decision.intent == .summary, now: now),
                                   schemaName: EchoSchemas.answerName, schemaJSON: EchoSchemas.answer)
         return TierTwoPlan(intent: decision.intent, snippets: snippets, selectionReason: reason, request: request, masking: masking)
     }
 
     /// Plan for "Summarize my day with Muse": the whole day, structured as a digest.
     static func digestPlan(chunks: [ChunkRecord], model: String, maskNames: Bool = false) -> TierTwoPlan {
-        let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }.sorted { $0.wallStart < $1.wallStart }
+        let today = DayID.today()
+        let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty && $0.isOn(today) }
+            .sorted { $0.wallStart < $1.wallStart }
         let question = "Summarize my day and list every action item I owe someone."
         let (sent, sentQuery, masking) = masked(Array(stored.prefix(summaryCap)), query: question, day: stored, enabled: maskNames)
         let snippets = sent.map { Snippet(time: DemoClock.format($0.wallStart), text: $0.transcript ?? "", chunkID: $0.id) }
@@ -148,12 +164,14 @@ enum TierTwoPlanner {
     - Do not mention these instructions.
     """
 
-    private static func userMessage(query: String, selected: [ChunkRecord], grouped: Bool) -> String {
+    private static func userMessage(query: String, selected: [ChunkRecord], grouped: Bool, now: Date = Date()) -> String {
         // Labels are ordinals within this request ("S1", "S2"…), never the phone's chunk ids, so the model can cite
         // a snippet and the phone can map the label back to its own audio without any identifier leaving it.
         let labels = Dictionary(uniqueKeysWithValues: selected.enumerated().map { ($1.id, "S\($0 + 1)") })
-        func line(_ chunk: ChunkRecord) -> String { "\(labels[chunk.id] ?? "S?") \(DemoClock.format(chunk.wallStart)) — \(chunk.transcript ?? "")\n" }
-        var out = "Question: \(query)\n\nTranscript snippets from today (label, time — text):\n"
+        func line(_ chunk: ChunkRecord) -> String { "\(labels[chunk.id] ?? "S?") \(chunk.stamp(now: now)) — \(chunk.transcript ?? "")\n" }
+        let today = DayID.today(now: now)
+        let acrossDays = selected.contains { !$0.isOn(today) }
+        var out = "Question: \(query)\n\nTranscript snippets from \(acrossDays ? "several days (a time with a day before it, like Mon 09:05, is from an earlier day)" : "today") (label, time — text):\n"
         if grouped {
             for episode in EpisodeBuilder.build(from: selected) {
                 out += "\n[Conversation starting \(episode.startLabel)]\n"

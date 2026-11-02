@@ -1,0 +1,182 @@
+{
+  "sampleRate": 16000,
+  "duration": 256.21,
+  "scenes": [
+    {
+      "label": "Dentist",
+      "wallClock": "08:40",
+      "fileStart": 8.0,
+      "fileEnd": 42.83,
+      "lines": [
+        {
+          "speaker": "Mehta",
+          "text": "Good morning. Please sit down. What seems to be the problem?",
+          "start": 8.0,
+          "end": 12.13
+        },
+        {
+          "speaker": "Levin",
+          "text": "Good morning. My back tooth has been hurting for a week, especially with cold water.",
+          "start": 13.42,
+          "end": 18.55
+        },
+        {
+          "speaker": "Mehta",
+          "text": "I can see it. It needs a filling. I can do it next Tuesday at three in the afternoon.",
+          "start": 19.84,
+          "end": 25.77
+        },
+        {
+          "speaker": "Levin",
+          "text": "Tuesday at three works for me. Do I need to stop eating before that?",
+          "start": 26.88,
+          "end": 31.07
+        },
+        {
+          "speaker": "Mehta",
+          "text": "No, just brush well. I will send you the booking confirmation today.",
+          "start": 32.08,
+          "end": 36.43
+        },
+        {
+          "speaker": "Levin",
+          "text": "Thank you. I will pay the deposit at the front desk on my way out.",
+          "start": 37.81,
+          "end": 41.88
+        }
+      ]
+    },
+    {
+      "label": "Lease renewal call",
+      "wallClock": "11:15",
+      "fileStart": 75.36,
+      "fileEnd": 108.0,
+      "lines": [
+        {
+          "speaker": "Brennan",
+          "text": "Hello, this is Mister Brennan, calling about your lease.",
+          "start": 75.36,
+          "end": 79.36
+        },
+        {
+          "speaker": "Levin",
+          "text": "Hi Mister Brennan. Thanks for calling. What are the new terms?",
+          "start": 80.17,
+          "end": 84.26
+        },
+        {
+          "speaker": "Brennan",
+          "text": "The rent will increase by three percent from January, and the lease runs for one more year.",
+          "start": 85.03,
+          "end": 90.72
+        },
+        {
+          "speaker": "Levin",
+          "text": "Three percent is fair. I will think about it and send you my answer by next Friday.",
+          "start": 91.96,
+          "end": 96.97
+        },
+        {
+          "speaker": "Brennan",
+          "text": "That is fine. Also, a plumber will come next week to look at the bathroom ceiling.",
+          "start": 97.7,
+          "end": 103.65
+        },
+        {
+          "speaker": "Levin",
+          "text": "Good. I will make sure someone is home.",
+          "start": 104.79,
+          "end": 107.17
+        }
+      ]
+    },
+    {
+      "label": "Vendor decision",
+      "wallClock": "15:30",
+      "fileStart": 152.64,
+      "fileEnd": 188.51,
+      "lines": [
+        {
+          "speaker": "Maya",
+          "text": "We need to pick a vendor for the payment service. Ravi, what did you find?",
+          "start": 152.64,
+          "end": 156.86
+        },
+        {
+          "speaker": "Ravi",
+          "text": "The second vendor has fixed pricing and better support. The first one is cheaper, but its fees change every month.",
+          "start": 158.16,
+          "end": 164.97
+        },
+        {
+          "speaker": "Levin",
+          "text": "Fixed pricing is what we need. I think we should go with the second vendor.",
+          "start": 166.17,
+          "end": 170.36
+        },
+        {
+          "speaker": "Maya",
+          "text": "Agreed. We decided to go with the second vendor, and Ravi will send the contract by Friday.",
+          "start": 171.88,
+          "end": 177.23
+        },
+        {
+          "speaker": "Ravi",
+          "text": "I will send the contract by Friday morning and set up the kickoff call.",
+          "start": 178.32,
+          "end": 182.42
+        },
+        {
+          "speaker": "Levin",
+          "text": "I will review the pricing sheet tonight and share my notes tomorrow.",
+          "start": 183.54,
+          "end": 187.05
+        }
+      ]
+    },
+    {
+      "label": "Evening with Priya",
+      "wallClock": "19:20",
+      "fileStart": 228.0,
+      "fileEnd": 256.21,
+      "lines": [
+        {
+          "speaker": "Priya",
+          "text": "Have you thought about the Lisbon trip? I am planning the second week of March.",
+          "start": 228.0,
+          "end": 232.18
+        },
+        {
+          "speaker": "Levin",
+          "text": "Yes, I would love to go. Which hotel are you thinking of?",
+          "start": 233.1,
+          "end": 236.81
+        },
+        {
+          "speaker": "Priya",
+          "text": "A small place near the Alma district. I will send you the link tomorrow.",
+          "start": 237.92,
+          "end": 242.05
+        },
+        {
+          "speaker": "Levin",
+          "text": "Great. I will book the flights this weekend once you confirm the dates.",
+          "start": 242.79,
+          "end": 246.82
+        },
+        {
+          "speaker": "Priya",
+          "text": "Perfect. We should also work out who will drive from the airport.",
+          "start": 247.53,
+          "end": 251.09
+        },
+        {
+          "speaker": "Levin",
+          "text": "I can drive. I will rent a small car.",
+          "start": 252.52,
+          "end": 255.13
+        }
+      ]
+    }
+  ]
+}

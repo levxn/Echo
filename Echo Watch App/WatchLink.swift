@@ -33,7 +33,7 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     /// Called when the phone asks the watch to start the replay (the demo driver does this; it is the same
     /// as tapping Start day).
-    var onRemoteStart: (() -> Void)?
+    var onRemoteStart: ((Int) -> Void)?
 
     /// Called when the phone asks the watch to run quick-ask preset N (the demo driver does this).
     var onRemoteQuickAsk: ((Int) -> Void)?
@@ -85,11 +85,11 @@ final class WatchLink: NSObject, WCSessionDelegate {
     }
 
     /// Best-effort notice that the replay started or finished.
-    func sendSession(state: String, recorded: Double, total: Double, count: Int = 0) async {
+    func sendSession(state: String, recorded: Double, total: Double, count: Int = 0, dayOffset: Int = 0) async {
         for _ in 0..<20 where !WCSession.default.isReachable { try? await Task.sleep(for: .milliseconds(250)) }
         _ = try? await message([
             Wire.typeKey: Wire.session, Wire.stateKey: state,
-            Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count,
+            Wire.recordedKey: recorded, Wire.totalKey: total, Wire.countKey: count, Wire.dayOffsetKey: dayOffset,
         ])
     }
 
@@ -196,7 +196,8 @@ final class WatchLink: NSObject, WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         switch message[Wire.typeKey] as? String {
         case Wire.demoStart:
-            Task { @MainActor in self.onRemoteStart?() }
+            let offset = message[Wire.dayOffsetKey] as? Int ?? 0
+            Task { @MainActor in self.onRemoteStart?(offset) }
         case Wire.demoQuickAsk:
             let index = message[Wire.presetKey] as? Int ?? 0
             Task { @MainActor in self.onRemoteQuickAsk?(index) }

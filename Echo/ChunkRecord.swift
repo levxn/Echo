@@ -22,6 +22,16 @@ struct ChunkRecord: Identifiable, Sendable, Equatable {
     var speechConfidence: Double?
     var confirmedSeconds: Double // audio kept after stage 2 (0 if dropped)
     var transcript: String?
+    /// The calendar day this was said on ("2026-11-02"); empty for a moment stored before days existed.
+    var dayId: String = ""
 
     var wallLabel: String { DemoClock.format(wallStart) }
+
+    /// When it was said, with the day if it wasn't today: "12:30", or "Mon 12:30".
+    func stamp(now: Date = Date()) -> String {
+        dayId.isEmpty || dayId == DayID.today(now: now) ? wallLabel : "\(DayID.shortLabel(dayId, now: now)) \(wallLabel)"
+    }
+
+    /// Is this from `day`? Moments from before days existed count as belonging to every day.
+    func isOn(_ day: String) -> Bool { dayId.isEmpty || dayId == day }
 }

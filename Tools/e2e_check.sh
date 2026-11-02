@@ -15,26 +15,32 @@ echo "1/8 preparing the simulators…"
 Tools/demo_prep.sh >/tmp/e2e_prep.log 2>&1 || { cat /tmp/e2e_prep.log; echo "FAIL: demo_prep"; exit 1; }
 LIVE=0; [ -f "$(xcrun simctl get_app_container "$PHONE" levtech.Echo data)/Library/Application Support/Echo/meta_api_key" ] && LIVE=1
 
-echo "2/8 replaying the day from the watch…"
-xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
-xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "$(date +%s)" >/dev/null
+echo "2/8 replaying last week, then today, from the watch…"
 DB=""
 for _ in $(seq 1 30); do
   DB=$(find ~/Library/Developer/CoreSimulator/Devices/$PHONE/data/Containers/Data/Application -name echo.sqlite 2>/dev/null | head -1); [ -n "$DB" ] && break; sleep 2
 done
 [ -n "$DB" ] || { echo "FAIL: the phone database never appeared"; exit 1; }
 echo "$DB" > /tmp/echo_db_path
-prev=-1; stable=0
-for _ in $(seq 1 90); do
-  out=$(python3 -I -c "
+wait_settled() {   # wait until the phone has stopped receiving and processing chunks (and has at least $1 of them)
+  local min=$1 prev=-1 stable=0 out
+  for _ in $(seq 1 90); do
+    out=$(python3 -I -c "
 import sqlite3
 c=sqlite3.connect('file:$DB?mode=ro',uri=True)
 print(c.execute('select count(*) from chunk').fetchone()[0], c.execute(\"select count(*) from chunk where status in ('received','vad','asr')\").fetchone()[0])" 2>/dev/null)
-  set -- $out
-  if [ "${2:-x}" = "0" ] && [ "${1:-0}" = "$prev" ] && [ "${1:-0}" -gt 20 ]; then stable=$((stable+1)); else stable=0; fi
-  prev=${1:-0}; [ "$stable" -ge 3 ] && break; sleep 10
-done
-sleep 3
+    set -- $out
+    if [ "${2:-x}" = "0" ] && [ "${1:-0}" = "$prev" ] && [ "${1:-0}" -gt "$min" ]; then stable=$((stable+1)); else stable=0; fi
+    prev=${1:-0}; [ "$stable" -ge 3 ] && break; sleep 10
+  done
+  sleep 3
+}
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "prev$(date +%s)" -day-offset -7 >/dev/null
+sleep 20; wait_settled 20
+xcrun simctl terminate "$WATCH" levtech.Echo.watchkitapp >/dev/null 2>&1
+xcrun simctl launch "$WATCH" levtech.Echo.watchkitapp -autostart "today$(date +%s)" >/dev/null
+sleep 20; wait_settled 60
 
 echo "3/8 asking the demo questions…"
 Q1="When is the plumber coming?"; Q2="What did Mister Brennan say about the lease?"; Q3="Where is Priya going in March?"
@@ -48,6 +54,13 @@ for Q in "$Q1" "$Q2" "$Q3" "$Q4" "$Q5"; do
     xcrun simctl spawn "$PHONE" log show --info --last 60s --predicate 'subsystem == "echo" AND eventMessage CONTAINS "ask "' --style compact 2>/dev/null \
       | grep -F "ask \"$Q\"" | grep -qE -- "-> local| <- |failed|switched off|nothing to send" && break
   done
+done
+
+echo "3b/8 asking across days…"
+for Q in "How much was the rent increase last week?" "What did Mister Brennan say about the lease?"; do
+  xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
+  xcrun simctl launch "$PHONE" levtech.Echo -tab ask -ask "$Q" >/dev/null
+  sleep 8
 done
 
 echo "4/8 asking Muse to summarize the day…"
@@ -112,20 +125,32 @@ questions = sys.argv[3:8]
 manifest = json.load(open("Echo Watch App/Resources/demo_day.json"))
 lines = sum(len(s["lines"]) for s in manifest["scenes"])
 con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+import datetime, shutil, tempfile
+today = datetime.date.today().isoformat()
+lastweek = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+# the calibration checks are about today's recording only
+copy = tempfile.mktemp(suffix=".sqlite"); shutil.copy(db, copy)
+tc = sqlite3.connect(copy); tc.execute("delete from chunk where day_id != ?", (today,)); tc.commit(); tc.close()
 results = []
 def check(name, ok, detail=""): results.append((ok, name, detail))
 
 # pipeline vs the manifest
-stored = con.execute("select count(*) from chunk where status='stored'").fetchone()[0]
-dropped = con.execute("select count(*) from chunk where status='dropped'").fetchone()[0]
+stored = con.execute("select count(*) from chunk where status='stored' and day_id=?", (today,)).fetchone()[0]
+dropped = con.execute("select count(*) from chunk where status='dropped' and day_id=?", (today,)).fetchone()[0]
 failed = con.execute("select count(*) from chunk where status in ('failed','received','vad','asr')").fetchone()[0]
 check("every spoken line became one stored moment", stored == lines, f"{stored} stored vs {lines} lines")
 check("noise chunks were dropped", dropped >= 5, f"{dropped} dropped")
 check("nothing stuck or failed in the pipeline", failed == 0, f"{failed} stuck/failed")
-emb = con.execute("select count(*) from chunk where status='stored' and embedding is not null").fetchone()[0]
+emb = con.execute("select count(*) from chunk where status='stored' and day_id=? and embedding is not null", (today,)).fetchone()[0]
 check("every stored moment is indexed", emb == stored, f"{emb}/{stored} with embeddings")
+prev_manifest = json.load(open("Echo Watch App/Resources/demo_day_prev.json"))
+prev_lines = sum(len(sc["lines"]) for sc in prev_manifest["scenes"])
+prev_stored = con.execute("select count(*) from chunk where status='stored' and day_id=?", (lastweek,)).fetchone()[0]
+check("memory: last week's day was kept alongside today's", prev_stored == prev_lines and stored == lines, f"{prev_stored}/{prev_lines} last week, {stored}/{lines} today")
+days = [r[0] for r in con.execute("select distinct day_id from chunk order by 1")]
+check("memory: the two days are different days", days == [lastweek, today], str(days))
 
-cal = subprocess.run(["python3", "-I", "Tools/calibrate.py", db], capture_output=True, text=True).stdout
+cal = subprocess.run(["python3", "-I", "Tools/calibrate.py", copy], capture_output=True, text=True).stdout
 m = re.search(r"speech accepted: (\d+)/(\d+).*noise rejected: (\d+)/(\d+)", cal)
 if m:
     a, b, c, d = map(int, m.groups())
@@ -212,6 +237,15 @@ missing = [q for q in questions if q.lower() not in kept]
 check("history: every typed question is kept, with how it was answered", not missing and all(r[2] in ("local", "muse", "stub", "none") for r in hist), f"{len(hist)} rows" + (f", missing {missing}" if missing else ""))
 has_detail = con.execute("select count(*) from ask_history where detail_json is not null and detail_json != ''").fetchone()[0]
 check("history: each entry keeps its full answer for reopening", has_detail == len(hist) and hist, f"{has_detail}/{len(hist)}")
+
+# memory across days: a day can be named, and with none named the newest fact wins
+def short_answer(q):
+    r = con.execute("select short_answer from ask_history where question=? order by ts desc limit 1", (q,)).fetchone()
+    return r[0] if r else ""
+named = short_answer("How much was the rent increase last week?")
+check("memory: a question can name last week", "3%" in named or "three percent" in named.lower() or "increase" in named.lower(), named[:70] or "no answer")
+latest = short_answer("What did Mister Brennan say about the lease?")
+check("memory: with no day named, the newest fact wins", "December 31" in latest, latest[:70] or "no answer")
 
 width = max(len(n) for _, n, _ in results)
 print()

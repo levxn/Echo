@@ -10,7 +10,7 @@ struct EchoWatchApp: App {
         let link = WatchLink()
         let engine = CaptureEngine(link: link)
         let quickAsk = WatchAsk(link: link)
-        link.onRemoteStart = { engine.start() }
+        link.onRemoteStart = { engine.start(dayOffset: $0) }
         link.onRemoteQuickAsk = { quickAsk.run(preset: $0) }
         link.onRemoteVoiceAsk = { quickAsk.run(voice: $0) }
         _link = State(initialValue: link)
@@ -37,7 +37,9 @@ struct EchoWatchApp: App {
                     let token = args[i + 1]
                     if UserDefaults.standard.string(forKey: "autostartToken") != token {
                         UserDefaults.standard.set(token, forKey: "autostartToken")
-                        engine.start()
+                        // `-day-offset -7` replays the recording of a week ago instead of today's.
+                        let offset = args.firstIndex(of: "-day-offset").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil } ?? 0
+                        engine.start(dayOffset: offset)
                     }
                 }
                 // `-quick N` runs preset N once the phone is reachable (one-shot per token, like -autostart).

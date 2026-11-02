@@ -150,6 +150,7 @@ struct RootView: View {
             voice.afterAnswer = { ask in
                 if profile.speakVoiceAnswers, let text = ask.spokenAnswer { speaker.speak(text) }
             }
+            await model.purgeExpired()
             await history.reload()
             await ledger.reload()
             await digest.load()
@@ -182,7 +183,7 @@ struct RootView: View {
             } else if args.contains("-digest") {
                 await model.load()
                 tab = .today
-                await digest.generate(chunks: model.chunks)
+                await digest.generate(chunks: model.todayChunks)
             }
         }
     }

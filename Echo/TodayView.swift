@@ -68,7 +68,7 @@ struct TodayView: View {
             VStack(spacing: Spacing.xl) {
                 greeting.id("todayTop")
                 FunnelCard(model: model)
-                if model.chunks.isEmpty {
+                if model.todayChunks.isEmpty {
                     EmptyDayHint()
                 } else {
                     sections.id("sections")
@@ -81,15 +81,15 @@ struct TodayView: View {
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
         .onChange(of: model.storedCount, initial: true) {
-            episodes = EpisodeBuilder.build(from: model.chunks)
-            promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name)
+            episodes = EpisodeBuilder.build(from: model.todayChunks)
+            promises = PromiseExtractor.extract(from: model.todayChunks, userName: profile.name)
             if model.storedCount == 0 { digest.reset() }
             refreshPeople()
         }
         // Dev hook: with `-today-focus` or `-today-section`, scroll so the switcher and its content fill the screen
         // once the day has loaded (screenshots, demo take).
         .onChange(of: profile.name) {
-            promises = PromiseExtractor.extract(from: model.chunks, userName: profile.name)
+            promises = PromiseExtractor.extract(from: model.todayChunks, userName: profile.name)
             refreshPeople()
         }
         .onChange(of: state.scrollTarget) { _, target in
@@ -149,6 +149,19 @@ struct TodayView: View {
 
     @ViewBuilder
     private var summary: some View {
+        VStack(spacing: Spacing.xl) {
+            ForEach(Resurfacing.suggestions(from: model.chunks, now: model.now())) { item in
+                ResurfacedCard(item: item) { onAsk(item.question) }
+            }
+            summaryToday
+            if model.storedCount > model.todayChunks.filter({ $0.status == .stored }).count {
+                EchoButton(title: "Summarize my week with Muse", systemImage: "calendar", action: { onAsk("Summarize my past week") })
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var summaryToday: some View {
         if model.isSettled {
             DigestSection(digest: digest, model: model, player: player)
         } else {

@@ -181,9 +181,15 @@ struct AnswerCard: View {
             .font(.echoAnswer)
             .fixedSize(horizontal: false, vertical: true)
 
+        if !answer.headlineChunk.isOn(DayID.today()) {
+            Label("From \(DayID.longLabel(answer.headlineChunk.dayId).lowercased())", systemImage: "calendar")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Palette.textSecondary)
+        }
+
         AnswerActions(speak: answer.headline,
                       share: ShareText.answer(question: result.query, answer: answer.headline,
-                                              lines: answer.sources.prefix(3).map { "• At \($0.chunk.wallLabel): “\($0.chunk.transcript ?? "")”" }))
+                                              lines: answer.sources.prefix(3).map { "• At \($0.chunk.stamp()): “\($0.chunk.transcript ?? "")”" }))
 
         if !result.outcome.unknownTerms.isEmpty {
             Label("Never heard “\(result.outcome.unknownTerms.joined(separator: ", "))” today, so matched on the rest.",
@@ -215,7 +221,7 @@ struct SourceRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(hit.chunk.wallLabel)
+                Text(hit.chunk.stamp())
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
@@ -224,7 +230,8 @@ struct SourceRow: View {
                     .monospacedDigit()
                     .foregroundStyle(Palette.textSecondary)
             }
-            .frame(width: 48, alignment: .leading)
+            .frame(minWidth: 48, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
 
             Text(Highlighter.attributed(hit.chunk.transcript ?? "", terms: terms, highlight: Palette.teal, base: Palette.textSecondary))
                 .font(.subheadline)
@@ -232,7 +239,7 @@ struct SourceRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            PlayButton(isPlaying: playing, label: "Play the audio from \(hit.chunk.wallLabel)") { player.toggle(hit.chunk) }
+            PlayButton(isPlaying: playing, label: "Play the audio from \(hit.chunk.stamp())") { player.toggle(hit.chunk) }
         }
         .echoRow(vertical: Spacing.sm)
     }

@@ -24,9 +24,9 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     }
 
     /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.
-    func sendDemoStart() {
+    func sendDemoStart(dayOffset: Int = 0) {
         guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be started from here"); return }
-        WCSession.default.sendMessage([Wire.typeKey: Wire.demoStart], replyHandler: nil) { error in
+        WCSession.default.sendMessage([Wire.typeKey: Wire.demoStart, Wire.dayOffsetKey: dayOffset], replyHandler: nil) { error in
             Log.link.error("couldn't start the watch: \(error.localizedDescription)")
         }
     }
@@ -60,7 +60,8 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         let recorded = message[Wire.recordedKey] as? Double ?? 0
         let total = message[Wire.totalKey] as? Double ?? 0
         if message[Wire.stateKey] as? String == "started" {
-            await model.sessionStarted(total: total)
+            let offset = message[Wire.dayOffsetKey] as? Int ?? 0
+            await model.sessionStarted(total: total, dayId: DayID.id(offset: offset, from: model.now()))
         } else {
             model.sessionFinished(recorded: recorded, expectedChunks: message[Wire.countKey] as? Int ?? 0)
         }
@@ -91,7 +92,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         let record = ChunkRecord(
             id: meta.id, index: meta.index, wallStart: meta.wallStart, fileOffset: meta.fileOffset,
             duration: meta.duration, peakDb: meta.peakDb, meanDb: meta.meanDb, audioFile: file,
-            status: .received, speechConfidence: nil, confirmedSeconds: 0, transcript: nil
+            status: .received, speechConfidence: nil, confirmedSeconds: 0, transcript: nil, dayId: model.activeDayId
         )
         model.put(record)
         onChunkReceived?(record)

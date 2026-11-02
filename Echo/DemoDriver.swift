@@ -166,7 +166,7 @@ struct DemoDriver {
         today.scrollTarget = "sections"
         setCaption("Commitments are found on the phone, with no model at all")
         await pause(2.5)
-        for promise in PromiseExtractor.extract(from: model.chunks).prefix(2) {
+        for promise in PromiseExtractor.extract(from: model.todayChunks).prefix(2) {
             var done = Set((UserDefaults.standard.string(forKey: DayWiper.promiseDoneKey) ?? "").split(separator: "\n").map(String.init))
             done.insert(promise.id)
             UserDefaults.standard.set(done.sorted().joined(separator: "\n"), forKey: DayWiper.promiseDoneKey)
@@ -204,7 +204,7 @@ struct DemoDriver {
         setCaption("Or approve every request first")
         ledger.reviewBeforeSend = true
         await pause(1.5)
-        let summary = Task { await digest.generate(chunks: model.chunks) }
+        let summary = Task { await digest.generate(chunks: model.todayChunks) }
         _ = await wait(timeout: 20) { ledger.gate.pending != nil }
         setCaption("You see exactly what would leave, then choose")
         await pause(5.5)

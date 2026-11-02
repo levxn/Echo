@@ -17,7 +17,7 @@ struct DigestSection: View {
         }
     }
 
-    private func run() { Task { await digest.generate(chunks: model.chunks) } }
+    private func run() { Task { await digest.generate(chunks: model.todayChunks) } }
 
     private var prompt: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {

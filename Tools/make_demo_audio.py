@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Echo demo "day" of audio: 16 kHz mono 16-bit WAV plus a JSON manifest.
 
-Run:  python3 -I Tools/make_demo_audio.py <output_dir>
+Run:  python3 -I Tools/make_demo_audio.py <output_dir> [--prev]
 
 Scenes are multi-voice conversations (macOS `say`) separated by ambient "dead air" that
 includes noise bursts, so the stage-1 energy VAD has something to over-accept and the
@@ -32,6 +32,7 @@ VOICES = {
     "Brennan": "Reed (English (US))",
     "Mom": "Flo (English (US))",
     "Dad": "Eddy (English (US))",
+    "Mehta": "Rishi",      # only in last week's recording
 }
 SAY_RATE = 165   # words per minute for `say`; a little slower than the default helps the recognizer
 
@@ -93,6 +94,44 @@ SCENES = [
 ]
 
 
+# Last week's recording (`--prev`): another day for the same life, so a question can reach back to it. Some facts
+# are updated today (the rent rise is three percent here and four today), which is what "newest wins" is for.
+SCENES_PREV = [
+    ("Dentist", "08:40", [
+        ("Mehta", "Good morning. Please sit down. What seems to be the problem?"),
+        ("Levin", "Good morning. My back tooth has been hurting for a week, especially with cold water."),
+        ("Mehta", "I can see it. It needs a filling. I can do it next Tuesday at three in the afternoon."),
+        ("Levin", "Tuesday at three works for me. Do I need to stop eating before that?"),
+        ("Mehta", "No, just brush well. I will send you the booking confirmation today."),
+        ("Levin", "Thank you. I will pay the deposit at the front desk on my way out."),
+    ]),
+    ("Lease renewal call", "11:15", [
+        ("Brennan", "Hello, this is Mister Brennan, calling about your lease."),
+        ("Levin", "Hi Mister Brennan. Thanks for calling. What are the new terms?"),
+        ("Brennan", "The rent will increase by three percent from January, and the lease runs for one more year."),
+        ("Levin", "Three percent is fair. I will think about it and send you my answer by next Friday."),
+        ("Brennan", "That is fine. Also, a plumber will come next week to look at the bathroom ceiling."),
+        ("Levin", "Good. I will make sure someone is home."),
+    ]),
+    ("Vendor decision", "15:30", [
+        ("Maya", "We need to pick a vendor for the payment service. Ravi, what did you find?"),
+        ("Ravi", "The second vendor has fixed pricing and better support. The first one is cheaper, but its fees change every month."),
+        ("Levin", "Fixed pricing is what we need. I think we should go with the second vendor."),
+        ("Maya", "Agreed. We decided to go with the second vendor, and Ravi will send the contract by Friday."),
+        ("Ravi", "I will send the contract by Friday morning and set up the kickoff call."),
+        ("Levin", "I will review the pricing sheet tonight and share my notes tomorrow."),
+    ]),
+    ("Evening with Priya", "19:20", [
+        ("Priya", "Have you thought about the Lisbon trip? I am planning the second week of March."),
+        ("Levin", "Yes, I would love to go. Which hotel are you thinking of?"),
+        ("Priya", "A small place near the Alma district. I will send you the link tomorrow."),
+        ("Levin", "Great. I will book the flights this weekend once you confirm the dates."),
+        ("Priya", "Perfect. We should also work out who will drive from the airport."),
+        ("Levin", "I can drive. I will rent a small car."),
+    ]),
+]
+
+
 def say_to_pcm(voice: str, text: str, tmp: str) -> array.array:
     aiff = os.path.join(tmp, "line.aiff")
     wav = os.path.join(tmp, "line.wav")
@@ -129,13 +168,18 @@ def pause(seconds: float) -> array.array:
 
 def main() -> None:
     out_dir = sys.argv[1]
+    prev = "--prev" in sys.argv          # last week's recording: demo_day_prev.wav / .json
+    stem = "demo_day_prev" if prev else "demo_day"
+    scenes = SCENES_PREV if prev else SCENES
+    if prev:
+        random.seed(11)
     os.makedirs(out_dir, exist_ok=True)
     timeline = array.array("h")
     scenes_meta = []
 
     with tempfile.TemporaryDirectory() as tmp:
         timeline.extend(ambient(8, bursts=1))  # short lead-in dead air
-        for scene_index, (label, wall, lines) in enumerate(SCENES):
+        for scene_index, (label, wall, lines) in enumerate(scenes):
             scene_start = len(timeline) / RATE
             lines_meta = []
             for speaker, text in lines:
@@ -152,10 +196,10 @@ def main() -> None:
                 {"label": label, "wallClock": wall, "fileStart": round(scene_start, 2),
                  "fileEnd": round(scene_end, 2), "lines": lines_meta}
             )
-            if scene_index < len(SCENES) - 1:   # dead air between scenes, none after the last
+            if scene_index < len(scenes) - 1:   # dead air between scenes, none after the last
                 timeline.extend(ambient(random.uniform(30, 45), bursts=4))
 
-    wav_path = os.path.join(out_dir, "demo_day.wav")
+    wav_path = os.path.join(out_dir, f"{stem}.wav")
     with wave.open(wav_path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -163,7 +207,7 @@ def main() -> None:
         w.writeframes(timeline.tobytes())
 
     manifest = {"sampleRate": RATE, "duration": round(len(timeline) / RATE, 2), "scenes": scenes_meta}
-    with open(os.path.join(out_dir, "demo_day.json"), "w") as f:
+    with open(os.path.join(out_dir, f"{stem}.json"), "w") as f:
         json.dump(manifest, f, indent=2)
 
     speech = sum(l["end"] - l["start"] for s in scenes_meta for l in s["lines"])

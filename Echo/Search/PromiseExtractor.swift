@@ -43,16 +43,16 @@ enum PromiseExtractor {
     static func extract(from chunks: [ChunkRecord], userName: String = "") -> [Promise] {
         let stored = chunks
             .filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }
-            .sorted { $0.wallStart < $1.wallStart }
+            .sorted { ($0.dayId, $0.wallStart) < ($1.dayId, $1.wallStart) }
         var out: [Promise] = []
         for (i, chunk) in stored.enumerated() {
-            let previous = i > 0 && chunk.wallStart - stored[i - 1].wallStart <= contextGap ? stored[i - 1] : nil
+            let previous = i > 0 && stored[i - 1].dayId == chunk.dayId && chunk.wallStart - stored[i - 1].wallStart <= contextGap ? stored[i - 1] : nil
             for (n, sentence) in AnswerExtractor.split(chunk.transcript ?? "").enumerated() {
                 guard let (kind, start) = firstCue(in: sentence) else { continue }
                 let clause = polish(String(sentence[start...]))
                 out.append(Promise(
                     id: "\(chunk.id)#\(n)", chunkID: chunk.id, kind: kind,
-                    timeLabel: chunk.wallLabel, wallStart: chunk.wallStart, sentence: clause,
+                    timeLabel: chunk.stamp(), wallStart: chunk.wallStart, sentence: clause,
                     toWhom: kind == .commitment ? recipient(previous: previous?.transcript).flatMap { ProfileLogic.isSamePerson($0, as: userName) ? nil : $0 } : nil,
                     due: due(in: clause), context: previous?.transcript))
             }

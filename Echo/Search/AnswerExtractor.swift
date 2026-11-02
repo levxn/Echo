@@ -23,13 +23,20 @@ enum AnswerExtractor {
         guard let top = sources.first else { return nil }
         let termLemmas = outcome.knownTerms.map { ($0, Set(TextNormalizer.lemmas($0))) }
 
+        // When the matches come from several days, a newer day's sentence is a little more likely to be the current answer.
+        let days = Array(Set(sources.map(\.chunk.dayId))).sorted()
+        func recency(_ day: String) -> Double {
+            guard days.count > 1, let i = days.firstIndex(of: day) else { return 1 }
+            return 1 + 0.5 * Double(i) / Double(days.count - 1)
+        }
+
         var best: (score: Double, sentences: [String], index: Int, chunk: ChunkRecord)?
         for (rank, hit) in sources.enumerated() {
             let sentences = split(hit.chunk.transcript ?? "")
             for (i, sentence) in sentences.enumerated() {
                 let lemmas = TextNormalizer.normalizedLemmas(sentence)
                 let matched = termLemmas.filter { !$0.1.isDisjoint(with: lemmas) }.map(\.0)
-                let score = matched.reduce(0) { $0 + (outcome.headlineWeights[$1] ?? 1) } - 0.01 * Double(rank)
+                let score = matched.reduce(0) { $0 + (outcome.headlineWeights[$1] ?? 1) } * recency(hit.chunk.dayId) - 0.01 * Double(rank)
                 if best == nil || score > best!.score { best = (score, sentences, i, hit.chunk) }
             }
         }

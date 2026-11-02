@@ -11,6 +11,7 @@ struct LedgerView: View {
     @State private var confirmClear = false
     @State private var confirmForget = false
     @State private var confirmClearHistory = false
+    @AppStorage(Retention.key) private var retentionDays = Retention.defaultDays
     @State private var showAllActivity = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -118,6 +119,28 @@ struct LedgerView: View {
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "calendar.badge.clock").font(.subheadline.weight(.semibold)).frame(width: 22)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("Keep memories for").font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    Text("Older days are forgotten automatically.").font(.caption).foregroundStyle(Palette.textSecondary)
+                }
+                Spacer()
+                Menu {
+                    Picker("Keep memories for", selection: $retentionDays) {
+                        ForEach(Retention.options, id: \.days) { Text($0.title).tag($0.days) }
+                    }
+                } label: {
+                    Text(Retention.title(days: retentionDays))
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.teal)
+                        .frame(minHeight: 44)
+                }
+            }
+            .foregroundStyle(Palette.textPrimary)
+            .frame(minHeight: 48)
+            .echoRow(vertical: 0, fill: Palette.fillStrong)
+            .onChange(of: retentionDays) { Task { await model.purgeExpired() } }
             if let exportURL {
                 ShareLink(item: exportURL) {
                     dataRow("Export the ledger (JSON)", systemImage: "square.and.arrow.up", tint: Palette.textPrimary)

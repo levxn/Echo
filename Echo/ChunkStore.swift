@@ -33,6 +33,12 @@ actor ChunkStore {
         let columns = columnNames(db, table: "chunk")
         if columns.contains("wav_file") { exec(db, "ALTER TABLE chunk RENAME COLUMN wav_file TO audio_file") }
         if !columns.contains("embedding") { exec(db, "ALTER TABLE chunk ADD COLUMN embedding BLOB") }
+        if !columns.contains("day_id") {
+            // Memories used to be a single day. Whatever is stored now was captured today.
+            exec(db, "ALTER TABLE chunk ADD COLUMN day_id TEXT")
+            exec(db, "UPDATE chunk SET day_id = '\(DayID.today())'")
+        }
+        exec(db, "CREATE INDEX IF NOT EXISTS chunk_day ON chunk(day_id)")
         exec(db, "CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(id UNINDEXED, text, tokenize='porter unicode61')")
         exec(db, """
         CREATE TABLE IF NOT EXISTS ledger (
@@ -48,6 +54,10 @@ actor ChunkStore {
         """)
         if !columnNames(db, table: "ledger").contains("masked_names") { exec(db, "ALTER TABLE ledger ADD COLUMN masked_names INTEGER DEFAULT 0") }
         exec(db, "CREATE TABLE IF NOT EXISTS day_digest (id INTEGER PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
+        if !columnNames(db, table: "day_digest").contains("day_id") {
+            exec(db, "ALTER TABLE day_digest ADD COLUMN day_id TEXT")
+            exec(db, "UPDATE day_digest SET day_id = '\(DayID.today())'")
+        }
     }
 
     private static func columnNames(_ db: OpaquePointer?, table: String) -> Set<String> {
@@ -75,13 +85,13 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         INSERT INTO chunk (id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-                           speech_conf, confirmed_seconds, transcript)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                           speech_conf, confirmed_seconds, transcript, day_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET idx=excluded.idx, wall_start=excluded.wall_start,
           file_offset=excluded.file_offset, duration=excluded.duration, peak_db=excluded.peak_db,
           mean_db=excluded.mean_db, audio_file=excluded.audio_file, status=excluded.status,
           speech_conf=excluded.speech_conf, confirmed_seconds=excluded.confirmed_seconds,
-          transcript=excluded.transcript
+          transcript=excluded.transcript, day_id=excluded.day_id
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             Log.app.error("upsert prepare failed: \(String(cString: sqlite3_errmsg(self.db)))")
@@ -101,17 +111,26 @@ actor ChunkStore {
         if let conf = c.speechConfidence { sqlite3_bind_double(stmt, 10, conf) } else { sqlite3_bind_null(stmt, 10) }
         sqlite3_bind_double(stmt, 11, c.confirmedSeconds)
         if let t = c.transcript { sqlite3_bind_text(stmt, 12, t, -1, transient) } else { sqlite3_bind_null(stmt, 12) }
+        sqlite3_bind_text(stmt, 13, c.dayId, -1, transient)
         if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("upsert failed") }
     }
 
-    func all() -> [ChunkRecord] {
+    /// Every moment from every day, oldest day first and in order within a day.
+    func all() -> [ChunkRecord] { rows(where: nil) }
+
+    /// The moments of one day (and any from before days existed).
+    func all(day: String) -> [ChunkRecord] { rows(where: day) }
+
+    private func rows(where day: String?) -> [ChunkRecord] {
         var stmt: OpaquePointer?
+        let filter = day == nil ? "" : "WHERE day_id = ? OR day_id IS NULL OR day_id = ''"
         let sql = """
         SELECT id, idx, wall_start, file_offset, duration, peak_db, mean_db, audio_file, status,
-               speech_conf, confirmed_seconds, transcript FROM chunk ORDER BY idx
+               speech_conf, confirmed_seconds, transcript, day_id FROM chunk \(filter) ORDER BY COALESCE(day_id, ''), idx
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
+        if let day { sqlite3_bind_text(stmt, 1, day, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) }
         var rows: [ChunkRecord] = []
         func text(_ i: Int32) -> String? { sqlite3_column_text(stmt, i).map { String(cString: $0) } }
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -122,7 +141,7 @@ actor ChunkStore {
                 meanDb: sqlite3_column_double(stmt, 6), audioFile: text(7) ?? "",
                 status: ChunkStatus(rawValue: text(8) ?? "") ?? .failed,
                 speechConfidence: sqlite3_column_type(stmt, 9) == SQLITE_NULL ? nil : sqlite3_column_double(stmt, 9),
-                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11)
+                confirmedSeconds: sqlite3_column_double(stmt, 10), transcript: text(11), dayId: text(12) ?? ""
             ))
         }
         return rows
@@ -239,6 +258,61 @@ actor ChunkStore {
             sqlite3_finalize(stmt)
         }
         if let audioFile { try? FileManager.default.removeItem(at: chunksDirectory.appending(path: audioFile)) }
+    }
+
+    /// Removes several moments and anything that cites them (history entries whose answer pointed at them). Returns the
+    /// ids that were actually there.
+    @discardableResult
+    func deleteChunks(ids: [String]) -> [String] {
+        let present = Set(all().map(\.id)).intersection(ids)
+        for id in present { delete(id: id) }
+        deleteHistory(citing: Array(present))
+        return Array(present)
+    }
+
+    /// Replaces a day: everything captured on it goes (and the history that cited it), so a new session for the same day
+    /// starts clean. Other days are untouched. Moments from before days existed count as belonging to it.
+    @discardableResult
+    func deleteDay(_ day: String) -> [String] {
+        let ids = all(day: day).map(\.id)
+        for id in ids { delete(id: id) }
+        deleteHistory(citing: ids)
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id = ?", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, day, -1, transient)
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+        return ids
+    }
+
+    /// Forgets every day older than `day` (and its digest). Moments from before days existed are never purged. Returns how many.
+    @discardableResult
+    func purge(before day: String) -> Int {
+        let old = all().filter { !$0.dayId.isEmpty && $0.dayId < day }
+        for c in old { delete(id: c.id) }
+        deleteHistory(citing: old.map(\.id))
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id < ? AND day_id != ''", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, day, -1, transient)
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+        return old.count
+    }
+
+    /// The days that have anything stored, newest first, with how many moments each has.
+    func days() -> [(day: String, count: Int)] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT COALESCE(day_id, ''), COUNT(*) FROM chunk WHERE status = 'stored' GROUP BY COALESCE(day_id, '') ORDER BY 1 DESC", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [(String, Int)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            out.append((sqlite3_column_text(stmt, 0).map { String(cString: $0) } ?? "", Int(sqlite3_column_int(stmt, 1))))
+        }
+        return out
     }
 
     func write(audio: Data, named file: String) throws {
@@ -369,25 +443,60 @@ actor ChunkStore {
 
     func clearHistory() { Self.exec(db, "DELETE FROM ask_history") }
 
+    /// Removes the history entries whose stored answer points at any of these moments (their citations would be dead).
+    func deleteHistory(citing chunkIDs: [String]) {
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for id in chunkIDs {
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "DELETE FROM ask_history WHERE detail_json LIKE ?", -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(stmt, 1, "%\(id)%", -1, transient)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
+    }
+
     // MARK: Day digest
 
-    func saveDigest(json: String, model: String, isStub: Bool) {
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO day_digest (id, ts, json, model, is_stub) VALUES (1,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
-        defer { sqlite3_finalize(stmt) }
+    /// One digest per day; saving again replaces that day's.
+    func saveDigest(json: String, model: String, isStub: Bool, day: String = DayID.today()) {
         let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id = ?", -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(stmt, 1, day, -1, t)
+            sqlite3_step(stmt)
+        }
+        sqlite3_finalize(stmt)
+        stmt = nil
+        guard sqlite3_prepare_v2(db, "INSERT INTO day_digest (ts, json, model, is_stub, day_id) VALUES (?,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
         sqlite3_bind_double(stmt, 1, Date().timeIntervalSince1970)
         sqlite3_bind_text(stmt, 2, json, -1, t)
         sqlite3_bind_text(stmt, 3, model, -1, t)
         sqlite3_bind_int(stmt, 4, isStub ? 1 : 0)
+        sqlite3_bind_text(stmt, 5, day, -1, t)
         sqlite3_step(stmt)
     }
 
-    func loadDigest() -> (json: String, model: String, isStub: Bool)? {
+    func loadDigest(day: String = DayID.today()) -> (json: String, model: String, isStub: Bool)? {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "SELECT json, model, is_stub FROM day_digest WHERE id = 1", -1, &stmt, nil) == SQLITE_OK else { return nil }
+        guard sqlite3_prepare_v2(db, "SELECT json, model, is_stub FROM day_digest WHERE day_id = ? ORDER BY ts DESC LIMIT 1", -1, &stmt, nil) == SQLITE_OK else { return nil }
         defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, day, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
         guard sqlite3_step(stmt) == SQLITE_ROW, let j = sqlite3_column_text(stmt, 0) else { return nil }
         return (String(cString: j), sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? "", sqlite3_column_int(stmt, 2) != 0)
+    }
+
+    /// Every saved digest, newest day first (for a weekly summary).
+    func digests() -> [(day: String, json: String, model: String, isStub: Bool)] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT COALESCE(day_id, ''), json, model, is_stub FROM day_digest ORDER BY day_id DESC", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [(String, String, String, Bool)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            func t(_ i: Int32) -> String { sqlite3_column_text(stmt, i).map { String(cString: $0) } ?? "" }
+            out.append((t(0), t(1), t(2), sqlite3_column_int(stmt, 3) != 0))
+        }
+        return out
     }
 }

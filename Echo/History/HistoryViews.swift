@@ -369,17 +369,18 @@ private struct MomentLine: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            Text(chunk.wallLabel)
+            Text(chunk.stamp())
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
-                .frame(width: 48, alignment: .leading)
+                .frame(minWidth: 48, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
             Text(Highlighter.attributed(chunk.transcript ?? "", terms: terms, highlight: Palette.teal, base: Palette.textSecondary))
                 .font(.subheadline)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            PlayButton(isPlaying: player.playingID == chunk.id, label: "Play the audio from \(chunk.wallLabel)") { player.toggle(chunk) }
+            PlayButton(isPlaying: player.playingID == chunk.id, label: "Play the audio from \(chunk.stamp())") { player.toggle(chunk) }
         }
         .echoRow()
         .accessibilityElement(children: .contain)

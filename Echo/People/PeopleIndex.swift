@@ -45,7 +45,7 @@ nonisolated enum PeopleIndex {
 
     /// `userName` is the profile name: the wearer isn't listed among the people they talked to.
     static func build(from chunks: [ChunkRecord], userName: String = "") -> [Person] {
-        let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }.sorted { $0.wallStart < $1.wallStart }
+        let stored = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty }.sorted { ($0.dayId, $0.wallStart) < ($1.dayId, $1.wallStart) }
         guard !stored.isEmpty else { return [] }
         let texts = stored.map { $0.transcript ?? "" }
 
@@ -75,7 +75,7 @@ nonisolated enum PeopleIndex {
             let hits = stored.indices.filter { i in ws.contains { tokens[i].contains($0) } }
             guard let first = hits.first, let last = hits.last else { continue }
             people.append(Person(name: ws.compactMap { valid[$0] }.joined(separator: " "), words: ws, momentIDs: hits.map { stored[$0].id },
-                                 firstLabel: stored[first].wallLabel, lastLabel: stored[last].wallLabel))
+                                 firstLabel: stored[first].stamp(), lastLabel: stored[last].stamp()))
         }
         return people.sorted { $0.count != $1.count ? $0.count > $1.count : $0.firstLabel < $1.firstLabel }
     }

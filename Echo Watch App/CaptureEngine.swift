@@ -27,8 +27,12 @@ final class CaptureEngine {
 
     init(link: WatchLink) { self.link = link }
 
-    func start() {
+    /// 0 = a day for today; -7 = the recording of a week ago (a different day, kept alongside today's on the phone).
+    private var dayOffset = 0
+
+    func start(dayOffset: Int = 0) {
         guard phase == .idle || phase == .finished else { return }
+        self.dayOffset = dayOffset
         captured = 0; keptSeconds = 0; recordedSeconds = 0; progress = 0
         link.resetCounters()
         phase = .running
@@ -44,8 +48,9 @@ final class CaptureEngine {
     }
 
     private func run() async {
-        guard let wavURL = Bundle.main.url(forResource: "demo_day", withExtension: "wav"),
-              let manifestURL = Bundle.main.url(forResource: "demo_day", withExtension: "json"),
+        let name = dayOffset < 0 ? "demo_day_prev" : "demo_day"
+        guard let wavURL = Bundle.main.url(forResource: name, withExtension: "wav"),
+              let manifestURL = Bundle.main.url(forResource: name, withExtension: "json"),
               let manifest = try? DemoManifest.load(from: manifestURL),
               let (samples, rate) = try? WAV.read(wavURL) else {
             Log.app.error("demo audio missing from bundle")
@@ -56,7 +61,7 @@ final class CaptureEngine {
         let vad = EnergyVAD()
         let frame = vad.config.frameSamples
         totalSeconds = Double(samples.count) / Double(rate)
-        await link.sendSession(state: "started", recorded: 0, total: totalSeconds)
+        await link.sendSession(state: "started", recorded: 0, total: totalSeconds, dayOffset: dayOffset)
 
         let tickSeconds = 0.05
         let framesPerTick = max(1, Int((tickSeconds * speed) / (Double(frame) / Double(rate))))

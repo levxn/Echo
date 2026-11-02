@@ -17,7 +17,7 @@ enum CitationResolver {
            let chunk = chunks.first(where: { $0.id == snippets[n - 1].chunkID }) {
             return chunk
         }
-        let sameMinute = chunks.filter { $0.status == .stored && $0.wallLabel == sourceTime }
+        let sameMinute = chunks.filter { $0.status == .stored && ($0.wallLabel == sourceTime || $0.stamp() == sourceTime) }
         if sameMinute.count <= 1 { return sameMinute.first }
         let wanted = Set(TextNormalizer.contentTokens(detail))
         return sameMinute.max { overlap($0, wanted) < overlap($1, wanted) }
