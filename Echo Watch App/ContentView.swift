@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// The watch is a silent sensor, so this is a "proof of life" screen: a ring that breathes with the
 /// microphone level and traces replay progress, three counters, and one control.
@@ -7,6 +8,8 @@ struct ContentView: View {
     let link: WatchLink
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var confirmForget = false
+    @State private var forgotten: String?
 
     private var title: String {
         switch engine.phase {
@@ -49,7 +52,7 @@ struct ContentView: View {
                 HStack(spacing: Spacing.sm) {
                     MicRing(progress: engine.progress, level: engine.level, tint: ringTint,
                             active: engine.phase == .running, reduceMotion: reduceMotion)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 64, height: 64)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Counter(value: engine.captured, label: "heard")
@@ -67,8 +70,32 @@ struct ContentView: View {
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .accessibilityLabel(buttonLabel)
 
+                Button { confirmForget = true } label: {
+                    Label(forgotten ?? "Forget 10 min", systemImage: forgotten == nil ? "clock.arrow.circlepath" : "checkmark.circle.fill")
+                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .foregroundStyle(forgotten == nil ? Palette.textSecondary : Palette.teal)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(EchoPressStyle())
+                .disabled(!link.reachable)
+                .accessibilityLabel("Forget the last 10 minutes")
+                .accessibilityHint("Deletes what was heard in the last 10 minutes, on your phone")
             }
             .padding(.horizontal, Spacing.sm)
+        }
+        .confirmationDialog("Forget the last 10 minutes?", isPresented: $confirmForget, titleVisibility: .visible) {
+            Button("Forget", role: .destructive) {
+                Task {
+                    let count = await link.forget(minutes: 10)
+                    WKInterfaceDevice.current().play(count == nil ? .failure : .success)
+                    forgotten = count.map { $0 == 0 ? "Nothing to forget" : "Forgot \($0)" } ?? "Phone not reachable"
+                    try? await Task.sleep(for: .seconds(4))
+                    forgotten = nil
+                }
+            }
+        } message: {
+            Text("Deletes it from your phone.")
         }
     }
 

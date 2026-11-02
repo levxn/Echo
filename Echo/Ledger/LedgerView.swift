@@ -5,12 +5,17 @@ struct LedgerView: View {
     let ledger: LedgerModel
     let model: PipelineModel
     let history: AskHistoryModel
+    let privacy: RecordingPrivacy
+    /// Forgets the last N minutes of what was heard; says how many moments went.
+    let onForgetRecent: (Int) async -> Int
     /// Wipes the day (and optionally the ledger); owned by RootView because it touches every model.
     let onForget: (_ includeLedger: Bool) -> Void
 
     @State private var confirmClear = false
     @State private var confirmForget = false
     @State private var confirmClearHistory = false
+    @State private var forgetMinutes: Int?
+    @State private var forgotten: String?
     @AppStorage(Retention.key) private var retentionDays = Retention.defaultDays
     @State private var showAllActivity = false
     @State private var exportURL: URL?
@@ -48,6 +53,17 @@ struct LedgerView: View {
         } message: {
             Text("Deletes every transcript, audio clip, summary and checked-off commitment on this phone. Your API key and settings stay. The ledger stays too, unless you choose to forget it.")
         }
+        .confirmationDialog("Forget the last few minutes?", isPresented: Binding(get: { forgetMinutes != nil }, set: { if !$0 { forgetMinutes = nil } }),
+                            titleVisibility: .visible, presenting: forgetMinutes) { minutes in
+            Button("Forget the last \(ForgetWindow.title(minutes: minutes))", role: .destructive) {
+                Task {
+                    let count = await onForgetRecent(minutes)
+                    forgotten = count == 0 ? "There was nothing to forget." : "Forgot \(count) moment\(count == 1 ? "" : "s")."
+                }
+            }
+        } message: { minutes in
+            Text("Deletes what was heard in the last \(ForgetWindow.title(minutes: minutes)) of what was captured: its transcripts, audio, any answers that used it, and that day's summary. The ledger keeps its record of what was sent.")
+        }
         .confirmationDialog("Clear your ask history?", isPresented: $confirmClearHistory, titleVisibility: .visible) {
             Button("Clear history", role: .destructive) { Task { await history.clear() } }
         } message: {
@@ -84,6 +100,11 @@ struct LedgerView: View {
                       caption: ledger.maskNames ? "Names become [PERSON_1] on this phone and return in the answer. Best effort."
                                                 : "Off: names are sent as spoken.",
                       isOn: Bindable(ledger).maskNames)
+            Divider().overlay(Palette.stroke)
+            ToggleRow(title: "Announce recording", systemImage: "applewatch.radiowaves.left.and.right",
+                      caption: privacy.announce ? "The watch buzzes every 10 minutes while it listens, so people nearby aren't unaware."
+                                                : "Off: the watch listens silently. Say “off the record” any time to pause.",
+                      isOn: Bindable(privacy).announce, tint: Palette.teal)
         }
         .echoCard()
     }
@@ -146,6 +167,19 @@ struct LedgerView: View {
                     dataRow("Export the ledger (JSON)", systemImage: "square.and.arrow.up", tint: Palette.textPrimary)
                 }
                 .buttonStyle(EchoPressStyle())
+            }
+            Menu {
+                ForEach(ForgetWindow.options, id: \.self) { minutes in
+                    Button("The last \(ForgetWindow.title(minutes: minutes))") { forgetMinutes = minutes }
+                }
+            } label: {
+                dataRow("Forget the last few minutes", systemImage: "clock.arrow.circlepath", tint: Palette.rose)
+            }
+            if let forgotten {
+                Label(forgotten, systemImage: "checkmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.teal)
+                    .accessibilityAddTraits(.updatesFrequently)
             }
             Button { confirmForget = true } label: {
                 dataRow("Forget my day", systemImage: "trash", tint: Palette.rose)

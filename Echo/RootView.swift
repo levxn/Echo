@@ -22,6 +22,7 @@ struct RootView: View {
     let model: PipelineModel
     let link: PhoneLink
     let voices: VoiceBookModel
+    let privacy: RecordingPrivacy
 
     @State private var ask: AskModel
     @State private var history: AskHistoryModel
@@ -38,10 +39,11 @@ struct RootView: View {
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel) {
+    init(model: PipelineModel, link: PhoneLink, voices: VoiceBookModel, privacy: RecordingPrivacy) {
         self.model = model
         self.link = link
         self.voices = voices
+        self.privacy = privacy
         let ledger = LedgerModel(store: model.store)
         _ledger = State(initialValue: ledger)
         let client = MuseClientFactory.make()
@@ -68,6 +70,18 @@ struct RootView: View {
                    onProfile: { showProfile = true }, onWatch: { self.tab = .moments }, onCloud: { self.tab = .ledger })
     }
 
+    /// Forgets the last `minutes` of what was heard, and everything that depended on it. Returns how many moments went.
+    private func forgetRecent(minutes: Int) async -> Int {
+        let gone = await model.forgetLast(minutes: minutes)
+        guard !gone.isEmpty else { return 0 }
+        reminders.cancel(forChunkIDs: gone)
+        ask.clear()
+        digest.reset()
+        player.stop()
+        await history.reload()
+        return gone.count
+    }
+
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
@@ -86,7 +100,7 @@ struct RootView: View {
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.today) }
             }
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
-                MomentsView(model: model, player: player) { ledger.showArchitecture = true }
+                MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
@@ -95,7 +109,7 @@ struct RootView: View {
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
             }
             Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) {
-                LedgerView(ledger: ledger, model: model, history: history) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                LedgerView(ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ledger) }
             }
         }
@@ -122,6 +136,7 @@ struct RootView: View {
         .onChange(of: model.session) { Task { await history.reload() } }
         .environment(speaker)
         .environment(voices)
+        .environment(privacy)
         .environment(reminders)
         .preferredColorScheme(.dark)
         .tint(Palette.teal)
@@ -147,7 +162,10 @@ struct RootView: View {
                     return answer
                 },
                 history: { history.recentForWatch() },
-                speakVoiceAnswers: { profile.speakVoiceAnswers })
+                speakVoiceAnswers: { profile.speakVoiceAnswers },
+                forgetRecent: { await forgetRecent(minutes: $0) })
+            privacy.onAnnounceChanged = { link.sendSettings(announce: $0) }
+            link.sendSettings(announce: privacy.announce)
             // Spoken answers and recorded moments take turns, and a voice question's answer is read back if the person wants.
             speaker.willSpeak = { player.stop() }
             player.willPlay = { speaker.stop() }
@@ -162,6 +180,13 @@ struct RootView: View {
                     await voices.rename(mine.id, to: profile.name)
                     await voices.setMe(mine.id)
                 }
+            }
+            // Dev hook: `-forget-recent N` forgets the last N minutes once the day has loaded (end-to-end checks).
+            if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-forget-recent"), i + 1 < ProcessInfo.processInfo.arguments.count,
+               let minutes = Int(ProcessInfo.processInfo.arguments[i + 1]) {
+                await model.load()
+                let n = await forgetRecent(minutes: minutes)
+                Log.app.notice("forget-recent: \(n) moments")
             }
             await history.reload()
             await ledger.reload()

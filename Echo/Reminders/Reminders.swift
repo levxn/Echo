@@ -109,6 +109,12 @@ final class Reminders {
         save()
     }
 
+    /// Moments were forgotten, so reminders about promises made in them (ids start with the moment's id) go too.
+    func cancel(forChunkIDs ids: [String]) {
+        let gone = Set(ids)
+        for key in scheduled.keys where gone.contains(String(key.split(separator: "#").first ?? "")) { cancel(key) }
+    }
+
     /// Forget my day: no reminder about a forgotten day should go off.
     func clearAll() {
         scheduler.remove(ids: scheduled.keys.map { Self.prefix + $0 })

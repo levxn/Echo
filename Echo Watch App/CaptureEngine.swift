@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import os
+import WatchKit
 
 /// Replays the bundled demo day through the stage-1 VAD as if it were a live microphone,
 /// and hands each speech segment to the link. In a production build the frame source would be
@@ -26,6 +27,18 @@ final class CaptureEngine {
     private var task: Task<Void, Never>?
 
     init(link: WatchLink) { self.link = link }
+
+    private var lastAnnounce = Date()
+
+    /// When the phone says to announce recording, the watch buzzes as it starts and every ten minutes after, so people
+    /// nearby aren't unaware that it is listening.
+    private func announceIfDue(starting: Bool = false) {
+        guard UserDefaults.standard.bool(forKey: "echo.announce") else { return }
+        if starting || Date().timeIntervalSince(lastAnnounce) >= 600 {
+            lastAnnounce = Date()
+            WKInterfaceDevice.current().play(.notification)
+        }
+    }
 
     /// 0 = a day for today; -7 = the recording of a week ago (a different day, kept alongside today's on the phone).
     private var dayOffset = 0
@@ -62,6 +75,7 @@ final class CaptureEngine {
         let frame = vad.config.frameSamples
         totalSeconds = Double(samples.count) / Double(rate)
         await link.sendSession(state: "started", recorded: 0, total: totalSeconds, dayOffset: dayOffset)
+        announceIfDue(starting: true)
 
         let tickSeconds = 0.05
         let framesPerTick = max(1, Int((tickSeconds * speed) / (Double(frame) / Double(rate))))
@@ -88,6 +102,7 @@ final class CaptureEngine {
                 if let seg = vad.push(Array(samples[cursor..<cursor + frame])) { emit(seg) }
                 cursor += frame
             }
+            announceIfDue()
             recordedSeconds = Double(cursor) / Double(rate)
             progress = recordedSeconds / totalSeconds
             speaking = vad.isSpeaking

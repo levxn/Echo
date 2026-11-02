@@ -296,6 +296,18 @@ actor ChunkStore {
         return ids
     }
 
+    /// Removes a stored audio file by name (a moment that was heard but must not be kept).
+    func removeAudio(named file: String) { try? FileManager.default.removeItem(at: chunksDirectory.appending(path: file)) }
+
+    /// Forgets a day's summary (it described moments that are gone).
+    func deleteDigest(day: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM day_digest WHERE day_id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, day, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
+
     /// Forgets every day older than `day` (and its digest). Moments from before days existed are never purged. Returns how many.
     @discardableResult
     func purge(before day: String) -> Int {

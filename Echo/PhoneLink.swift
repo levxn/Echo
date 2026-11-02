@@ -23,6 +23,12 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         WCSession.default.activate()
     }
 
+    /// Tells the watch whether to announce that it is listening. Delivered whenever the watch next wakes, even if it is away now.
+    func sendSettings(announce: Bool) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        try? WCSession.default.updateApplicationContext([Wire.announceKey: announce])
+    }
+
     /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.
     func sendDemoStart(dayOffset: Int = 0) {
         guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be started from here"); return }

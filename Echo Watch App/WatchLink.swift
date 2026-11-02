@@ -144,6 +144,13 @@ final class WatchLink: NSObject, WCSessionDelegate {
         VoiceReply(dictionary: await request([Wire.typeKey: Wire.transcribe, Wire.audioKey: clip.audio], timeout: timeout))
     }
 
+    /// Asks the phone to forget the last `minutes` of what was heard. Returns how many moments it forgot (nil if it can't be reached).
+    nonisolated func forget(minutes: Int, timeout: TimeInterval = 15) async -> Int? {
+        guard let reply = await request([Wire.typeKey: Wire.forget, Wire.minutesKey: minutes], timeout: timeout),
+              reply[Wire.okKey] as? Bool == true else { return nil }
+        return reply[Wire.countKey] as? Int ?? 0
+    }
+
     /// The phone's recent questions and answers (nil if it can't be reached).
     nonisolated func history(timeout: TimeInterval = 10) async -> [HistoryItem]? {
         guard let reply = await request([Wire.typeKey: Wire.history], timeout: timeout), reply[Wire.okKey] as? Bool == true,
@@ -185,7 +192,17 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     // MARK: WCSessionDelegate
 
+    /// The phone's settings that the watch acts on (announce recording).
+    nonisolated private func apply(context: [String: Any]) {
+        if let announce = context[Wire.announceKey] as? Bool { UserDefaults.standard.set(announce, forKey: "echo.announce") }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        apply(context: applicationContext)
+    }
+
     nonisolated func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?) {
+        apply(context: session.receivedApplicationContext)
         let reachable = session.isReachable
         Task { @MainActor in
             self.reachable = reachable

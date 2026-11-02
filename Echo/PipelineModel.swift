@@ -113,6 +113,19 @@ final class PipelineModel {
         chunks.removeAll { !$0.dayId.isEmpty && $0.dayId < cutoff }
     }
 
+    /// Forgets the last `minutes` of what was captured: the moments, their audio and search entries, the history that cited them
+    /// and the day's summary. Returns the ids that were forgotten.
+    @discardableResult
+    func forgetLast(minutes: Int) async -> [String] {
+        let doomed = ForgetWindow.chunks(in: chunks, minutes: minutes)
+        guard !doomed.isEmpty else { return [] }
+        let ids = doomed.map(\.id)
+        await store.deleteChunks(ids: ids)
+        for day in Set(doomed.map(\.dayId)) { await store.deleteDigest(day: day.isEmpty ? DayID.today(now: now()) : day) }
+        chunks.removeAll { ids.contains($0.id) }
+        return ids
+    }
+
     func sessionFinished(recorded: Double, expectedChunks: Int = 0) {
         recordedSeconds = recorded
         self.expectedChunks = expectedChunks

@@ -21,6 +21,9 @@ extension Wire {
     static let viaKey = "via"
     static let itemsKey = "items"
     static let speakKey = "speak"
+    static let announceKey = "announce"      // phone -> watch (application context): buzz every 10 minutes while listening
+    static let forget = "forget"             // watch -> phone: forget the last N minutes
+    static let minutesKey = "minutes"
 }
 
 /// A question the watch can ask without a keyboard.

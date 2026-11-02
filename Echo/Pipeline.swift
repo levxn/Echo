@@ -13,6 +13,8 @@ final class Pipeline {
     private let model: PipelineModel
     /// Tells voices apart (set by the app; tests that don't care leave it nil).
     var voices: VoiceBookModel?
+    /// Honors "off the record" (set by the app; tests that don't care leave it nil).
+    var privacy: RecordingPrivacy?
     private var pending: [ChunkRecord] = []
     private var running = false
 
@@ -66,6 +68,17 @@ final class Pipeline {
         // ASR, fully on-device.
         do {
             let text = try await OnDeviceASR.transcribe(url: url)
+            // "Off the record": the command and whatever is said while it is off are understood only to listen for
+            // "back on the record", then dropped here: no transcript, no search entry, no audio.
+            if let privacy, privacy.decide(transcript: text) != .keep {
+                chunk.status = .dropped
+                chunk.transcript = nil
+                chunk.confirmedSeconds = 0
+                model.put(chunk)
+                await model.store.removeAudio(named: chunk.audioFile)
+                Log.pipe.info("chunk \(chunk.index) dropped: off the record")
+                return
+            }
             chunk.transcript = text
             chunk.status = .asr
             model.put(chunk)

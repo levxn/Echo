@@ -38,7 +38,8 @@ struct VoicesStrip: View {
                                         Text(voice.isMe ? "\(voice.display) (you)" : voice.display)
                                             .font(.system(.footnote, design: .rounded, weight: .semibold))
                                             .foregroundStyle(Palette.textPrimary)
-                                        Text("\(voice.count) moment\(voice.count == 1 ? "" : "s")")
+                                        let moments = chunks.filter { $0.speakerId == voice.id && $0.status == .stored }.count
+                                        Text("\(moments) moment\(moments == 1 ? "" : "s")")
                                             .font(.caption2)
                                             .foregroundStyle(Palette.textSecondary)
                                     }
