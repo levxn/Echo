@@ -11,7 +11,7 @@ speech, like a real recording.
 import array, json, os, random, subprocess, sys, tempfile, wave
 
 RATE = 16000
-VOICE = "Daniel"        # the voice for Jordan in Tools/make_demo_audio.py (the best word error rate)
+VOICE = "Daniel"        # the voice for Levin in Tools/make_demo_audio.py (the best word error rate)
 SAY_RATE = 165
 LEAD_SECONDS = 0.5
 TAIL_SECONDS = 2.0

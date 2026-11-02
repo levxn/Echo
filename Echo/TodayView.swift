@@ -108,7 +108,7 @@ struct TodayView: View {
         }
     }
 
-    /// "Good evening, Jordan" and one line on where the day stands.
+    /// "Good evening, Levin" and one line on where the day stands.
     private var greeting: some View {
         VStack(alignment: .leading, spacing: Spacing.tight) {
             Text(profile.greeting)

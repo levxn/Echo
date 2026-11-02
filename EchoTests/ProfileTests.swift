@@ -5,28 +5,28 @@ import Testing
 @MainActor
 struct ProfileTests {
     @Test func initialsComeFromTheFirstTwoWords() {
-        #expect(ProfileLogic.initials(from: "Jordan Lee") == "JL")
-        #expect(ProfileLogic.initials(from: "jordan") == "J")
+        #expect(ProfileLogic.initials(from: "Levin Shah") == "LS")
+        #expect(ProfileLogic.initials(from: "levin") == "L")
         #expect(ProfileLogic.initials(from: "  ana maria  lopez ") == "AM")
         #expect(ProfileLogic.initials(from: "") == "" && ProfileLogic.initials(from: "   ") == "" && ProfileLogic.initials(from: "123 !!") == "")
         #expect(ProfileLogic.initials(from: "Émile") == "É")
     }
 
     @Test func theGreetingFollowsTheHourAndUsesTheFirstName() {
-        #expect(ProfileLogic.greeting(hour: 8, name: "Jordan Lee") == "Good morning, Jordan")
-        #expect(ProfileLogic.greeting(hour: 13, name: "Jordan") == "Good afternoon, Jordan")
-        #expect(ProfileLogic.greeting(hour: 19, name: "Jordan") == "Good evening, Jordan")
-        #expect(ProfileLogic.greeting(hour: 2, name: "Jordan") == "Good night, Jordan")
+        #expect(ProfileLogic.greeting(hour: 8, name: "Levin Shah") == "Good morning, Levin")
+        #expect(ProfileLogic.greeting(hour: 13, name: "Levin") == "Good afternoon, Levin")
+        #expect(ProfileLogic.greeting(hour: 19, name: "Levin") == "Good evening, Levin")
+        #expect(ProfileLogic.greeting(hour: 2, name: "Levin") == "Good night, Levin")
         #expect(ProfileLogic.greeting(hour: 19, name: "") == "Good evening", "no name yet, no comma")
         #expect(ProfileLogic.greeting(hour: 19, name: "   ") == "Good evening")
     }
 
     @Test func theUsersOwnNameIsRecognizedInAnyForm() {
-        #expect(ProfileLogic.isSamePerson("Jordan", as: "Jordan Lee"))
-        #expect(ProfileLogic.isSamePerson("jordan", as: "Jordan"))
-        #expect(ProfileLogic.isSamePerson("Mr. Jordan", as: "Jordan"))
-        #expect(!ProfileLogic.isSamePerson("Priya", as: "Jordan"))
-        #expect(!ProfileLogic.isSamePerson("Jordan", as: ""), "no profile name, nobody is the user")
+        #expect(ProfileLogic.isSamePerson("Levin", as: "Levin Shah"))
+        #expect(ProfileLogic.isSamePerson("levin", as: "Levin"))
+        #expect(ProfileLogic.isSamePerson("Mr. Levin", as: "Levin"))
+        #expect(!ProfileLogic.isSamePerson("Priya", as: "Levin"))
+        #expect(!ProfileLogic.isSamePerson("Levin", as: ""), "no profile name, nobody is the user")
     }
 
     private func defaults() -> UserDefaults { UserDefaults(suiteName: "echo-profile-\(UUID().uuidString)")! }
@@ -44,18 +44,18 @@ struct ProfileTests {
     @Test func theProfileIsSavedAndReloaded() {
         let d = defaults()
         let a = ProfileStore(defaults: d, arguments: [])
-        #expect(a.name == "" && a.colorIndex == 0 && a.initials == "")
-        a.name = "Jordan Lee"
+        #expect(a.name == ProfileStore.defaultName && a.colorIndex == 0 && a.initials == "L", "Levin until they type their own name")
+        a.name = "Levin Shah"
         a.colorIndex = 3
         let b = ProfileStore(defaults: d, arguments: [])
-        #expect(b.name == "Jordan Lee" && b.colorIndex == 3 && b.initials == "JL")
+        #expect(b.name == "Levin Shah" && b.colorIndex == 3 && b.initials == "LS")
     }
 
     @Test func launchArgumentsSetTheProfileForScreenshots() {
-        let s = ProfileStore(defaults: defaults(), arguments: ["-profile-name", "Jordan", "-profile-color", "2"])
-        #expect(s.name == "Jordan" && s.colorIndex == 2)
+        let s = ProfileStore(defaults: defaults(), arguments: ["-profile-name", "Levin", "-profile-color", "2"])
+        #expect(s.name == "Levin" && s.colorIndex == 2)
         let missing = ProfileStore(defaults: defaults(), arguments: ["-profile-name"])
-        #expect(missing.name == "", "a flag without a value is ignored")
+        #expect(missing.name == ProfileStore.defaultName, "a flag without a value is ignored")
     }
 
     @Test func aStoredColourOutOfRangeIsFoldedBackIn() {

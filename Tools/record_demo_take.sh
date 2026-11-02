@@ -24,7 +24,7 @@ ECHO_VIDEO_DIR="$DIR" Tools/record_demo.sh start >/dev/null || exit 1
 T0=$(python3 -I -c "import time; print(f'{time.time():.3f}')")
 START=$(date -r "${T0%.*}" '+%Y-%m-%d %H:%M:%S')
 xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1
-xcrun simctl launch "$PHONE" levtech.Echo -demo-script full -profile-name Jordan -profile-color 0 -review off -mask off >/dev/null
+xcrun simctl launch "$PHONE" levtech.Echo -demo-script full -profile-name Levin -profile-color 0 -review off -mask off >/dev/null
 
 echo "3/5 the app is performing the demo (about 4 minutes)…"
 FINISHED=0

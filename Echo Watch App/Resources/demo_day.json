@@ -1,306 +1,306 @@
 {
   "sampleRate": 16000,
-  "duration": 374.86,
+  "duration": 373.04,
   "scenes": [
     {
       "label": "Morning standup",
       "wallClock": "09:05",
       "fileStart": 8.0,
-      "fileEnd": 68.13,
+      "fileEnd": 67.49,
       "lines": [
         {
           "speaker": "Maya",
-          "text": "Okay, let's start. Jordan, where are we on the billing service?",
+          "text": "Okay, let's start. Where are we on the billing service?",
           "start": 8.0,
-          "end": 12.0
+          "end": 11.36
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "The migration is done in staging. I think we can deploy to production on Thursday morning.",
-          "start": 13.05,
-          "end": 18.25
+          "start": 12.41,
+          "end": 17.61
         },
         {
           "speaker": "Ravi",
           "text": "Thursday works for me, but I still need the API specification for the invoices endpoint.",
-          "start": 19.76,
-          "end": 25.55
+          "start": 19.12,
+          "end": 24.91
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Right. I will send you the API specification by Wednesday noon, that's a promise.",
-          "start": 26.43,
-          "end": 31.84
+          "start": 25.8,
+          "end": 31.2
         },
         {
           "speaker": "Maya",
           "text": "Great. I will review the design document on Tuesday and leave comments before the end of the day.",
-          "start": 33.25,
-          "end": 38.45
+          "start": 32.61,
+          "end": 37.81
         },
         {
           "speaker": "Ravi",
           "text": "One risk. The payment provider changes their webhook format on November eighth.",
-          "start": 39.29,
-          "end": 43.99
+          "start": 38.65,
+          "end": 43.36
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Good catch. I will add a compatibility layer so both formats work during the switch.",
-          "start": 45.3,
-          "end": 50.54
+          "start": 44.66,
+          "end": 49.9
         },
         {
           "speaker": "Maya",
           "text": "Perfect. Budget is tight, so let's not add new features before the launch.",
-          "start": 52.1,
-          "end": 56.5
+          "start": 51.47,
+          "end": 55.86
         },
         {
           "speaker": "Ravi",
           "text": "Agreed. I will also ask finance about the extra cloud credits we discussed.",
-          "start": 57.75,
-          "end": 62.88
+          "start": 57.11,
+          "end": 62.24
         },
         {
           "speaker": "Maya",
           "text": "Thanks everyone. Same time tomorrow.",
-          "start": 64.3,
-          "end": 66.77
+          "start": 63.66,
+          "end": 66.13
         }
       ]
     },
     {
       "label": "Lunch with Priya",
       "wallClock": "12:30",
-      "fileStart": 99.85,
-      "fileEnd": 163.03,
+      "fileStart": 99.21,
+      "fileEnd": 162.39,
       "lines": [
         {
           "speaker": "Priya",
           "text": "I finally booked the trip. Lisbon, the second week of March.",
-          "start": 99.85,
-          "end": 103.67
+          "start": 99.21,
+          "end": 103.03
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "That sounds amazing, Priya. Which hotel did you pick?",
-          "start": 105.06,
-          "end": 108.62
+          "start": 104.42,
+          "end": 107.98
         },
         {
           "speaker": "Priya",
           "text": "A small place near the Alfama district. I will text you the link if you want to join.",
-          "start": 110.15,
-          "end": 115.05
+          "start": 109.51,
+          "end": 114.42
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Yes, please send it. I will think about taking leave from the fifteenth to the twentieth.",
-          "start": 116.09,
-          "end": 121.45
+          "start": 115.45,
+          "end": 120.82
         },
         {
           "speaker": "Priya",
           "text": "By the way, you mentioned your tooth was bothering you. See Doctor Patel, she is excellent.",
-          "start": 122.45,
-          "end": 127.92
+          "start": 121.81,
+          "end": 127.28
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Thanks. I will call her office tomorrow morning and book an appointment.",
-          "start": 128.85,
-          "end": 132.96
+          "start": 128.21,
+          "end": 132.32
         },
         {
           "speaker": "Priya",
           "text": "Also, what are you getting your mom for her birthday?",
-          "start": 133.7,
-          "end": 136.38
+          "start": 133.06,
+          "end": 135.74
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "I was thinking of a book about pottery, she has been wanting to take a class.",
-          "start": 137.24,
-          "end": 141.76
+          "start": 136.6,
+          "end": 141.12
         },
         {
           "speaker": "Priya",
           "text": "Lovely idea. Pair it with a voucher for a beginner workshop.",
-          "start": 142.58,
-          "end": 145.94
+          "start": 141.94,
+          "end": 145.3
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Oh, that's good. I will order the book tonight and look up workshops this weekend.",
-          "start": 147.53,
-          "end": 152.2
+          "start": 146.9,
+          "end": 151.56
         },
         {
           "speaker": "Priya",
           "text": "And tonight, don't forget to send me that recipe for the lentil soup.",
-          "start": 153.58,
-          "end": 157.37
+          "start": 152.94,
+          "end": 156.73
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "I will send the lentil soup recipe this evening, I promise.",
-          "start": 158.38,
-          "end": 162.01
+          "start": 157.74,
+          "end": 161.38
         }
       ]
     },
     {
       "label": "Call with the landlord",
       "wallClock": "15:10",
-      "fileStart": 201.96,
-      "fileEnd": 271.54,
+      "fileStart": 201.32,
+      "fileEnd": 270.39,
       "lines": [
         {
           "speaker": "Brennan",
-          "text": "Hello Jordan, this is Mister Brennan, calling about the apartment.",
-          "start": 201.96,
-          "end": 206.85
+          "text": "Hello, this is Mister Brennan, calling about the apartment.",
+          "start": 201.32,
+          "end": 205.7
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Hi Mister Brennan. Thanks for calling back. The bathroom ceiling is still leaking.",
-          "start": 208.03,
-          "end": 213.11
+          "start": 206.88,
+          "end": 211.96
         },
         {
           "speaker": "Brennan",
           "text": "Yes, I received your photos. I have booked a plumber to come on Friday at ten in the morning.",
-          "start": 214.66,
-          "end": 221.16
+          "start": 213.51,
+          "end": 220.01
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Friday at ten works. I will make sure I am home to let them in.",
-          "start": 222.44,
-          "end": 226.41
+          "start": 221.29,
+          "end": 225.26
         },
         {
           "speaker": "Brennan",
           "text": "Wonderful. Now, about your lease. It ends on December thirty first.",
-          "start": 227.33,
-          "end": 233.0
+          "start": 226.18,
+          "end": 231.85
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Right, I wanted to ask about renewing.",
-          "start": 234.57,
-          "end": 237.12
+          "start": 233.42,
+          "end": 235.97
         },
         {
           "speaker": "Brennan",
           "text": "I can offer a twelve month renewal, with a four percent rent increase.",
-          "start": 238.36,
-          "end": 243.19
+          "start": 237.21,
+          "end": 242.04
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Four percent is a bit more than I expected. Can I think about it and let you know?",
-          "start": 244.46,
-          "end": 249.06
+          "start": 243.31,
+          "end": 247.91
         },
         {
           "speaker": "Brennan",
           "text": "Of course. I need your decision by November twentieth.",
-          "start": 250.03,
-          "end": 254.3
+          "start": 248.88,
+          "end": 253.15
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Understood. I will give you a final answer before November twentieth.",
-          "start": 255.85,
-          "end": 259.85
+          "start": 254.69,
+          "end": 258.7
         },
         {
           "speaker": "Brennan",
           "text": "Excellent. Also, rent for this month is still outstanding.",
-          "start": 260.93,
-          "end": 265.5
+          "start": 259.78,
+          "end": 264.35
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Sorry about that. I will transfer it tomorrow, first thing.",
-          "start": 266.33,
-          "end": 270.48
+          "start": 265.18,
+          "end": 269.33
         }
       ]
     },
     {
       "label": "Family dinner",
       "wallClock": "18:40",
-      "fileStart": 315.03,
-      "fileEnd": 374.86,
+      "fileStart": 313.88,
+      "fileEnd": 373.04,
       "lines": [
         {
           "speaker": "Mom",
-          "text": "Dinner is ready everyone. Jordan, can you bring the salad?",
-          "start": 315.03,
-          "end": 319.64
+          "text": "Dinner is ready everyone. Can you bring the salad, sweetheart?",
+          "start": 313.88,
+          "end": 318.5
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "Sure, Mom. Smells fantastic.",
-          "start": 320.53,
-          "end": 323.26
+          "start": 319.4,
+          "end": 322.12
         },
         {
           "speaker": "Dad",
           "text": "Your mother's birthday is on November fourteenth, and I want to take her to the lake cabin for the weekend.",
-          "start": 324.48,
-          "end": 331.37
+          "start": 323.34,
+          "end": 330.24
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "That's a great idea, Dad. I can drive you both on Saturday morning.",
-          "start": 332.77,
-          "end": 337.1
+          "start": 331.64,
+          "end": 335.97
         },
         {
           "speaker": "Mom",
           "text": "You don't need to fuss. But I would love to see the lake in autumn.",
-          "start": 337.97,
-          "end": 342.46
+          "start": 336.83,
+          "end": 341.33
         },
         {
           "speaker": "Dad",
-          "text": "Jordan, remember to call Grandma on Sunday. She has been asking about you.",
-          "start": 343.4,
-          "end": 348.95
+          "text": "Remember to call Grandma on Sunday. She has been asking about you.",
+          "start": 342.27,
+          "end": 347.13
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "I will call Grandma this Sunday afternoon, I promise.",
-          "start": 350.33,
-          "end": 353.85
+          "start": 348.51,
+          "end": 352.03
         },
         {
           "speaker": "Mom",
           "text": "We also need groceries. Eggs, olive oil, and oranges for the juice.",
-          "start": 354.99,
-          "end": 360.39
+          "start": 353.17,
+          "end": 358.57
         },
         {
-          "speaker": "Jordan",
+          "speaker": "Levin",
           "text": "I will pick those up on my way home from work tomorrow.",
-          "start": 361.72,
-          "end": 364.68
+          "start": 359.9,
+          "end": 362.87
         },
         {
           "speaker": "Dad",
           "text": "And bring an umbrella. They say it will rain all week.",
-          "start": 366.07,
-          "end": 369.85
+          "start": 364.25,
+          "end": 368.03
         },
         {
           "speaker": "Mom",
           "text": "Alright, let's eat before it gets cold.",
-          "start": 370.9,
-          "end": 373.94
+          "start": 369.08,
+          "end": 372.12
         }
       ]
     }

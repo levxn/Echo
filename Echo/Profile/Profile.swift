@@ -6,14 +6,14 @@ import SwiftUI
 nonisolated enum ProfileLogic {
     static let colorCount = 6
 
-    /// "Jordan Lee" -> "JL", "jordan" -> "J", "  " -> "". At most two letters.
+    /// "Levin Shah" -> "LS", "levin" -> "L", "  " -> "". At most two letters.
     static func initials(from name: String) -> String {
         let words = name.split(whereSeparator: { $0.isWhitespace }).filter { $0.contains(where: \.isLetter) }
         let letters = words.prefix(2).compactMap { $0.first(where: \.isLetter) }
         return String(letters).uppercased()
     }
 
-    /// "Good evening, Jordan", or just "Good evening" before a name is set.
+    /// "Good evening, Levin", or just "Good evening" before a name is set.
     static func greeting(hour: Int, name: String) -> String {
         let part: String
         switch hour {
@@ -40,6 +40,8 @@ final class ProfileStore {
     static let nameKey = "echo.profileName"
     static let colorKey = "echo.profileColor"
     static let speakKey = "echo.speakVoiceAnswers"
+    /// Whose day this is until they type their own name.
+    static let defaultName = "Levin"
 
     private let defaults: UserDefaults
 
@@ -54,13 +56,13 @@ final class ProfileStore {
         didSet { defaults.set(speakVoiceAnswers, forKey: Self.speakKey) }
     }
 
-    /// Dev hooks for screenshots and the demo take: `-profile-name Jordan`, `-profile-color 2`.
+    /// Dev hooks for screenshots and the demo take: `-profile-name Levin`, `-profile-color 2`.
     init(defaults: UserDefaults = .standard, arguments: [String] = ProcessInfo.processInfo.arguments) {
         self.defaults = defaults
         func value(_ flag: String) -> String? { arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil } }
         if let n = value("-profile-name") { defaults.set(n, forKey: Self.nameKey) }
         if let c = value("-profile-color").flatMap(Int.init) { defaults.set(c, forKey: Self.colorKey) }
-        name = defaults.string(forKey: Self.nameKey) ?? ""
+        name = defaults.string(forKey: Self.nameKey) ?? Self.defaultName
         let stored = defaults.object(forKey: Self.colorKey) as? Int ?? 0
         colorIndex = ((stored % ProfileLogic.colorCount) + ProfileLogic.colorCount) % ProfileLogic.colorCount
         speakVoiceAnswers = defaults.object(forKey: Self.speakKey) as? Bool ?? true

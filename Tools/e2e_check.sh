@@ -185,7 +185,7 @@ if live:
 # masking: the masked request carried placeholders and none of the people's names
 masked_rows = [r for r in asks if r[3] and r[3] > 0]
 if live:
-    names = ["Jordan", "Priya", "Brennan", "Patel"]
+    names = ["Levin", "Priya", "Brennan", "Patel"]
     leaked = [n for r in masked_rows for n in names if n in r[1]]
     check("masking: a masked request was sent, with placeholders and no names", len(masked_rows) >= 1 and not leaked and any("[PERSON_" in r[1] for r in masked_rows),
           f"{len(masked_rows)} masked request(s), leaked {sorted(set(leaked))}")

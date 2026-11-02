@@ -29,7 +29,7 @@ shot_watch() {   # name  -> docs/media/screenshots/watch-<name>.png, with the re
   ffmpeg -loglevel error -y -i "$TMP/raw_watch_$1.png" -vf "crop=iw:ih-72:0:72" "$SHOTS/watch-$1.png"
   cp "$SHOTS/watch-$1.png" "$TMP/raw_watchcrop_$1.png"
 }
-launch_phone() { xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1; xcrun simctl launch "$PHONE" levtech.Echo -profile-name Jordan -profile-color 0 "$@" >/dev/null; }
+launch_phone() { xcrun simctl terminate "$PHONE" levtech.Echo >/dev/null 2>&1; xcrun simctl launch "$PHONE" levtech.Echo -profile-name Levin -profile-color 0 "$@" >/dev/null; }
 
 # scene NAME SECONDS ARGS...: record both simulators, open the phone with ARGS, wait, screenshot, stop.
 scene() {

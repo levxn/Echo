@@ -122,6 +122,6 @@ struct PromiseTests {
         #expect(PromiseExtractor.extract(from: day).first?.toWhom == "Priya", "with no profile, the addressed name is the recipient")
         #expect(PromiseExtractor.extract(from: day, userName: "Priya Shah").first?.toWhom == nil, "it is the user, so there is no recipient")
         #expect(PromiseExtractor.extract(from: day, userName: "priya").first?.toWhom == nil, "in any case")
-        #expect(PromiseExtractor.extract(from: day, userName: "Jordan").first?.toWhom == "Priya", "a different profile name changes nothing")
+        #expect(PromiseExtractor.extract(from: day, userName: "Levin").first?.toWhom == "Priya", "a different profile name changes nothing")
     }
 }
