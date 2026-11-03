@@ -87,6 +87,13 @@ struct TodayView: View {
     private var people: [Person] { PeopleIgnore.visible(heardPeople, ignoring: ignoredPeople) }
     @AppStorage(DayWiper.promiseDoneKey) private var doneRaw = ""
     /// Promises heard and not yet ticked off: the one number the tab, the header and the list all agree on.
+    /// Switches to a section and scrolls it into view (the shortcuts in the header).
+    private func open(_ section: TodaySection) {
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { state.section = section }
+        state.scrollTarget = nil
+        Task { state.scrollTarget = "sections" }
+    }
+
     private var openPromises: Int {
         let done = Set(doneRaw.split(separator: "\n").map(String.init))
         return promises.filter { !done.contains($0.id) }.count
@@ -106,11 +113,8 @@ struct TodayView: View {
             VStack(spacing: Spacing.xl) {
                 greeting.id("todayTop")
                 if model.todayChunks.contains(where: { $0.status == .stored }) {
-                    TodayHero(model: model, promises: promises, openPromises: openPromises, conversations: episodes.count) {
-                        withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { state.section = .commitments }
-                        state.scrollTarget = nil
-                        Task { state.scrollTarget = "sections" }
-                    }
+                    TodayHero(model: model, promises: promises, openPromises: openPromises, conversations: episodes.count,
+                              onOpenPromises: { open(.commitments) }, onOpenTimeline: { open(.day) })
                 }
                 // The bars say nothing until the watch has started (all zeros), so the hint below speaks for an empty day.
                 if model.session != .waiting || !model.todayChunks.isEmpty { FunnelCard(model: model) }
@@ -169,7 +173,7 @@ struct TodayView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             HStack(spacing: Spacing.tight) {
-                Circle().fill(model.watchReachable ? Palette.teal : Palette.amber).frame(width: 8, height: 8).accessibilityHidden(true)
+                Circle().fill(model.watchReachable || model.isSettled ? Palette.teal : Palette.amber).frame(width: 8, height: 8).accessibilityHidden(true)
                 Text(statusText)
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)

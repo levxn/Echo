@@ -8,6 +8,7 @@ struct TodayHero: View {
     let openPromises: Int
     let conversations: Int
     let onOpenPromises: () -> Void
+    var onOpenTimeline: () -> Void = {}
 
     @Environment(VoiceBookModel.self) private var voices
     @AppStorage(DayWiper.promiseDoneKey) private var doneRaw = ""
@@ -22,14 +23,17 @@ struct TodayHero: View {
     var body: some View {
         let snap = snapshot
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            // With very large text the three numbers stack, so a label like "conversations" is never squeezed.
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.md))
-                                                      : AnyLayout(HStackLayout(spacing: 0))
+            // Three equal tiles. With very large text they stack, so a label like "Conversations" is never squeezed.
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
+                                                      : AnyLayout(HStackLayout(spacing: Spacing.sm))
             layout {
-                stat(snap.momentsToday, "moments")
-                stat(conversations, "conversations")
-                stat(openPromises, openPromises == 1 ? "promise open" : "promises open")
+                tile(snap.momentsToday, "Moments", symbol: "waveform", tint: Palette.blue)
+                tile(conversations, conversations == 1 ? "Conversation" : "Conversations", symbol: "bubble.left.and.bubble.right.fill",
+                     tint: Palette.violet, hint: "Opens the timeline", action: onOpenTimeline)
+                tile(openPromises, "Open promises", symbol: "checkmark.circle.fill", tint: Palette.teal,
+                     hint: "Opens your promises", action: onOpenPromises)
             }
+            .fixedSize(horizontal: false, vertical: true)   // the three tiles are always the same height
             if let next = snap.items.first {
                 Button(action: onOpenPromises) {
                     HStack(alignment: .top, spacing: Spacing.md) {
@@ -71,20 +75,39 @@ struct TodayHero: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func stat(_ value: Int, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
+    /// One of the three numbers: an icon, the number, and what it counts, on a softly tinted tile.
+    @ViewBuilder
+    private func tile(_ value: Int, _ label: String, symbol: String, tint: Color, hint: String? = nil, action: (() -> Void)? = nil) -> some View {
+        let content = VStack(alignment: .leading, spacing: Spacing.xs) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
             Text("\(value)")
-                .font(.echoScreenTitle)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(Palette.accentGradient)
+                .foregroundStyle(Palette.textPrimary)
                 .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
-                .font(Font.echoMeta)
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(Palette.textSecondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.7)   // one line, so a word is never broken in two
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, Spacing.md)
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous).strokeBorder(tint.opacity(0.28), lineWidth: 1))
         .accessibilityElement(children: .combine)
+        if let action {
+            Button(action: action) { content.contentShape(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)) }
+                .buttonStyle(EchoPressStyle())
+                .accessibilityHint(hint ?? "")
+        } else {
+            content
+        }
     }
 }
