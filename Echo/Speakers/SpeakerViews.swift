@@ -56,6 +56,7 @@ struct VoicesStrip: View {
                 }
                 .scrollIndicators(.hidden)
                 .scrollClipDisabled()
+                .trailingFade()
                 if let guess = model.suggestedMe {
                     HStack(spacing: Spacing.md) {
                         VoiceDot(voice: guess, size: 28)

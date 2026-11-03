@@ -9,6 +9,7 @@ struct TodayHero: View {
 
     @Environment(VoiceBookModel.self) private var voices
     @AppStorage(DayWiper.promiseDoneKey) private var doneRaw = ""
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var snapshot: WidgetSnapshot {
         WidgetSnapshotBuilder.make(promises: promises, reminders: [:], done: Set(doneRaw.split(separator: "\n").map(String.init)),
@@ -19,7 +20,10 @@ struct TodayHero: View {
     var body: some View {
         let snap = snapshot
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(spacing: 0) {
+            // With very large text the three numbers stack, so a label like "conversations" is never squeezed.
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.md))
+                                                      : AnyLayout(HStackLayout(spacing: 0))
+            layout {
                 stat(snap.momentsToday, "moments")
                 stat(conversations, "conversations")
                 stat(snap.openCount, snap.openCount == 1 ? "promise open" : "promises open")

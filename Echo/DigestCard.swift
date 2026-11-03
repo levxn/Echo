@@ -21,7 +21,7 @@ struct DigestSection: View {
 
     private var prompt: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            EchoButton(title: "Summarize my day with Muse", systemImage: "sparkles", style: .prominent, action: run)
+            EchoButton(title: "Summarize my day with Muse", systemImage: "doc.text.magnifyingglass", style: .prominent, action: run)
             Text("Sends the day's text (\(model.storedCount) snippets, no audio) to Muse Spark. It is recorded in your Privacy Ledger.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
@@ -75,7 +75,7 @@ private struct DigestCard: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             HStack(spacing: Spacing.tight) {
                 Label(ready.isStub ? "Stub preview · no API key" : "Muse's view of your day",
-                      systemImage: ready.isStub ? "testtube.2" : "sparkles")
+                      systemImage: ready.isStub ? "testtube.2" : "text.alignleft")
                     .font(.echoLabel)
                 Spacer()
                 ShareLink(item: ShareText.digest(summary: ready.digest.daySummary,

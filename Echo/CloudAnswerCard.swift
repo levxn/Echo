@@ -25,10 +25,7 @@ struct CloudAnswerCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(result.answer.answer)
-                .font(.echoAnswer)
-                .foregroundStyle(Palette.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            RevealingText(text: result.answer.answer)
 
             AnswerActions(speak: result.answer.answer,
                           share: ShareText.answer(question: result.query, answer: result.answer.answer,
@@ -82,7 +79,7 @@ struct SourcePlayChip: View {
     var body: some View {
         if let chunk {
             Button { player.toggle(chunk) } label: {
-                Chip(text: label, icon: playing ? "stop.fill" : "play.fill", tint: tint)
+                Chip(text: label, icon: "play.fill", tint: tint, wave: playing)
                     .monospacedDigit()
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -237,12 +234,13 @@ struct SendingCard: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             RouteStrip(active: .cloud)
             HStack(spacing: Spacing.md) {
-                ProgressView().tint(Palette.cloud)
+                WaveBars(count: 4, height: 18, tint: Palette.cloud)
                 Text(isStub ? "Preparing a stub preview. Nothing is sent."
                             : "Sending \(plan.snippets.count) snippets (\(ByteFormat.short(plan.bodyBytes))) to Muse Spark…")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Palette.textPrimary)
             }
+            SkeletonLines()
             Text("Chosen because: \(plan.selectionReason). No audio is sent.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)

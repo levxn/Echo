@@ -59,11 +59,18 @@ struct PlayButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: isPlaying ? "stop.fill" : "play.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Palette.textPrimary)
-                .frame(width: 44, height: 44)
-                .background(Palette.fillStrong, in: Circle())
+            Group {
+                if isPlaying {
+                    WaveBars(count: 4, height: 16, tint: Palette.teal)
+                } else {
+                    Image(systemName: "play.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.textPrimary)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .background(isPlaying ? Palette.teal.opacity(0.18) : Palette.fillStrong, in: Circle())
+            .animation(.smooth(duration: 0.2), value: isPlaying)
         }
         .buttonStyle(EchoPressStyle())
         .accessibilityLabel(isPlaying ? "Stop audio" : label)
@@ -108,15 +115,18 @@ struct EchoSegmented<Value: Hashable>: View {
 
     @Namespace private var highlight
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: Spacing.xs) {
+        // With very large text the choices wrap into rows of two, instead of being cut short ("Promis…").
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(TwoColumnLayout(spacing: Spacing.xs)) : AnyLayout(HStackLayout(spacing: Spacing.xs))
+        layout {
             ForEach(segments) { segment in
                 let selected = segment.value == selection
                 Button { selection = segment.value } label: {
                     Text(segment.title)
                         .font(.echoLabel)
-                        .lineLimit(1)
+                        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                         .minimumScaleFactor(0.8)
                         .foregroundStyle(selected ? Palette.textPrimary : Palette.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -132,8 +142,34 @@ struct EchoSegmented<Value: Hashable>: View {
             }
         }
         .padding(Spacing.xs)
-        .glassEffect(.regular, in: .capsule)
+        .glassEffect(.regular, in: typeSize.isAccessibilitySize ? AnyShape(RoundedRectangle(cornerRadius: 28, style: .continuous)) : AnyShape(Capsule()))
         .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: selection)
+    }
+}
+
+/// Lays children out in two equal columns, as many rows as it takes.
+struct TwoColumnLayout: Layout {
+    var spacing: CGFloat = Spacing.xs
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 300
+        let cell = (width - spacing) / 2
+        let heights = subviews.map { $0.sizeThatFits(ProposedViewSize(width: cell, height: nil)).height }
+        let rows = stride(from: 0, to: heights.count, by: 2).map { heights[$0..<min($0 + 2, heights.count)].max() ?? 0 }
+        return CGSize(width: width, height: rows.reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let cell = (bounds.width - spacing) / 2
+        var y = bounds.minY
+        for start in stride(from: 0, to: subviews.count, by: 2) {
+            let row = subviews[start..<min(start + 2, subviews.count)]
+            let height = row.map { $0.sizeThatFits(ProposedViewSize(width: cell, height: nil)).height }.max() ?? 0
+            for (offset, subview) in row.enumerated() {
+                subview.place(at: CGPoint(x: bounds.minX + CGFloat(offset) * (cell + spacing), y: y), proposal: ProposedViewSize(width: cell, height: height))
+            }
+            y += height + spacing
+        }
     }
 }
 

@@ -88,7 +88,7 @@ struct DraftSheet: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             EchoSegmented(segments: DraftChannel.allCases.map { .init(value: $0, title: $0.title) }, selection: $channel)
             EchoSegmented(segments: DraftTone.allCases.map { .init(value: $0, title: $0.title) }, selection: $tone)
-            EchoButton(title: "Write it with Muse", systemImage: "sparkles", style: .prominent) {
+            EchoButton(title: "Write it with Muse", systemImage: "square.and.pencil", style: .prominent) {
                 Task { await drafts.generate(for: promise, tone: tone, channel: channel, chunks: chunks) }
             }
             Label(ledger.reviewBeforeSend ? "You will see exactly what is sent first. Only this moment and the line before it go to Muse, as text."

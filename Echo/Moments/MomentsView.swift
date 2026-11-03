@@ -48,6 +48,14 @@ struct MomentsView: View {
             }
             .scrollIndicators(.hidden)
             .background { AuroraBackground() }
+            // Dev hook: `-play-first` starts the newest moment's audio, so the playing state can be seen (screenshots).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-play-first") else { return }
+                try? await Task.sleep(for: .milliseconds(1200))
+                let stored = model.sessionChunks.filter { $0.status == .stored }
+                // The first moment of the newest conversation, which is the one open at the top of the list.
+                if let newest = stored.last, let first = stored.filter({ $0.wallStart >= newest.wallStart - 300 }).min(by: { $0.wallStart < $1.wallStart }) { player.toggle(first) }
+            }
             // Dev hook: `-moments-behind` opens Behind the scenes and scrolls to it (screenshots).
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-moments-behind") else { return }

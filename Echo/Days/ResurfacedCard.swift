@@ -17,7 +17,7 @@ struct ResurfacedCard: View {
             Text("\(item.conversations) conversation\(item.conversations == 1 ? "" : "s") · \(item.moments) moments, kept on this phone")
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)
-            EchoButton(title: "What happened that day?", systemImage: "sparkles", action: onAsk)
+            EchoButton(title: "What happened that day?", systemImage: "clock.arrow.circlepath", action: onAsk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()

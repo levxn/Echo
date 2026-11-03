@@ -31,7 +31,7 @@ struct AskView: View {
                     Color.clear.frame(height: 0).id("askTop")
                     field
                     VoiceCard(voice: voice, onStop: micTapped, onRetry: micTapped)
-                    suggestions
+                    if hasMemory || !history.items.isEmpty { suggestions }   // nothing to ask about yet, nothing to suggest
                     followUpNote
                     result
                     followUpChips
@@ -167,20 +167,24 @@ struct AskView: View {
         case .idle where !history.items.isEmpty:
             EmptyView()   // the history below is the prompt now
         case .idle:
-            EmptyState(icon: hasMemory ? "sparkles" : "applewatch.radiowaves.left.and.right",
+            EmptyState(icon: hasMemory ? "text.bubble" : "applewatch.radiowaves.left.and.right",
                        tint: hasMemory ? Palette.blue : Palette.amber,
                        title: hasMemory ? "Try a question above" : "Nothing to search yet",
                        message: hasMemory ? "Tap the mic and ask out loud, tap a suggestion, or type your own."
                                           : "Start the day on your watch. Conversations appear here once they have been transcribed.")
         case .searching(let q):
-            HStack(spacing: Spacing.md) {
-                ProgressView().tint(Palette.teal)
-                Text("Searching “\(q)”")
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.textSecondary)
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(spacing: Spacing.md) {
+                    WaveBars(count: 4, height: 18, tint: Palette.teal)
+                    Text("Searching “\(q)”")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                }
+                SkeletonLines(widths: [1, 0.7])
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .echoCard()
+            .accessibilityElement(children: .combine)
         case .answered(let r):
             AnswerCard(result: r, player: player)
                 .transition(.echoRise(reduceMotion: reduceMotion))

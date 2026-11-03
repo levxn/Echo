@@ -11,6 +11,7 @@ struct LedgerView: View {
     /// Wipes the day (and optionally the ledger); owned by RootView because it touches every model.
     let onForget: (_ includeLedger: Bool) -> Void
 
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var confirmClear = false
     @State private var confirmForget = false
     @State private var confirmClearHistory = false
@@ -154,13 +155,16 @@ struct LedgerView: View {
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: Spacing.md) {
-                Image(systemName: "calendar.badge.clock").font(.subheadline.weight(.semibold)).frame(width: 22)
+            // With very large text the value drops below the title instead of squeezing it to one word per line.
+            let retentionLayout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+                                                               : AnyLayout(HStackLayout(spacing: Spacing.md))
+            retentionLayout {
+                if !typeSize.isAccessibilitySize { Image(systemName: "calendar.badge.clock").font(.subheadline.weight(.semibold)).frame(width: 22) }
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("Keep memories for").font(.system(.subheadline, design: .rounded, weight: .semibold))
                     Text("Older days are forgotten automatically.").font(.caption).foregroundStyle(Palette.textSecondary)
                 }
-                Spacer()
+                if !typeSize.isAccessibilitySize { Spacer() }
                 Menu {
                     Picker("Keep memories for", selection: $retentionDays) {
                         ForEach(Retention.options, id: \.days) { Text($0.title).tag($0.days) }
@@ -231,10 +235,14 @@ struct LedgerView: View {
 
 private struct SummaryCard: View {
     let totals: LedgerTotals
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
+        // With very large text the three numbers stack, so none of them is cut off ("16.1…").
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.md))
+                                                  : AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.lg))
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            HStack(alignment: .top, spacing: Spacing.lg) {
+            layout {
                 stat("\(totals.stayedOnPhone)", "kept on phone", Palette.teal)
                 stat("\(totals.usedMuse)", "via Muse", Palette.cloud)
                 stat(ByteFormat.short(totals.bytesSent), "text sent", Palette.textPrimary)

@@ -134,7 +134,7 @@ private struct PersonRow: View {
                         ShowMoreButton(total: moments.count, limit: Self.momentLimit, isExpanded: $showAllMoments)
                     }
                     EchoButton(title: "Ask about \(person.name.split(separator: " ").first.map(String.init) ?? person.name)",
-                               systemImage: "sparkles", action: onAsk)
+                               systemImage: "text.bubble", action: onAsk)
                     EchoButton(title: "Not a person", systemImage: "eye.slash", style: .quiet, action: onIgnore)
                         .accessibilityHint("Hides this name. Use it when speech recognition heard a word that isn't a name")
                 }

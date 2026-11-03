@@ -8,10 +8,14 @@ struct Chip: View {
     var icon: String?
     var tint: Color = Palette.teal
     var size: Size = .regular
+    /// Shows a moving equalizer in place of the icon (audio is playing).
+    var wave = false
 
     var body: some View {
         Group {
-            if let icon { Label(text, systemImage: icon) } else { Text(text) }
+            if wave {
+                HStack(spacing: Spacing.xs) { WaveBars(count: 3, height: 11, tint: tint); Text(text) }
+            } else if let icon { Label(text, systemImage: icon) } else { Text(text) }
         }
         .font(size == .regular ? Font.echoMeta.weight(.medium) : Font.echoMicro.weight(.semibold))
         .foregroundStyle(tint)

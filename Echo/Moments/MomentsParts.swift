@@ -202,6 +202,8 @@ struct MomentRowView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(VoiceBookModel.self) private var voices
     @State private var translating = false
+    @State private var expanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var time: some View {
         Text(item.timeLabel)
@@ -232,9 +234,12 @@ struct MomentRowView: View {
                 Text(text)
                     .font(.subheadline)
                     .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(3)
+                    .lineLimit(expanded ? nil : 3)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture { withAnimation(reduceMotion ? nil : .smooth(duration: 0.28)) { expanded.toggle() } }
+                    .accessibilityAction(named: expanded ? "Show less" : "Show all of it") { expanded.toggle() }
                 PlayButton(isPlaying: isPlaying, label: "Play the audio from \(item.timeLabel)", action: onPlay)
                 Menu {
                     Button("Translate…", systemImage: "translate") { translating = true }

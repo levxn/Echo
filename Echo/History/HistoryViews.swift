@@ -33,7 +33,7 @@ extension AskVia {
     var historySymbol: String {
         switch self {
         case .typed: "keyboard"
-        case .suggestion: "sparkles"
+        case .suggestion: "lightbulb.fill"
         case .voice: "mic.fill"
         case .watch: "applewatch"
         case .watchVoice: "applewatch.radiowaves.left.and.right"
@@ -145,6 +145,7 @@ struct HistorySheet: View {
     @State private var selectedID: String?
     @State private var confirmClear = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let initial: HistoryRequest.Open
 
     init(history: AskHistoryModel, chunks: [ChunkRecord], player: ChunkPlayer, open: HistoryRequest.Open = .list,
@@ -165,13 +166,18 @@ struct HistorySheet: View {
                     HistoryDetail(record: record, chunks: chunks, player: player,
                                   onAskAgain: onAskAgain, onViewLedger: onViewLedger,
                                   onDelete: { Task { await history.delete(id: record.id); selectedID = nil } })
+                        .transition(reduceMotion ? .opacity : .asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                                                          removal: .move(edge: .trailing).combined(with: .opacity)))
                 } else if history.items.isEmpty {
                     EmptyState(icon: "clock.arrow.circlepath", title: "No questions yet",
                                message: "What you ask, and what you were told, is kept here on this phone until you clear it.")
                 } else {
                     list
+                        .transition(reduceMotion ? .opacity : .asymmetric(insertion: .move(edge: .leading).combined(with: .opacity),
+                                                                          removal: .move(edge: .leading).combined(with: .opacity)))
                 }
             }
+            .animation(reduceMotion ? nil : .smooth(duration: 0.36), value: selectedID)
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
             .padding(.bottom, Spacing.xxl)

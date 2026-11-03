@@ -164,7 +164,7 @@ struct RootView: View {
                 MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
-            Tab("Ask", systemImage: "sparkles", value: RootTab.ask) {
+            Tab("Ask", systemImage: "text.bubble.fill", value: RootTab.ask) {
                 AskView(ask: ask, voice: voice, history: history, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks,
                         onViewLedger: { tab = .ledger })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
