@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-457%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-459%20passing-34D399)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
 
@@ -157,7 +157,7 @@ flowchart LR
 | Transcription word error rate | 7.4% overall (every scene under 10%) on the demo recordings; real speech will be harder |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 457 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) that checks the whole demo against live Muse |
+| Tests | 459 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) that checks the whole demo against live Muse |
 
 ## The privacy model
 

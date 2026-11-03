@@ -107,6 +107,10 @@ struct EchoSegmented<Value: Hashable>: View {
     struct Segment: Identifiable {
         let value: Value
         let title: String
+        /// A count shown as a small badge on the segment, like an unread count (nothing when nil).
+        var badge: Int? = nil
+        /// What VoiceOver says after the title ("15 open").
+        var spoken: String? = nil
         var id: Value { value }
     }
 
@@ -124,10 +128,25 @@ struct EchoSegmented<Value: Hashable>: View {
             ForEach(segments) { segment in
                 let selected = segment.value == selection
                 Button { selection = segment.value } label: {
-                    Text(segment.title)
-                        .font(.echoLabel)
-                        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
-                        .minimumScaleFactor(0.8)
+                    HStack(alignment: .top, spacing: 2) {
+                        Text(segment.title)
+                            .font(.echoLabel)
+                            .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+                            .minimumScaleFactor(0.8)
+                        if let badge = segment.badge {
+                            // A small raised count beside the name, like an unread count, so it reads as a number of things.
+                            Text("\(badge)")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(Palette.background)
+                                .padding(.horizontal, 4)
+                                .frame(minWidth: 16, minHeight: 16)
+                                .background(Palette.teal.opacity(selected ? 1 : 0.8), in: Capsule())
+                                .offset(y: -4)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                        .frame(height: typeSize.isAccessibilitySize ? nil : 22, alignment: .center)   // the same height with or without a badge, so labels line up
                         .foregroundStyle(selected ? Palette.textPrimary : Palette.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background {
@@ -138,6 +157,8 @@ struct EchoSegmented<Value: Hashable>: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(segment.title)
+                .accessibilityValue(segment.spoken ?? "")
                 .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
             }
         }

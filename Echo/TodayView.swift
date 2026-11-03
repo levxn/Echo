@@ -6,13 +6,37 @@ enum TodaySection: String, CaseIterable, Identifiable {
     case summary, commitments, people, day
     var id: String { rawValue }
 
-    /// The segment label, with a count where one helps ("Promises 15").
-    func title(commitments: Int, people: Int, conversations: Int) -> String {
+    /// The segment's name. ("Timeline" is the day's conversations in order, with where each happened.)
+    var label: String {
         switch self {
         case .summary: "Summary"
-        case .commitments: commitments > 0 ? "Promises \(commitments)" : "Promises"
-        case .people: people > 0 ? "People \(people)" : "People"
-        case .day: conversations > 0 ? "Day \(conversations)" : "Day"
+        case .commitments: "Promises"
+        case .people: "People"
+        case .day: "Timeline"
+        }
+    }
+
+    /// The number shown as a small badge on the segment: promises still open, people who came up, conversations had.
+    /// Nil where a number would say nothing (Summary, or none yet).
+    func count(openPromises: Int, people: Int, conversations: Int) -> Int? {
+        let n: Int
+        switch self {
+        case .summary: return nil
+        case .commitments: n = openPromises
+        case .people: n = people
+        case .day: n = conversations
+        }
+        return n > 0 ? n : nil
+    }
+
+    /// What VoiceOver adds after the name: "15 open", "6 mentioned", "4 conversations".
+    func spokenCount(openPromises: Int, people: Int, conversations: Int) -> String? {
+        guard let n = count(openPromises: openPromises, people: people, conversations: conversations) else { return nil }
+        switch self {
+        case .summary: return nil
+        case .commitments: return "\(n) open"
+        case .people: return "\(n) mentioned"
+        case .day: return "\(n) conversation\(n == 1 ? "" : "s")"
         }
     }
 
@@ -61,6 +85,12 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var people: [Person] { PeopleIgnore.visible(heardPeople, ignoring: ignoredPeople) }
+    @AppStorage(DayWiper.promiseDoneKey) private var doneRaw = ""
+    /// Promises heard and not yet ticked off: the one number the tab, the header and the list all agree on.
+    private var openPromises: Int {
+        let done = Set(doneRaw.split(separator: "\n").map(String.init))
+        return promises.filter { !done.contains($0.id) }.count
+    }
 
     private var statusText: String {
         switch model.session {
@@ -76,7 +106,7 @@ struct TodayView: View {
             VStack(spacing: Spacing.xl) {
                 greeting.id("todayTop")
                 if model.todayChunks.contains(where: { $0.status == .stored }) {
-                    TodayHero(model: model, promises: promises, conversations: episodes.count) {
+                    TodayHero(model: model, promises: promises, openPromises: openPromises, conversations: episodes.count) {
                         withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { state.section = .commitments }
                         state.scrollTarget = nil
                         Task { state.scrollTarget = "sections" }
@@ -152,8 +182,10 @@ struct TodayView: View {
     private var sections: some View {
         VStack(spacing: Spacing.xl) {
             EchoSegmented(
-                segments: TodaySection.allCases.map {
-                    .init(value: $0, title: $0.title(commitments: promises.count, people: people.count, conversations: episodes.count))
+                segments: TodaySection.allCases.map { s in
+                    .init(value: s, title: s.label,
+                          badge: s.count(openPromises: openPromises, people: people.count, conversations: episodes.count),
+                          spoken: s.spokenCount(openPromises: openPromises, people: people.count, conversations: episodes.count))
                 },
                 selection: Bindable(state).section)
             Group {

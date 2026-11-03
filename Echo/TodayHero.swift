@@ -4,6 +4,8 @@ import SwiftUI
 struct TodayHero: View {
     let model: PipelineModel
     let promises: [Promise]
+    /// The same number as on the Promises tab below.
+    let openPromises: Int
     let conversations: Int
     let onOpenPromises: () -> Void
 
@@ -26,7 +28,7 @@ struct TodayHero: View {
             layout {
                 stat(snap.momentsToday, "moments")
                 stat(conversations, "conversations")
-                stat(snap.openCount, snap.openCount == 1 ? "promise open" : "promises open")
+                stat(openPromises, openPromises == 1 ? "promise open" : "promises open")
             }
             if let next = snap.items.first {
                 Button(action: onOpenPromises) {
