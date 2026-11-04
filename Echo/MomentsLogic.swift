@@ -68,17 +68,6 @@ struct CaptureStatus: Equatable {
     }
 }
 
-extension PipelineModel {
-    /// The banner for the current state of the day.
-    func captureStatus(conversations: Int) -> CaptureStatus {
-        CaptureStatus.make(
-            phase: { switch session { case .waiting: .waiting; case .running: .running; case .finished: .finished } }(),
-            reachable: watchReachable, arrived: arrivedCount, pending: chunks.filter { [.received, .vad, .asr].contains($0.status) }.count,
-            stored: storedCount, ignored: droppedCount, conversations: conversations,
-            keptSeconds: phoneConfirmedSeconds, fraction: sessionFraction, expected: expectedChunks, listening: isListening)
-    }
-}
-
 // MARK: - The feed
 
 /// One line in the feed: a transcript, or a moment that is still being understood.

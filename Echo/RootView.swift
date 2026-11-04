@@ -96,9 +96,8 @@ struct RootView: View {
     private func topBar(_ tab: RootTab) -> some View {
         EchoTopBar(title: tab.title,
                    watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.isListening),
-                   cloud: HeaderStatus.cloud(enabled: ledger.cloudEnabled, reviewing: ledger.reviewBeforeSend),
                    listening: model.isListening,
-                   onWatch: { self.tab = .moments }, onCloud: { self.tab = .you }, onLock: { self.tab = .you })
+                   onWatch: { self.tab = .moments })
     }
 
     /// Forgets the last `minutes` of what was heard, and everything that depended on it. Returns how many moments went.
@@ -192,7 +191,7 @@ struct RootView: View {
             }
             .badge(actions.pendingCount)
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
-                MomentsView(model: model, player: player, privacy: privacy, listening: listening) { ledger.showArchitecture = true }
+                MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab(value: RootTab.ask) {

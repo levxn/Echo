@@ -36,69 +36,43 @@ struct AvatarView: View {
     }
 }
 
-/// One slim header on every tab. Left: the Echo wordmark with the app's mark in front of it. Right: three glanceable indicators in
-/// one glass capsule (is the watch there, is the cloud allowed, everything stays on this phone). It has no backdrop of
-/// its own: content scrolls under it and the system fades it out. The tab bar already names the page, so the header doesn't.
+/// One slim header on every tab: "ECHO" in the middle, and one indicator on the right (is the watch there, is it listening). It has no
+/// backdrop of its own: content scrolls under it and the system fades it out. The tab bar already names the page, so the header doesn't.
 struct EchoTopBar: View {
     /// The page, read out by VoiceOver after the name.
     let title: String
     let watch: HeaderStatus.Indicator
-    let cloud: HeaderStatus.Indicator
     let listening: Bool
     let onWatch: () -> Void
-    let onCloud: () -> Void
-    let onLock: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var sweep: CGFloat = -0.7
 
-    private static let wordmarkFont = Font.system(size: 30, weight: .black, design: .rounded)
+    /// Wide-set capitals in Avenir Next, plain white. (A system font that ships with iOS, so nothing is bundled.)
+    private static let tracking: CGFloat = 6
+    private static let slot: CGFloat = 52
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            HStack(spacing: Spacing.xs) {
-                EchoLogo(height: 13, frame: LaunchChoreography.reducedFrame(at: 0))
-                    .frame(width: 30, height: 30)
-                wordmark
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Echo, \(title)")
-            .accessibilityAddTraits(.isHeader)
-
-            Spacer(minLength: Spacing.sm)
-
-            HStack(spacing: 0) {
-                indicator(watch, action: onWatch, pulse: listening)
-                indicator(cloud, action: onCloud)
-                indicator(HeaderStatus.lock, action: onLock)
-            }
-            .padding(.horizontal, Spacing.xs)
-            .glassEffect(.regular, in: .capsule)
+        HStack(spacing: 0) {
+            // Same width as the indicator on the other side, so the name sits exactly in the middle.
+            Color.clear.frame(width: Self.slot, height: 44)
+            Spacer(minLength: 0)
+            Text("ECHO")
+                .font(.custom("AvenirNext-DemiBold", size: 22, relativeTo: .title3))
+                .tracking(Self.tracking)
+                .padding(.leading, Self.tracking)   // the spacing after the last letter would otherwise push the word left of centre
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Echo, \(title)")
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            indicator(watch, action: onWatch, pulse: listening)
+                .frame(width: Self.slot)
+                .glassEffect(.regular, in: .capsule)
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.xs)
         .padding(.bottom, Spacing.sm)
-    }
-
-    /// "Echo" in heavy rounded type, in the colours of the app's aurora, with one slow glint across it when it first appears.
-    private var wordmark: some View {
-        Text("Echo")
-            .font(Self.wordmarkFont)
-            .tracking(-0.6)
-            .foregroundStyle(LinearGradient(colors: [Palette.teal, Palette.blue, Palette.violet], startPoint: .leading, endPoint: .trailing))
-            .overlay {
-                GeometryReader { geo in
-                    LinearGradient(colors: [.clear, .white.opacity(0.85), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: geo.size.width * 0.55)
-                        .offset(x: sweep * geo.size.width)
-                }
-                .mask { Text("Echo").font(Self.wordmarkFont).tracking(-0.6) }
-                .allowsHitTesting(false)
-            }
-            .fixedSize()
-            .onAppear {
-                guard !reduceMotion, sweep < 0 else { return }
-                withAnimation(.easeInOut(duration: 1.8).delay(0.8)) { sweep = 1.2 }
-            }
     }
 
     private func indicator(_ i: HeaderStatus.Indicator, action: @escaping () -> Void, pulse: Bool = false) -> some View {

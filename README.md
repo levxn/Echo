@@ -51,7 +51,7 @@ On a watch, capture runs in the background with no button at all; in the demo th
 
 ### iPhone
 
-A slim bar sits at the top of every tab: your profile, where you are, and indicators for the watch, the cloud and a lock that says everything stays on the phone. The profile is just a name and a colour kept on the phone; there is no account.
+A slim bar sits at the top of every tab: the name ECHO in the middle, and one indicator on the right that shows whether the watch is near and listening. Your profile lives in the You tab; it is just a name and a colour kept on the phone, with no account.
 
 <table align="center">
   <tr>
@@ -87,7 +87,7 @@ And what Echo does with more than one day, more than one voice and more than one
 ## What it does
 
 1. **Watch.** Listens, keeps only speech (a lenient voice detector with a 2-second pre-roll so the first word is never clipped), compresses it and streams it to the phone.
-2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity). The **Moments** tab shows what it heard in plain language (is it listening, has it caught up, the moments grouped by conversation); you can play any moment or delete it.
+2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity). The **Moments** tab shows what it heard in plain language (when it listened, and the moments grouped by conversation); you can play any moment or delete it.
 3. **Ask your day.** A rules-based router decides where each question is answered:
    - **Lookups** ("When is the plumber coming?") are answered on the phone in about 30 ms, with the matching words highlighted and the original audio one tap away.
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
