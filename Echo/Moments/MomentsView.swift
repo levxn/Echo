@@ -31,7 +31,7 @@ struct MomentsView: View {
                                    message: "Moments appear here as your watch hears them.")
                     } else {
                         if !layout.groups.isEmpty {
-                            ListeningRibbon(groups: layout.groups) { id in
+                            DayActivityChart(chunks: model.sessionChunks.filter { $0.status != .dropped }, groups: layout.groups) { id in
                                 overrides[id] = true
                                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.5)) { proxy.scrollTo(id, anchor: .top) }
                             }

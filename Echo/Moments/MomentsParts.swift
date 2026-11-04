@@ -1,61 +1,89 @@
 import SwiftUI
 import Translation
 
-// MARK: - The ribbon
+// MARK: - The day's graph
 
-/// "When it listened": one block per conversation, one bar per moment, start time underneath. Tapping a block jumps to it.
-struct ListeningRibbon: View {
+/// "When it listened": the whole day as one graph, with a spike wherever the microphone was on. Tapping it jumps to the nearest conversation.
+struct DayActivityChart: View {
+    let chunks: [ChunkRecord]
     let groups: [MomentGroup]
     let onSelect: (Int) -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let spacing = Spacing.sm
+    private var graph: DayActivity.Graph? { DayActivity.graph(spans: chunks.map { (start: $0.wallStart, duration: $0.duration) }) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            SectionHeader("When it listened", style: .overline)
-            GeometryReader { geo in
-                let shares = Ribbon.shares(counts: groups.map(\.count))
-                let usable = max(0, geo.size.width - spacing * CGFloat(max(0, groups.count - 1)))
-                HStack(alignment: .top, spacing: spacing) {
-                    ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-                        Button { onSelect(group.id) } label: {
-                            block(group)
-                        }
-                        .buttonStyle(EchoPressStyle())
-                        .frame(width: usable * shares[index])
-                        .accessibilityLabel("Conversation at \(group.startLabel), \(group.count) moment\(group.count == 1 ? "" : "s")")
-                        .accessibilityHint("Jumps to it")
+        if let graph {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                SectionHeader("When it listened", style: .overline)
+                VStack(spacing: Spacing.xs) {
+                    GeometryReader { geo in
+                        Canvas { context, size in draw(graph, in: &context, size: size) }
+                            .contentShape(Rectangle())
+                            .onTapGesture { point in select(at: point.x / max(geo.size.width, 1), graph: graph) }
                     }
+                    .frame(height: 112)
+                    axis(graph)
                 }
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.sm)
+                .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("The day: spikes show when the microphone was on, between \(DayActivity.hourLabels(graph).first?.text ?? "") and \(DayActivity.hourLabels(graph).last?.text ?? "")")
+                .accessibilityHint("Tap to jump to a conversation")
             }
-            .frame(height: 76)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.4), value: groups.map(\.count))
         }
     }
 
-    private func block(_ group: MomentGroup) -> some View {
-        let heights = Ribbon.bars(durations: group.items.map(\.duration))
-        return VStack(spacing: Spacing.tight) {
-            HStack(alignment: .bottom, spacing: Spacing.xxs) {
-                ForEach(Array(heights.enumerated()), id: \.offset) { _, h in
-                    Capsule()
-                        .fill(Palette.accentGradient)
-                        .frame(maxWidth: 7)   // a conversation with few moments stays a small cluster, not fat blobs
-                        .frame(height: 8 + 28 * h)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .frame(height: 36, alignment: .bottom)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
-            Text(group.startLabel)
-                .font(Font.echoMeta.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.textSecondary)
+    private func draw(_ graph: DayActivity.Graph, in context: inout GraphicsContext, size: CGSize) {
+        let count = graph.values.count
+        guard count > 0 else { return }
+        let slot = size.width / CGFloat(count)
+        let floorY = size.height - 2
+        let span = size.height - 8
+        // Each peak is spread a little over its neighbours, so a burst of speech is a hill you can see and tap, not a hairline.
+        var shown = graph.values.indices.map { i -> Double in
+            let before = i > 0 ? graph.values[i - 1] : 0, after = i < count - 1 ? graph.values[i + 1] : 0
+            return before * 0.35 + graph.values[i] + after * 0.35
         }
-        .contentShape(Rectangle())
+        let tallest = shown.max() ?? 1
+        if tallest > 0 { shown = shown.map { $0 / tallest } }
+        func point(_ index: Int) -> CGPoint {
+            // A gentle curve on the height keeps a short burst of speech visible next to a long one.
+            CGPoint(x: (CGFloat(index) + 0.5) * slot, y: floorY - CGFloat(pow(shown[index], 0.7)) * span)
+        }
+        // One continuous shape for the whole day: flat where nothing was heard, a peak where the microphone was on.
+        var line = Path()
+        line.move(to: CGPoint(x: 0, y: floorY))
+        for index in 0..<count { line.addLine(to: point(index)) }
+        line.addLine(to: CGPoint(x: size.width, y: floorY))
+        var area = line
+        area.addLine(to: CGPoint(x: size.width, y: size.height))
+        area.addLine(to: CGPoint(x: 0, y: size.height))
+        area.closeSubpath()
+        context.fill(area, with: .linearGradient(Gradient(colors: [Palette.teal.opacity(0.6), Palette.blue.opacity(0.05)]),
+                                                 startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+        context.stroke(line, with: .linearGradient(Gradient(colors: [Palette.teal, Palette.blue]), startPoint: .zero, endPoint: CGPoint(x: size.width, y: 0)),
+                       style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+    }
+
+    private func axis(_ graph: DayActivity.Graph) -> some View {
+        GeometryReader { geo in
+            ForEach(DayActivity.hourLabels(graph), id: \.text) { label in
+                Text(label.text)
+                    .font(Font.echoMicro.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize()
+                    .position(x: min(max(label.offset * geo.size.width, 14), geo.size.width - 14), y: 8)
+            }
+        }
+        .frame(height: 16)
+    }
+
+    private func select(at fraction: CGFloat, graph: DayActivity.Graph) {
+        guard !groups.isEmpty else { return }
+        let seconds = graph.start + Double(min(max(fraction, 0), 1)) * (graph.end - graph.start)
+        if let nearest = groups.min(by: { abs(Double($0.id) - seconds) < abs(Double($1.id) - seconds) }) { onSelect(nearest.id) }
     }
 }
 
@@ -156,7 +184,8 @@ struct MomentRowView: View {
         layout {
             time
                 .frame(width: typeSize.isAccessibilitySize ? nil : 44, alignment: .leading)
-            if let voice = voices.voice(id: item.speakerId) { VoiceDot(voice: voice) }
+            // A small circle with the speaker's first letter, but only once the voice has a name: "2" or "4" meant nothing to anyone.
+            if let voice = voices.voice(id: item.speakerId), voice.name?.isEmpty == false { VoiceDot(voice: voice) }
             if let text = item.text, item.inFlight {
                 // Transcribed, but not saved yet: shown, but not playable or deletable until it is.
                 Text(text)

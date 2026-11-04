@@ -71,7 +71,8 @@ struct ProfileTests {
 
     @Test func theWatchIndicatorSaysWhetherItIsThereAndListening() {
         #expect(HeaderStatus.watch(reachable: false, listening: false) == .init(symbol: "applewatch.slash", label: "Watch not reachable", tint: .amber))
-        #expect(HeaderStatus.watch(reachable: true, listening: false).label == "Watch connected")
+        #expect(HeaderStatus.watch(reachable: true, listening: false) == .init(symbol: "waveform", label: "Watch connected, not listening", tint: .teal),
+                "the same bars as while listening, which TopBar only animates when listening")
         #expect(HeaderStatus.watch(reachable: true, listening: true).symbol == "waveform", "listening wins over connected")
         #expect(HeaderStatus.watch(reachable: false, listening: true).tint == .teal)
     }

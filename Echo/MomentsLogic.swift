@@ -128,6 +128,57 @@ struct MomentsLayout: Equatable {
 
 // MARK: - The ribbon
 
+/// The day as one graph: how much speech was heard in every few minutes. Pure, so it can be tested.
+nonisolated enum DayActivity {
+    struct Graph: Equatable {
+        /// Seconds since midnight at the left and right edges (whole hours).
+        var start: Double
+        var end: Double
+        /// 0...1 for each bin from `start`; 0 where nothing was heard, 1 for the busiest.
+        var values: [Double]
+        var bin: Double
+    }
+
+    static let minimumSpan = 3.0 * 3600
+
+    /// `spans` are (start, duration) in seconds since midnight. The graph runs from just before the first sound to just after the last,
+    /// on whole hours, and never less than three hours wide.
+    static func graph(spans: [(start: Double, duration: Double)], bin: Double = 300) -> Graph? {
+        let spans = spans.filter { $0.duration > 0 }
+        guard let first = spans.map(\.start).min(), let last = spans.map({ $0.start + $0.duration }).max() else { return nil }
+        var start = max(0, floor((first - 1800) / 3600) * 3600)
+        var end = min(86_400, ceil((last + 1800) / 3600) * 3600)
+        if end - start < minimumSpan {
+            end = min(86_400, start + minimumSpan)
+            start = max(0, end - minimumSpan)
+        }
+        let count = max(1, Int(ceil((end - start) / bin)))
+        var seconds = [Double](repeating: 0, count: count)
+        for span in spans {
+            var t = max(span.start, start)
+            let stop = min(span.start + span.duration, end)
+            while t < stop {
+                let index = min(count - 1, Int((t - start) / bin))
+                let binEnd = start + Double(index + 1) * bin
+                let piece = min(stop, binEnd) - t
+                seconds[index] += piece
+                t += max(piece, 0.001)
+            }
+        }
+        let peak = seconds.max() ?? 0
+        return Graph(start: start, end: end, values: peak > 0 ? seconds.map { $0 / peak } : seconds, bin: bin)
+    }
+
+    /// "9 am", "12 pm": the hour labels under the graph, every `step` hours from the left edge.
+    static func hourLabels(_ graph: Graph, step: Int = 3) -> [(offset: Double, text: String)] {
+        let firstHour = Int(graph.start / 3600), lastHour = Int(graph.end / 3600)
+        return stride(from: firstHour, through: lastHour, by: step).map { h in
+            let h12 = h % 12 == 0 ? 12 : h % 12
+            return (offset: (Double(h) * 3600 - graph.start) / (graph.end - graph.start), text: "\(h12) \(h % 24 < 12 ? "am" : "pm")")
+        }
+    }
+}
+
 /// Geometry for the "when it listened" ribbon: one block per conversation, one bar per moment.
 enum Ribbon {
     static let maxBars = 24

@@ -63,16 +63,27 @@ struct ActionsView: View {
         }
     }
 
+    /// What needs attention first: "2 overdue · 3 due today". Nothing when nothing is.
+    private var dueSummary: String? {
+        let groups = actions.groups(.all)
+        let overdue = groups.first { $0.section == .overdue }?.items.count ?? 0
+        let today = groups.first { $0.section == .today }?.items.count ?? 0
+        let parts = [overdue > 0 ? "\(overdue) overdue" : nil, today > 0 ? "\(today) due today" : nil].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(actions.pendingCount == 0 ? "All caught up" : "\(actions.pendingCount) to review")
                 .font(.echoSheetTitle)
                 .foregroundStyle(Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
-            Label("Found on this phone. Nothing is sent anywhere until you tap, and drafts open in the app you choose for you to send.", systemImage: "lock.fill")
-                .font(.caption)
-                .foregroundStyle(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if let due = dueSummary {
+                Text(due)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

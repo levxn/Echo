@@ -284,3 +284,43 @@ struct SettlingTests {
         #expect(reopened.expectedChunks == 56 && reopened.session == .finished && !reopened.isSettled)
     }
 }
+
+struct DayActivityTests {
+    private func span(_ start: Double, _ duration: Double) -> (start: Double, duration: Double) { (start: start, duration: duration) }
+    private let hour = 3600.0
+
+    @Test func theGraphRunsOnWholeHoursAroundWhatWasHeard() throws {
+        let g = try #require(DayActivity.graph(spans: [span(9 * hour + 300, 20), span(18 * hour + 2400, 30)]))
+        #expect(g.start == 8 * hour && g.end == 20 * hour, "from the hour before the first sound to the hour after the last")
+        #expect(g.values.count == Int((g.end - g.start) / g.bin))
+        #expect(g.values.max() == 1 && g.values.allSatisfy { (0.0...1.0).contains($0) })
+    }
+
+    @Test func aSpikeLandsInTheBinWhereTheMicrophoneWasOn() throws {
+        let g = try #require(DayActivity.graph(spans: [span(10 * hour, 60), span(12 * hour + 10, 120)]))
+        func index(_ t: Double) -> Int { Int((t - g.start) / g.bin) }
+        #expect(g.values[index(10 * hour)] > 0 && g.values[index(12 * hour)] > 0)
+        #expect(g.values[index(11 * hour)] == 0, "silence stays flat")
+        #expect(g.values[index(12 * hour)] == 1, "the busier five minutes is the peak")
+    }
+
+    @Test func aSoundThatCrossesTwoBinsIsSplitBetweenThem() throws {
+        let g = try #require(DayActivity.graph(spans: [span(10 * hour + 290, 20)]))
+        let a = Int((10 * hour + 290 - g.start) / g.bin)
+        #expect(g.values[a] == 1 && g.values[a + 1] == 1, "ten seconds either side of the boundary: equal")
+    }
+
+    @Test func aShortDayStillGetsAReadableWidthAndNothingMeansNoGraph() throws {
+        let g = try #require(DayActivity.graph(spans: [span(600, 10)]))
+        #expect(g.end - g.start >= DayActivity.minimumSpan && g.start >= 0)
+        #expect(DayActivity.graph(spans: []) == nil)
+        #expect(DayActivity.graph(spans: [span(5, 0)]) == nil)
+    }
+
+    @Test func theHourLabelsAreSpacedAcrossTheGraph() throws {
+        let g = try #require(DayActivity.graph(spans: [span(9 * hour, 10), span(18 * hour, 10)]))
+        let labels = DayActivity.hourLabels(g)
+        #expect(labels.first?.text == "8 am" && labels.first?.offset == 0)
+        #expect(labels.map(\.text).contains("2 pm") && labels.allSatisfy { (0.0...1.0).contains($0.offset) })
+    }
+}

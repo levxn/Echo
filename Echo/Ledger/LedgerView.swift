@@ -22,9 +22,35 @@ struct YouView: View {
     @AppStorage(Retention.key) private var retentionDays = Retention.defaultDays
     @AppStorage(OnDevicePreference.key) private var preferOnDevice = false
     @State private var showAllActivity = false
+    @State private var page: Page?
+    @State private var showProfile = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(BriefingCenter.self) private var briefings
+
+    /// The sections of settings, each on a page of its own so none of them is a long scroll.
+    enum Page: String, CaseIterable, Identifiable {
+        case muse, listening, helpers, sent, data
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .muse: "Muse and privacy"
+            case .listening: "Listening"
+            case .helpers: "Helpers"
+            case .sent: "What was sent"
+            case .data: "Your data"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .muse: "lock.shield.fill"
+            case .listening: "waveform"
+            case .helpers: "wand.and.stars"
+            case .sent: "paperplane.fill"
+            case .data: "internaldrive.fill"
+            }
+        }
+    }
 
     /// Activity shows this many entries until "Show all" is tapped.
     static let activityLimit = 3
@@ -34,14 +60,7 @@ struct YouView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 Color.clear.frame(height: 0).id("ledgerTop")
-                ProfileCard(profile: profile)
-                SummaryCard(totals: ledger.totals)
-                museAndPrivacy
-                listeningGroup
-                helpers
-                activity
-                EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
-                yourData.id("yourData")
+                if let page { detail(page) } else { overview }
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.sm)
@@ -49,10 +68,13 @@ struct YouView: View {
         }
         .scrollIndicators(.hidden)
         .background { AuroraBackground() }
+        .sheet(isPresented: $showProfile) { ProfileEditSheet(profile: profile) }
+        .onChange(of: page) { proxy.scrollTo("ledgerTop", anchor: .top) }
         .task(id: ledger.focus) {
+            // The demo and the dev hooks ask for a place by name: "yourData" is its own page now.
             guard let target = ledger.focus else { return }
             try? await Task.sleep(for: .milliseconds(500))
-            withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) { proxy.scrollTo(target, anchor: .top) }
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.4)) { page = target == "yourData" ? .data : nil }
         }
         .onChange(of: ledger.entries, initial: true) { refreshExport() }
         .confirmationDialog("Forget the day?", isPresented: $confirmForget, titleVisibility: .visible) {
@@ -92,20 +114,90 @@ struct YouView: View {
 
     // MARK: Settings
 
-    /// One labelled group of switches on a card.
-    private func group<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader(title)
-            VStack(spacing: Spacing.md) { content() }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .echoCard()
+    /// One group of switches on a card.
+    private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: Spacing.md) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .echoCard()
+    }
+
+    // MARK: Overview and pages
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: Spacing.xl) {
+            ProfileCard(profile: profile) { showProfile = true }
+            SummaryCard(totals: ledger.totals)
+            VStack(spacing: Spacing.sm) {
+                ForEach(Page.allCases) { p in sectionRow(p) }
+            }
+            EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
+        }
+    }
+
+    private func sectionRow(_ p: Page) -> some View {
+        Button { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { page = p } } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: p.symbol)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.teal)
+                    .frame(width: 36, height: 36)
+                    .background(Palette.teal.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(p.title).font(.system(.subheadline, design: .rounded, weight: .semibold)).foregroundStyle(Palette.textPrimary)
+                    Text(summary(of: p)).font(.caption).foregroundStyle(Palette.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: Spacing.sm)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Palette.textTertiary).accessibilityHidden(true)
+            }
+            .frame(minHeight: 44)
+            .echoRow(horizontal: Spacing.md, vertical: Spacing.sm)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(EchoPressStyle())
+        .accessibilityLabel("\(p.title), \(summary(of: p))")
+    }
+
+    /// One line saying how the section is set right now, so most of the time there is no need to open it.
+    private func summary(of p: Page) -> String {
+        switch p {
+        case .muse: ledger.cloudEnabled ? (ledger.reviewBeforeSend ? "On · you approve each request" : "On") : "Off · nothing is sent"
+        case .listening: listening.settings.title
+        case .helpers:
+            "\([profile.catchPromises, briefings.enabled, profile.actionsMorning, profile.journalReminder, profile.speakVoiceAnswers].filter { $0 }.count) of 5 on"
+        case .sent: ledger.entries.isEmpty ? "Nothing yet" : "\(ledger.entries.count) request\(ledger.entries.count == 1 ? "" : "s")"
+        case .data: "Keeps \(Retention.title(days: retentionDays).lowercased())"
+        }
+    }
+
+    private func detail(_ p: Page) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xl) {
+            Button { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { page = nil } } label: {
+                Label("You", systemImage: "chevron.left")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.teal)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(EchoPressStyle())
+            Text(p.title)
+                .font(.echoSheetTitle)
+                .foregroundStyle(Palette.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            switch p {
+            case .muse: museAndPrivacy
+            case .listening: listeningGroup
+            case .helpers: helpers
+            case .sent: activity
+            case .data: yourData.id("yourData")
+            }
         }
     }
 
     private var divider: some View { Divider().overlay(Palette.stroke) }
 
     private var museAndPrivacy: some View {
-        group("Muse and privacy") {
+        group {
             ToggleRow(title: "Allow Muse for broad questions", systemImage: "cloud.fill",
                       caption: ledger.cloudEnabled ? "Broad questions go to Muse Spark as text. Audio never does."
                                                    : "Off: nothing is sent. Broad questions show the closest moments here.",
@@ -135,7 +227,7 @@ struct YouView: View {
     }
 
     private var listeningGroup: some View {
-        group("Listening") {
+        group {
             ListeningCard(model: model, listening: listening)
             divider
             ToggleRow(title: "Announce recording", systemImage: "applewatch.radiowaves.left.and.right",
@@ -146,7 +238,7 @@ struct YouView: View {
     }
 
     private var helpers: some View {
-        group("Helpers") {
+        group {
             ToggleRow(title: "Catch promises as I say them", systemImage: "checkmark.circle.fill",
                       caption: "When you say you will do something, your watch shows “Got it” and you can tap Keep for a reminder.",
                       isOn: $profile.catchPromises, tint: Palette.teal)
@@ -175,11 +267,6 @@ struct YouView: View {
     @ViewBuilder
     private var activity: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader(title: "What was sent") {
-                if !ledger.entries.isEmpty {
-                    Text("\(ledger.entries.count)").font(.footnote).monospacedDigit().foregroundStyle(Palette.textSecondary)
-                }
-            }
             if ledger.entries.isEmpty {
                 EmptyState(icon: "lock.shield", tint: Palette.teal, title: "Nothing recorded yet",
                            message: "Ask a question and it appears here, along with whether anything left your phone.")
@@ -196,7 +283,6 @@ struct YouView: View {
 
     private var yourData: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            SectionHeader("Your data")
             Text("Everything Echo keeps is on this phone. Export the ledger, or erase what you don't want kept.")
                 .font(.footnote)
                 .foregroundStyle(Palette.textSecondary)
@@ -316,13 +402,22 @@ private struct SummaryCard: View {
 
     private func stat(_ value: String, _ label: String, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(value)
-                .font(.system(.title, design: .rounded, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(tint)
-                .contentTransition(.numericText())
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+            // "4.0 KB": the number is big, the unit is tiny and sits at its bottom right.
+            let parts = value.split(separator: " ", maxSplits: 1).map(String.init)
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(parts.first ?? value)
+                    .font(.system(.title, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
+                    .contentTransition(.numericText())
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                if parts.count > 1 {
+                    Text(parts[1])
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Palette.textSecondary)
+                }
+            }
             Text(label)
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)

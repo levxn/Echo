@@ -162,6 +162,17 @@ struct LaunchMark: View {
                     .scaleEffect(frame.logoScale)
                     .opacity(frame.logoOpacity)
             }
+            .overlay(alignment: .bottom) {
+                // The name, in the same capitals as the header, low on the screen. It goes with the logo as the app opens.
+                Text("ECHO")
+                    .font(.custom("AvenirNext-DemiBold", size: 26, relativeTo: .title2))
+                    .tracking(9)
+                    .padding(.leading, 9)
+                    .foregroundStyle(.white)
+                    .opacity(frame.logoOpacity)
+                    .padding(.bottom, 96)
+                    .accessibilityHidden(true)
+            }
             .mask {
                 Rectangle()
                     .overlay { Circle().frame(width: reach * frame.reveal, height: reach * frame.reveal).blendMode(.destinationOut) }

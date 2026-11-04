@@ -13,7 +13,8 @@ enum HeaderStatus {
     /// Is the watch there, and is it listening?
     static func watch(reachable: Bool, listening: Bool) -> Indicator {
         if listening { return Indicator(symbol: "waveform", label: "Watch is listening", tint: .teal) }
-        if reachable { return Indicator(symbol: "applewatch", label: "Watch connected", tint: .teal) }
+        // Connected but the microphone is off: the same sound bars, standing still (they only move while it listens).
+        if reachable { return Indicator(symbol: "waveform", label: "Watch connected, not listening", tint: .teal) }
         return Indicator(symbol: "applewatch.slash", label: "Watch not reachable", tint: .amber)
     }
 
