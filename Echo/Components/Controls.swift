@@ -121,6 +121,17 @@ struct EchoSegmented<Value: Hashable>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    /// "Title 15": one run of text, so the number sits on the title's own line and baseline.
+    private func label(_ segment: Segment, selected: Bool) -> some View {
+        let title = Text(segment.title)
+        let text = segment.badge.map { title + Text(" \($0)").foregroundStyle(Palette.teal) } ?? title
+        return text
+            .font(.echoLabel)
+            .monospacedDigit()
+            .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+            .minimumScaleFactor(0.8)
+    }
+
     var body: some View {
         // With very large text the choices wrap into rows of two, instead of being cut short ("Promis…").
         let layout = typeSize.isAccessibilitySize ? AnyLayout(TwoColumnLayout(spacing: Spacing.xs)) : AnyLayout(HStackLayout(spacing: Spacing.xs))
@@ -128,21 +139,8 @@ struct EchoSegmented<Value: Hashable>: View {
             ForEach(segments) { segment in
                 let selected = segment.value == selection
                 Button { selection = segment.value } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(segment.title)
-                            .font(.echoLabel)
-                            .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
-                            .minimumScaleFactor(0.8)
-                        if let badge = segment.badge {
-                            // A small count hugging the name, with no circle behind it, so it reads as a number and takes no room.
-                            Text("\(badge)")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .monospacedDigit()
-                                .foregroundStyle(selected ? Palette.teal : Palette.teal.opacity(0.85))
-                                .offset(y: typeSize.isAccessibilitySize ? 0 : -2)
-                                .accessibilityHidden(true)
-                        }
-                    }
+                    // The count is part of the same line of text, in the same size and on the same baseline, only in teal ("Promises 15").
+                    label(segment, selected: selected)
                         .frame(height: typeSize.isAccessibilitySize ? nil : 22, alignment: .center)   // the same height with or without a badge, so labels line up
                         .foregroundStyle(selected ? Palette.textPrimary : Palette.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: 44)

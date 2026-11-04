@@ -73,7 +73,8 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// can only be started by a watch app that is running.
     @discardableResult
     func sendListenCommand(_ command: String) -> Bool {
-        guard WCSession.isSupported(), WCSession.default.isReachable else { return false }
+        guard WCSession.isSupported(), WCSession.default.isReachable else { Log.link.notice("listen command \(command): the watch isn't reachable"); return false }
+        Log.link.notice("listen command \(command) sent to the watch")
         WCSession.default.sendMessage([Wire.typeKey: Wire.listenCommand, Wire.commandKey: command], replyHandler: nil) { error in
             Log.link.error("couldn't send \(command) to the watch: \(error.localizedDescription)")
         }
@@ -116,7 +117,12 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     private func handle(session message: [String: Any]) async -> [String: Any] {
         let recorded = message[Wire.recordedKey] as? Double ?? 0
         let total = message[Wire.totalKey] as? Double ?? 0
-        if message[Wire.stateKey] as? String == "started" {
+        let state = message[Wire.stateKey] as? String
+        if state == "paused" || state == "resumed" {
+            model.setPaused(state == "paused")
+            return [Wire.okKey: true]
+        }
+        if state == "started" {
             let offset = message[Wire.dayOffsetKey] as? Int ?? 0
             await model.sessionStarted(total: total, dayId: DayID.id(offset: offset, from: model.now()), keepExisting: message[Wire.liveKey] as? Bool ?? false)
         } else {

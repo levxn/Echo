@@ -137,10 +137,21 @@ final class ListeningStore {
     /// Phone only: asks the watch to start or stop now. False if the watch can't be reached.
     var sendCommand: ((String) -> Bool)?
 
-    init(defaults: UserDefaults = .standard, now: @escaping () -> Date = { Date() }) {
+    init(defaults: UserDefaults = .standard, now: @escaping () -> Date = { Date() }, arguments: [String] = ProcessInfo.processInfo.arguments) {
         self.defaults = defaults
         self.now = now
         if let data = defaults.data(forKey: Self.settingsKey), let stored = try? JSONDecoder().decode(ListeningSettings.self, from: data) { settings = stored } else { settings = ListeningSettings() }
+        // Dev hook: `-listen-mode manual|allday|hours` sets the mode as if it had just been chosen (checks and screenshots).
+        if let i = arguments.firstIndex(of: "-listen-mode"), i + 1 < arguments.count {
+            let stamp = now().timeIntervalSince1970
+            switch arguments[i + 1] {
+            case "manual": settings = ListeningSettings(stamp: stamp)
+            case "allday": settings = .allDay(stamp: stamp)
+            case "hours": settings = ListeningSettings(mode: .hours, startMinute: 9 * 60, endMinute: 18 * 60, stamp: stamp)
+            default: break
+            }
+            save()
+        }
     }
 
     var wasListening: Bool {

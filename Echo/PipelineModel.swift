@@ -17,6 +17,8 @@ final class PipelineModel {
     private(set) var watchReachable = false
     /// When the watch last said or sent anything (a session starting, a bundle of audio).
     private(set) var lastWatchActivity: Date?
+    /// The watch paused listening without ending the session.
+    private(set) var watchPaused = false
     /// How many snippets the watch said it sent in all (0 until it says, or if it is an older watch).
     private(set) var expectedChunks = 0
 
@@ -36,8 +38,16 @@ final class PipelineModel {
     /// force-quit, the battery died) the phone would stay "listening" for ever: after three quiet minutes out of reach, it isn't.
     var isListening: Bool { isListening(at: now()) }
 
+    /// Listening was paused on the watch (the microphone is off) but the session isn't over.
+    var isPaused: Bool { session == .running && watchPaused }
+
+    func setPaused(_ paused: Bool) {
+        watchPaused = paused
+        lastWatchActivity = now()
+    }
+
     func isListening(at date: Date) -> Bool {
-        guard session == .running else { return false }
+        guard session == .running, !watchPaused else { return false }
         if watchReachable { return true }
         guard let last = lastWatchActivity else { return false }
         return date.timeIntervalSince(last) < 180
@@ -118,6 +128,7 @@ final class PipelineModel {
         expectedChunks = 0
         totalSeconds = total
         session = .running
+        watchPaused = false
         lastWatchActivity = now()
         persistSession()
     }
@@ -150,6 +161,7 @@ final class PipelineModel {
     func sessionFinished(recorded: Double, expectedChunks: Int = 0) {
         recordedSeconds = recorded
         self.expectedChunks = expectedChunks
+        watchPaused = false
         session = .finished
         persistSession()
     }

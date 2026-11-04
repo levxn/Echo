@@ -18,7 +18,7 @@ nonisolated struct ChunkMeta: Codable, Sendable, Equatable {
 nonisolated enum Wire {
     static let typeKey = "type"
     static let session = "session"       // watch -> phone: replay started / finished
-    static let stateKey = "state"        // "started" | "finished"
+    static let stateKey = "state"        // "started" | "finished" | "paused" | "resumed"
     static let recordedKey = "recorded"  // seconds of audio the watch has processed so far
     static let totalKey = "total"        // seconds in the whole recording
     static let dayOffsetKey = "dayOffset" // with "started": which day this recording is for (0 = today, -7 = a week ago)

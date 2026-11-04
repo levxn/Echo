@@ -84,8 +84,15 @@ final class CaptureEngine {
     func togglePause() {
         switch phase {
         case .running where isLive: stopLive()
-        case .running: phase = .paused
-        case .paused: phase = .running
+        case .running:
+            phase = .paused
+            onListeningChanged?(false)
+            // The phone must know the microphone is off, or it keeps saying the watch is listening.
+            Task { await link.sendSession(state: "paused", recorded: recordedSeconds, total: totalSeconds) }
+        case .paused:
+            phase = .running
+            onListeningChanged?(true)
+            Task { await link.sendSession(state: "resumed", recorded: recordedSeconds, total: totalSeconds) }
         default: break
         }
     }

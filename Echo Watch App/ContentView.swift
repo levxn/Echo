@@ -20,7 +20,7 @@ struct ContentView: View {
         if listening.suggestListening && !isOn { return ("Time to listen", Palette.teal) }
         switch engine.phase {
         case .idle: return ("Tap to listen", Palette.textSecondary)
-        case .running: return (engine.isLive ? "Listening" : "Playing the day", Palette.teal)
+        case .running: return (link.reachable ? (engine.isLive ? "Listening" : "Playing the day") : "Listening · phone away", Palette.teal)
         case .paused: return ("Paused", Palette.textSecondary)
         case .finished: return (engine.wasLive ? "Tap to listen again" : "Day captured", Palette.textSecondary)
         }
@@ -63,18 +63,8 @@ struct ContentView: View {
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .accessibilityLabel("When to listen: \(listening.store.settings.title)")
             }
-            .overlay(alignment: .topLeading) { linkDot }
         }
         .sheet(isPresented: $showHours) { ListeningSheet(listening: listening) }
-    }
-
-    /// Whether the phone is near: a dot, and a line only when it isn't.
-    private var linkDot: some View {
-        Circle()
-            .fill(link.reachable ? Palette.teal : Palette.amber)
-            .frame(width: 7, height: 7)
-            .padding(.leading, Spacing.xs)
-            .accessibilityLabel(link.reachable ? "Phone connected" : "Phone not nearby. Echo keeps what it hears until it is.")
     }
 
     private func primaryAction() {
@@ -101,7 +91,7 @@ private struct ListenRing: View {
                 .animation(reduceMotion ? nil : .spring(duration: 0.18, bounce: 0.3), value: level)
             Circle().stroke(active ? tint.opacity(0.9) : Palette.stroke, lineWidth: 5)
                 .padding(8)
-            Image(systemName: active ? "waveform" : "mic.fill")
+            Image(systemName: "waveform")
                 .font(.system(size: 34, weight: .medium))
                 .foregroundStyle(Palette.textPrimary)
                 .symbolEffect(.variableColor.iterative, isActive: active && !reduceMotion)

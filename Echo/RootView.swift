@@ -200,8 +200,8 @@ struct RootView: View {
                         onViewLedger: { tab = .you })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
             } label: {
-                // The official Muse mark once it is in the asset catalogue; the chat bubble until then.
-                if MuseMark.isAvailable { Label("Ask", image: MuseMark.assetName) } else { Label("Ask", systemImage: "text.bubble.fill") }
+                // The official Muse mark once it is in the asset catalogue; the sparkles symbol until then.
+                if MuseMark.isAvailable { Label("Ask", image: MuseMark.assetName) } else { Label("Ask", systemImage: "sparkles") }
             }
             Tab("You", systemImage: "person.crop.circle.fill", value: RootTab.you) {
                 YouView(profile: profile, listening: listening, ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
@@ -304,6 +304,14 @@ struct RootView: View {
             if listening.merge(remote) { Task { await reminders.setListeningNudge(listening.settings) } }
         }
         listening.sendCommand = { link.sendListenCommand($0) }
+        // Dev hook: `-listen-command start|stop` presses the phone's Start/Stop listening button once the watch has had time to link (checks).
+        if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-listen-command"), i + 1 < ProcessInfo.processInfo.arguments.count {
+            let command = ProcessInfo.processInfo.arguments[i + 1]
+            Task {
+                for _ in 0..<40 where !model.watchReachable { try? await Task.sleep(for: .milliseconds(500)) }
+                _ = listening.sendCommand?(command)
+            }
+        }
         if listening.settings.stamp > 0 { link.sendListening(listening.settings) }
         await reminders.setListeningNudge(listening.settings)
         // A promise just heard: the watch shows "Got it"; with no watch nearby it is a notification with a Remind me button.

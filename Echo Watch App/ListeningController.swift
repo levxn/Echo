@@ -42,7 +42,8 @@ final class ListeningController {
         // What is remembered: was it listening when the app went away? (Cleared when listening ends for any reason.)
         engine.onListeningChanged = { [weak self] on in
             guard let self else { return }
-            store.wasListening = on
+            // Only the real microphone is picked up again after an interruption; replaying a recorded day (the simulator) never is.
+            store.wasListening = on && CaptureEngine.listensLive()
             if on { suggestListening = false }
         }
         store.onChange = { [weak self] settings in
@@ -76,8 +77,10 @@ final class ListeningController {
     }
 
     func handle(command: String) {
+        Log.app.notice("listen command from the phone: \(command) (phase \(String(describing: self.engine.phase)))")
         switch command {
-        case "start": if engine.phase == .idle || engine.phase == .finished { engine.begin() }
+        case "start":
+            if engine.phase == .idle || engine.phase == .finished { engine.begin() } else if engine.phase == .paused { engine.togglePause() }
         case "stop": if engine.phase == .running { engine.togglePause() }
         default: break
         }
@@ -102,6 +105,7 @@ final class ListeningController {
                                     battery: battery, nudgeSent: nudged) {
         case .none: break
         case .resume:
+            guard CaptureEngine.listensLive() else { store.wasListening = false; break }
             Log.app.info("listening: resuming after an interruption")
             engine.begin()
         case .stop(let reason):

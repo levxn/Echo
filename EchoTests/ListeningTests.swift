@@ -105,6 +105,13 @@ struct ListeningStoreTests {
         #expect(told == 0, "otherwise the two devices would echo the same change forever")
     }
 
+    @Test func theDevHookSetsTheModeAsIfChosen() {
+        let d = UserDefaults(suiteName: "echo-listen-\(UUID().uuidString)")!
+        #expect(ListeningStore(defaults: d, now: { Date(timeIntervalSince1970: 7) }, arguments: ["-listen-mode", "allday"]).settings == .allDay(stamp: 7))
+        #expect(ListeningStore(defaults: d, now: { Date(timeIntervalSince1970: 8) }, arguments: ["-listen-mode", "manual"]).settings == ListeningSettings(stamp: 8))
+        #expect(ListeningStore(defaults: d, now: { Date(timeIntervalSince1970: 9) }, arguments: ["-listen-mode", "nonsense"]).settings.stamp == 8, "an unknown value changes nothing")
+    }
+
     @Test func whetherItWasListeningIsRemembered() {
         let d = UserDefaults(suiteName: "echo-listen-\(UUID().uuidString)")!
         let s = store(d)
@@ -130,6 +137,23 @@ struct PhoneListeningStateTests {
         #expect(m.isListening)
         m.sessionFinished(recorded: 1)
         #expect(!m.isListening, "once the watch says it stopped")
+    }
+
+    @Test func pausingOnTheWatchTurnsListeningOffOnThePhoneAndResumingTurnsItBackOn() async throws {
+        let (m, h) = try await model(); defer { h.cleanup() }
+        await m.sessionStarted(total: 0, keepExisting: true)
+        m.setReachable(true)
+        #expect(m.isListening && !m.isPaused)
+        m.setPaused(true)
+        #expect(!m.isListening && m.isPaused, "the microphone is off, so the phone must not say listening")
+        m.setPaused(false)
+        #expect(m.isListening && !m.isPaused)
+        m.setPaused(true)
+        await m.sessionStarted(total: 0, keepExisting: true)
+        #expect(!m.isPaused, "a new session is not paused")
+        m.setPaused(true)
+        m.sessionFinished(recorded: 1)
+        #expect(!m.isPaused && !m.isListening)
     }
 
     @Test func aWatchThatWentQuietWithoutSayingSoStopsCountingAfterThreeMinutes() async throws {

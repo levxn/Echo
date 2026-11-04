@@ -18,6 +18,7 @@ struct ListeningCard: View {
 
     private var state: (title: String, symbol: String, tint: Color) {
         if model.isListening { return ("Your watch is listening", "waveform", Palette.teal) }
+        if model.isPaused { return ("Listening is paused", "pause.circle.fill", Palette.amber) }
         if model.watchReachable { return ("Your watch is ready", "applewatch", Palette.teal) }
         return ("Your watch isn't nearby", "applewatch.slash", Palette.amber)
     }
