@@ -8,7 +8,7 @@ struct AskView: View {
     let hasMemory: Bool
     /// The day's moments, so a citation in a Muse answer can find its audio.
     let chunks: [ChunkRecord]
-    /// Opens the Privacy tab, from a history entry.
+    /// Opens the You tab, from a history entry.
     var onViewLedger: () -> Void = {}
 
     @FocusState private var focused: Bool

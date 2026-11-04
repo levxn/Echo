@@ -347,8 +347,11 @@ private struct MessageEditor: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Label(writtenBy == .muse ? "Written by Muse Spark. Check it, and change anything." : "Written on this phone. Muse can write a better one.",
-                      systemImage: writtenBy == .muse ? "cloud.fill" : "iphone")
+                Label {
+                    Text(writtenBy == .muse ? "Written by Muse Spark. Check it, and change anything." : "Written on this phone. Muse can write a better one.")
+                } icon: {
+                    if writtenBy == .muse { MuseIcon() } else { Image(systemName: "iphone") }
+                }
                     .font(Font.echoMeta.weight(.semibold))
                     .foregroundStyle(writtenBy == .muse ? Palette.cloud : Palette.textSecondary)
                 if heldBack > 0, writtenBy == .muse {

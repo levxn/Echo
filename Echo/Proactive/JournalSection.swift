@@ -37,7 +37,7 @@ struct JournalSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .echoCard()
             case .cloudOff:
-                Label("Cloud is off, so Muse can't write your entry. Turn it back on in Privacy.", systemImage: "cloud.slash.fill")
+                Label("Cloud is off, so Muse can't write your entry. Turn it back on in the You tab.", systemImage: "cloud.slash.fill")
                     .font(.footnote)
                     .foregroundStyle(Palette.amber)
             }

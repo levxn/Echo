@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// What stayed on the phone, what left it, and the switches that control the cloud.
-struct LedgerView: View {
+/// The You tab: who you are, what stayed on the phone and what left it, every switch in one place, and your data.
+struct YouView: View {
+    @Bindable var profile: ProfileStore
     let ledger: LedgerModel
     let model: PipelineModel
     let history: AskHistoryModel
@@ -25,15 +26,18 @@ struct LedgerView: View {
     @Environment(BriefingCenter.self) private var briefings
 
     /// Activity shows this many entries until "Show all" is tapped.
-    static let activityLimit = 5
+    static let activityLimit = 3
 
     var body: some View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 Color.clear.frame(height: 0).id("ledgerTop")
+                ProfileCard(profile: profile)
                 SummaryCard(totals: ledger.totals)
-                settings
+                museAndPrivacy
+                listening
+                helpers
                 activity
                 EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
                 yourData.id("yourData")
@@ -87,41 +91,80 @@ struct LedgerView: View {
 
     // MARK: Settings
 
-    private var settings: some View {
-        VStack(spacing: Spacing.md) {
+    /// One labelled group of switches on a card.
+    private func group<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title)
+            VStack(spacing: Spacing.md) { content() }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .echoCard()
+        }
+    }
+
+    private var divider: some View { Divider().overlay(Palette.stroke) }
+
+    private var museAndPrivacy: some View {
+        group("Muse and privacy") {
             ToggleRow(title: "Allow Muse for broad questions", systemImage: "cloud.fill",
                       caption: ledger.cloudEnabled ? "Broad questions go to Muse Spark as text. Audio never does."
                                                    : "Off: nothing is sent. Broad questions show the closest moments here.",
                       isOn: Bindable(ledger).cloudEnabled)
             if SystemLocalBrain().isAvailable {
-                Divider().overlay(Palette.stroke)
+                divider
                 ToggleRow(title: "Keep answers on this phone", systemImage: "cpu",
                           caption: preferOnDevice ? "Broad questions are answered by this phone's own model, so nothing is sent. Muse is used only if it can't."
                                                   : "Off: broad questions go to Muse Spark. With the cloud switched off, this phone's model answers instead.",
                           isOn: $preferOnDevice, tint: Palette.local)
             }
-            Divider().overlay(Palette.stroke)
+            divider
             ToggleRow(title: "Review before sending", systemImage: "eye",
                       caption: ledger.reviewBeforeSend ? "You see the exact text first, then choose Send or Don't send."
                                                        : "Off: sent as soon as you ask, and logged here.",
                       isOn: Bindable(ledger).reviewBeforeSend)
-            Divider().overlay(Palette.stroke)
+            divider
             ToggleRow(title: "Mask names before sending", systemImage: "theatermasks",
                       caption: ledger.maskNames ? "Names become [PERSON_1] on this phone and return in the answer. Best effort."
                                                 : "Off: names are sent as spoken.",
                       isOn: Bindable(ledger).maskNames)
-            Divider().overlay(Palette.stroke)
+            divider
+            ToggleRow(title: "Let Muse write my drafts", systemImage: "square.and.pencil",
+                      caption: "When you open a message in Actions, Muse writes a better version. It only sees that moment, with passwords, numbers, emails and phone numbers swapped for placeholders; your words go back in on this phone.",
+                      isOn: $profile.museDrafts, tint: Palette.cloud)
+        }
+    }
+
+    private var listening: some View {
+        group("Listening") {
             ToggleRow(title: "Announce recording", systemImage: "applewatch.radiowaves.left.and.right",
                       caption: privacy.announce ? "The watch buzzes every 10 minutes while it listens, so people nearby aren't unaware."
                                                 : "Off: the watch listens silently. Say “off the record” any time to pause.",
                       isOn: Bindable(privacy).announce, tint: Palette.teal)
-            Divider().overlay(Palette.stroke)
+        }
+    }
+
+    private var helpers: some View {
+        group("Helpers") {
+            ToggleRow(title: "Catch promises as I say them", systemImage: "checkmark.circle.fill",
+                      caption: "When you say you will do something, your watch shows “Got it” and you can tap Keep for a reminder.",
+                      isOn: $profile.catchPromises, tint: Palette.teal)
+            divider
             ToggleRow(title: "Brief me before meetings", systemImage: "calendar.badge.clock",
                       caption: briefings.enabled ? "Looks at who you are meeting in your calendar, on this phone, and reminds you what you owe them 15 minutes before."
                                                  : "Off. Turning it on asks to read your calendar. Nothing from it is sent anywhere.",
                       isOn: Bindable(briefings).enabled, tint: Palette.teal)
+            divider
+            ToggleRow(title: "Morning summary of actions", systemImage: "sunrise.fill",
+                      caption: "A nudge at 8 am saying how many things are waiting in Actions. It says nothing about what they are.",
+                      isOn: $profile.actionsMorning, tint: Palette.teal)
+            divider
+            ToggleRow(title: "Remind me to write my journal", systemImage: "book.closed.fill",
+                      caption: "A nudge at 9 pm. It says nothing about your day, and nothing is written or sent until you ask.",
+                      isOn: $profile.journalReminder, tint: Palette.teal)
+            divider
+            ToggleRow(title: "Speak answers to voice questions", systemImage: "speaker.wave.2.fill",
+                      caption: "When you ask out loud, the answer is read back to you. Every answer also has a Read aloud button.",
+                      isOn: $profile.speakVoiceAnswers, tint: Palette.teal)
         }
-        .echoCard()
     }
 
     // MARK: Activity
@@ -129,7 +172,7 @@ struct LedgerView: View {
     @ViewBuilder
     private var activity: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            SectionHeader(title: "Activity") {
+            SectionHeader(title: "What was sent") {
                 if !ledger.entries.isEmpty {
                     Text("\(ledger.entries.count)").font(.footnote).monospacedDigit().foregroundStyle(Palette.textSecondary)
                 }

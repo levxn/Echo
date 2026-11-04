@@ -57,7 +57,7 @@ struct DraftSheet: View {
                 }
 
                 if case .cloudOff = drafts.state {
-                    Label("Cloud is off, so Muse can't write it. Turn it back on in Privacy.", systemImage: "cloud.slash.fill")
+                    Label("Cloud is off, so Muse can't write it. Turn it back on in the You tab.", systemImage: "cloud.slash.fill")
                         .font(.footnote)
                         .foregroundStyle(Palette.amber)
                 }
@@ -114,7 +114,11 @@ struct DraftSheet: View {
 
     private func result(_ ready: DraftModel.Ready) -> some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            Label(ready.isStub ? "Stub preview · no API key" : "Written by Muse Spark", systemImage: ready.isStub ? "testtube.2" : "cloud.fill")
+            Label {
+                Text(ready.isStub ? "Stub preview · no API key" : "Written by Muse Spark")
+            } icon: {
+                if ready.isStub { Image(systemName: "testtube.2") } else { MuseIcon() }
+            }
                 .font(.echoLabel)
                 .foregroundStyle(ready.isStub ? Palette.amber : Palette.cloud)
             if !ready.draft.subject.isEmpty {

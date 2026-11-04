@@ -15,8 +15,11 @@ struct CloudAnswerCard: View {
             RouteStrip(active: result.onDevice ? .local : .cloud)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Label(result.onDevice ? "Answered by the on-device model" : (isStub ? "Stub preview · no API key" : "Answered by Muse Spark"),
-                      systemImage: result.onDevice ? "cpu" : (isStub ? "testtube.2" : "cloud.fill"))
+                Label {
+                    Text(result.onDevice ? "Answered by the on-device model" : (isStub ? "Stub preview · no API key" : "Answered by Muse Spark"))
+                } icon: {
+                    if result.onDevice { Image(systemName: "cpu") } else if isStub { Image(systemName: "testtube.2") } else { MuseIcon() }
+                }
                     .font(.echoLabel)
                     .foregroundStyle(result.onDevice ? Palette.local : (isStub ? Palette.amber : Palette.cloud))
                 Text(result.decision.reason)

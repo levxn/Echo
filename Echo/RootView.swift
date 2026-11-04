@@ -2,19 +2,27 @@ import os
 import SwiftUI
 
 enum RootTab: String {
-    case today, actions, moments, ask, ledger
+    case day, actions, moments, ask, you
 
-    /// Launch-argument values for `-tab`. The old name `pipeline` still opens Moments, so older scripts keep working.
-    static func from(argument: String) -> RootTab? { argument == "pipeline" ? .moments : RootTab(rawValue: argument) }
+    /// Launch-argument values for `-tab`. Older names still work, so older scripts keep working: `pipeline` opens Moments, `today` opens Day,
+    /// `ledger`, `privacy` and `profile` open You.
+    static func from(argument: String) -> RootTab? {
+        switch argument {
+        case "pipeline": .moments
+        case "today": .day
+        case "ledger", "privacy", "profile": .you
+        default: RootTab(rawValue: argument)
+        }
+    }
 
     /// The title in the top bar.
     var title: String {
         switch self {
-        case .today: "Today"
+        case .day: "Day"
         case .actions: "Actions"
         case .moments: "Moments"
         case .ask: "Ask"
-        case .ledger: "Privacy"
+        case .you: "You"
         }
     }
 }
@@ -44,7 +52,6 @@ struct RootView: View {
     @State private var player: ChunkPlayer
     @State private var today = TodayState()
     @State private var profile = ProfileStore()
-    @State private var showProfile = ProcessInfo.processInfo.arguments.contains("-show-profile")
     @State private var tab: RootTab
     @State private var caption: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -81,16 +88,16 @@ struct RootView: View {
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
         let args = ProcessInfo.processInfo.arguments
         let requested = args.firstIndex(of: "-tab").flatMap { $0 + 1 < args.count ? RootTab.from(argument: args[$0 + 1]) : nil }
-        _tab = State(initialValue: requested ?? .today)
+        _tab = State(initialValue: requested ?? .day)
     }
 
     /// One slim bar on every tab: profile, where you are, and the watch / cloud / on-this-phone indicators.
     private func topBar(_ tab: RootTab) -> some View {
-        EchoTopBar(title: tab.title, profile: profile,
+        EchoTopBar(title: tab.title,
                    watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.session == .running),
                    cloud: HeaderStatus.cloud(enabled: ledger.cloudEnabled, reviewing: ledger.reviewBeforeSend),
                    listening: model.session == .running,
-                   onProfile: { showProfile = true }, onWatch: { self.tab = .moments }, onCloud: { self.tab = .ledger })
+                   onWatch: { self.tab = .moments }, onCloud: { self.tab = .you }, onLock: { self.tab = .you })
     }
 
     /// Forgets the last `minutes` of what was heard, and everything that depended on it. Returns how many moments went.
@@ -170,13 +177,13 @@ struct RootView: View {
 
     private var tabs: some View {
         TabView(selection: $tab) {
-            Tab("Today", systemImage: "sun.horizon.fill", value: RootTab.today) {
+            Tab("Day", systemImage: "calendar.day.timeline.left", value: RootTab.day) {
                 TodayView(model: model, digest: digest, player: player, state: today, profile: profile, journal: journal,
                           onAsk: { question in
                               tab = .ask
                               Task { await ask.ask(question, via: .suggestion) }
                           })
-                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.today) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.day) }
             }
             Tab("Actions", systemImage: "checklist", value: RootTab.actions) {
                 ActionsView(model: model, player: player)
@@ -187,14 +194,17 @@ struct RootView: View {
                 MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
-            Tab("Ask", systemImage: "text.bubble.fill", value: RootTab.ask) {
+            Tab(value: RootTab.ask) {
                 AskView(ask: ask, voice: voice, history: history, player: player, hasMemory: model.storedCount > 0, chunks: model.chunks,
-                        onViewLedger: { tab = .ledger })
+                        onViewLedger: { tab = .you })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.ask) }
+            } label: {
+                // The official Muse mark once it is in the asset catalogue; the chat bubble until then.
+                if MuseMark.isAvailable { Label("Ask", image: MuseMark.assetName) } else { Label("Ask", systemImage: "text.bubble.fill") }
             }
-            Tab("Ledger", systemImage: "lock.shield.fill", value: RootTab.ledger) {
-                LedgerView(ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
-                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.ledger) }
+            Tab("You", systemImage: "person.crop.circle.fill", value: RootTab.you) {
+                YouView(profile: profile, ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.you) }
             }
         }
     }
@@ -229,11 +239,6 @@ struct RootView: View {
         content
             // "How Echo works" can be opened from Moments and from the Ledger, so the sheet lives here.
             .background { Color.clear.sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) } }
-            .background {
-                Color.clear.sheet(isPresented: $showProfile) {
-                    ProfileSheet(profile: profile) { tab = .ledger }
-                }
-            }
             // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
             // (A draft's review is shown inside the draft sheet, because a sheet can't open over another from here.)
             .sheet(item: Binding(get: { ledger.gate.pending.flatMap { $0.kind == .draft ? nil : $0 } },
@@ -375,7 +380,7 @@ struct RootView: View {
             if let j = args.firstIndex(of: "-then"), j + 1 < args.count { await ask.ask(args[j + 1]) }
         } else if args.contains("-digest") {
             await model.load()
-            tab = .today
+            tab = .day
             await digest.generate(chunks: model.todayChunks)
         }
     }

@@ -214,7 +214,9 @@ struct TabNamingTests {
     @Test func theOldPipelineNameStillOpensMoments() {
         #expect(RootTab.from(argument: "pipeline") == .moments, "older scripts and docs say pipeline")
         #expect(RootTab.from(argument: "moments") == .moments)
-        #expect(RootTab.from(argument: "today") == .today && RootTab.from(argument: "ask") == .ask && RootTab.from(argument: "ledger") == .ledger)
+        #expect(RootTab.from(argument: "today") == .day && RootTab.from(argument: "day") == .day, "older scripts say today")
+        #expect(RootTab.from(argument: "ask") == .ask && RootTab.from(argument: "actions") == .actions)
+        #expect(RootTab.from(argument: "ledger") == .you && RootTab.from(argument: "privacy") == .you && RootTab.from(argument: "profile") == .you && RootTab.from(argument: "you") == .you)
         #expect(RootTab.from(argument: "nonsense") == nil)
     }
 }

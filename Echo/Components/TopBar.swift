@@ -36,51 +36,40 @@ struct AvatarView: View {
     }
 }
 
-/// One slim header on every tab. Left: your profile, then "ECHO" over where you are. Right: three glanceable indicators in
+/// One slim header on every tab. Left: the Echo wordmark with the app's mark in front of it. Right: three glanceable indicators in
 /// one glass capsule (is the watch there, is the cloud allowed, everything stays on this phone). It has no backdrop of
-/// its own: content scrolls under it and the system fades it out.
+/// its own: content scrolls under it and the system fades it out. The tab bar already names the page, so the header doesn't.
 struct EchoTopBar: View {
+    /// The page, read out by VoiceOver after the name.
     let title: String
-    let profile: ProfileStore
     let watch: HeaderStatus.Indicator
     let cloud: HeaderStatus.Indicator
     let listening: Bool
-    let onProfile: () -> Void
     let onWatch: () -> Void
     let onCloud: () -> Void
+    let onLock: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sweep: CGFloat = -0.7
+
+    private static let wordmarkFont = Font.system(size: 30, weight: .black, design: .rounded)
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Button(action: onProfile) {
-                AvatarView(profile: profile)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
+            HStack(spacing: Spacing.xs) {
+                EchoLogo(height: 13, frame: LaunchChoreography.reducedFrame(at: 0))
+                    .frame(width: 30, height: 30)
+                wordmark
             }
-            .buttonStyle(EchoPressStyle())
-            .accessibilityLabel(profile.name.isEmpty ? "Profile" : "Profile, \(profile.name)")
-            .accessibilityHint("Opens your profile")
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("ECHO")
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .tracking(1.6)
-                    .foregroundStyle(Palette.teal)
-                    .accessibilityHidden(true)
-                Text(title)
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .accessibilityAddTraits(.isHeader)
-            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Echo, \(title)")
+            .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: Spacing.sm)
 
             HStack(spacing: 0) {
                 indicator(watch, action: onWatch, pulse: listening)
                 indicator(cloud, action: onCloud)
-                indicator(HeaderStatus.lock, action: onProfile)
+                indicator(HeaderStatus.lock, action: onLock)
             }
             .padding(.horizontal, Spacing.xs)
             .glassEffect(.regular, in: .capsule)
@@ -88,6 +77,28 @@ struct EchoTopBar: View {
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.xs)
         .padding(.bottom, Spacing.sm)
+    }
+
+    /// "Echo" in heavy rounded type, in the colours of the app's aurora, with one slow glint across it when it first appears.
+    private var wordmark: some View {
+        Text("Echo")
+            .font(Self.wordmarkFont)
+            .tracking(-0.6)
+            .foregroundStyle(LinearGradient(colors: [Palette.teal, Palette.blue, Palette.violet], startPoint: .leading, endPoint: .trailing))
+            .overlay {
+                GeometryReader { geo in
+                    LinearGradient(colors: [.clear, .white.opacity(0.85), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.55)
+                        .offset(x: sweep * geo.size.width)
+                }
+                .mask { Text("Echo").font(Self.wordmarkFont).tracking(-0.6) }
+                .allowsHitTesting(false)
+            }
+            .fixedSize()
+            .onAppear {
+                guard !reduceMotion, sweep < 0 else { return }
+                withAnimation(.easeInOut(duration: 1.8).delay(0.8)) { sweep = 1.2 }
+            }
     }
 
     private func indicator(_ i: HeaderStatus.Indicator, action: @escaping () -> Void, pulse: Bool = false) -> some View {

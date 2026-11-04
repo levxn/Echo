@@ -17,7 +17,7 @@ struct ActionsView: View {
     private var groups: [ActionsModel.Group] { actions.groups(filter) }
     private var filterSegments: [EchoSegmented<ActionFilter>.Segment] {
         ActionFilter.allCases.filter { $0 == .all || $0 == filter || actions.count($0) > 0 }.map { f in
-            .init(value: f, title: f == .waiting ? "Waiting" : f.title, badge: actions.count(f) > 0 ? actions.count(f) : nil,
+            .init(value: f, title: f == .waiting ? "Waiting" : f.title, badge: f != .all && actions.count(f) > 0 ? actions.count(f) : nil,
                   spoken: "\(actions.count(f)) to review")
         }
     }
@@ -98,7 +98,7 @@ struct ActionsView: View {
             Label(ledger.cloudEnabled
                   ? (ledger.reviewBeforeSend ? "You see exactly what is sent first. Text only: passwords, numbers, emails and phone numbers are swapped for placeholders on this phone."
                                              : "Text only, logged in your Privacy Ledger. Passwords, numbers, emails and phone numbers are swapped for placeholders on this phone first.")
-                  : "Muse is off, so nothing leaves this phone. Turn it on in Privacy to look for more.",
+                  : "Muse is off, so nothing leaves this phone. Turn it on in the You tab to look for more.",
                   systemImage: "lock.fill")
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)

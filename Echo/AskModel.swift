@@ -279,7 +279,7 @@ final class AskModel {
         let headline: String
         switch spot {
         case .named(let name): headline = "You were at \(name)."
-        case .unnamed: headline = "You were at a place you haven't named yet. You can name it under Places on Today."
+        case .unnamed: headline = "You were at a place you haven't named yet. You can name it under Places on the Day tab."
         }
         let answer = Answer(headline: headline, headlineChunk: hit.chunk, sources: [hit], highlightTerms: outcome.knownTerms)
         let decision = RouteDecision(tier: .local, reason: "Worked out from where the watch was when it heard that, on this phone.", signals: ["where"])
@@ -311,7 +311,7 @@ final class AskModel {
         case .answered(let r) where r.query == question:
             switch r.note {
             case nil: return WatchAnswer(text: brief(r.answer?.headline ?? "I didn't find that in today's conversations."), source: .local, milliseconds: milliseconds)
-            case .cloudOff: return WatchAnswer(text: "Cloud is off, so I can't summarize that. Turn it on in the Privacy Ledger.", source: .none, milliseconds: milliseconds)
+            case .cloudOff: return WatchAnswer(text: "Cloud is off, so I can't summarize that. Turn it on in the You tab.", source: .none, milliseconds: milliseconds)
             case .declined: return WatchAnswer(text: "Not sent. You declined on your phone.", source: .none, milliseconds: milliseconds)
             case .nothingMatched: return WatchAnswer(text: "Nothing in today's conversations matches that.", source: .none, milliseconds: milliseconds)
             }
@@ -339,7 +339,7 @@ final class AskModel {
         case .answered(let r):
             switch r.note {
             case nil: return r.answer?.headline ?? "I didn't find that in today's conversations."
-            case .cloudOff: return "Cloud is off, so I can't summarize that. Turn it on in the Privacy tab."
+            case .cloudOff: return "Cloud is off, so I can't summarize that. Turn it on in the You tab."
             case .declined: return "Not sent. You chose not to send that to Muse."
             case .nothingMatched: return "Nothing in today's conversations matches that."
             }

@@ -128,21 +128,18 @@ struct EchoSegmented<Value: Hashable>: View {
             ForEach(segments) { segment in
                 let selected = segment.value == selection
                 Button { selection = segment.value } label: {
-                    HStack(alignment: .top, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(segment.title)
                             .font(.echoLabel)
                             .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                             .minimumScaleFactor(0.8)
                         if let badge = segment.badge {
-                            // A small raised count beside the name, like an unread count, so it reads as a number of things.
+                            // A small count hugging the name, with no circle behind it, so it reads as a number and takes no room.
                             Text("\(badge)")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(Palette.background)
-                                .padding(.horizontal, 4)
-                                .frame(minWidth: 16, minHeight: 16)
-                                .background(Palette.teal.opacity(selected ? 1 : 0.8), in: Capsule())
-                                .offset(y: -4)
+                                .foregroundStyle(selected ? Palette.teal : Palette.teal.opacity(0.85))
+                                .offset(y: typeSize.isAccessibilitySize ? 0 : -2)
                                 .accessibilityHidden(true)
                         }
                     }

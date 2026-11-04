@@ -13,7 +13,7 @@ struct DigestSection: View {
         case .ready(let ready): DigestCard(ready: ready, model: model, player: player) { run() }
         case .failed(let message): failed(message)
         case .cloudOff: notice(icon: "cloud.slash.fill", title: "Cloud is off",
-                               text: "Turn it back on in the Privacy Ledger to let Muse summarize your day.")
+                               text: "Turn it back on in the You tab to let Muse summarize your day.")
         }
     }
 

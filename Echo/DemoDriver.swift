@@ -173,7 +173,7 @@ struct DemoDriver {
         // the recording script can cut that dead time out of the video.
         _ = await wait(timeout: 120) { model.watchReachable }
         mark("begin")
-        setTab(.today)
+        setTab(.day)
         caption("Echo: a private memory for your day")
         await pause(3)
 
@@ -182,7 +182,7 @@ struct DemoDriver {
         _ = await sync()
         await afterSync()
 
-        setTab(.today)
+        setTab(.day)
         caption("\(Int((model.savedFraction * 100).rounded()))% of the day was never stored, and it all stays on the phone")
         await pause(5)
 
@@ -201,7 +201,7 @@ struct DemoDriver {
         await playFirstCitation()
         ask.scrollTarget = nil
 
-        setTab(.today)
+        setTab(.day)
         today.section = .commitments
         today.scrollTarget = "sections"
         caption("Promises are found on the phone, with no model")
@@ -226,7 +226,7 @@ struct DemoDriver {
             actions.openRequest = nil
             await pause(0.8)
         }
-        setTab(.today)
+        setTab(.day)
 
         today.section = .day
         today.scrollTarget = "places"
@@ -239,7 +239,7 @@ struct DemoDriver {
         today.scrollTarget = "todayTop"
         today.section = .summary
 
-        setTab(.ledger)
+        setTab(.you)
         caption("Every question is on the record. Names can be masked too")
         await pause(3.5)
         caption("One switch turns the cloud off")
@@ -247,11 +247,11 @@ struct DemoDriver {
         ledger.cloudEnabled = false
         await pause(1.2)
         await question("Summarize my day", caption: "With the cloud off, nothing is sent", hold: 3.5)
-        setTab(.ledger)
+        setTab(.you)
         ledger.cloudEnabled = true
         await pause(1)
 
-        setTab(.today)
+        setTab(.day)
         today.section = .summary
         today.scrollTarget = "sections"
         caption("Or approve every request before it is sent")
@@ -295,7 +295,7 @@ struct DemoDriver {
         Log.app.notice("demo-script: forgot \(gone)")
         await pause(2.5)
 
-        setTab(.ledger)
+        setTab(.you)
         ledger.focus = "yourData"
         caption("Export the ledger, or forget the day. It is all yours")
         await pause(3)

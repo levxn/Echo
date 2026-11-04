@@ -135,7 +135,7 @@ struct AnswerCard: View {
                     Label("Cloud is off", systemImage: "cloud.slash.fill")
                         .font(.echoLabel)
                         .foregroundStyle(Palette.amber)
-                    Text("This question needs synthesis, but you've switched the cloud off, so nothing was sent. Here are the closest moments on this phone. Turn the cloud back on in the Privacy Ledger to let Muse answer.")
+                    Text("This question needs synthesis, but you've switched the cloud off, so nothing was sent. Here are the closest moments on this phone. Turn Muse back on in the You tab to let it answer.")
                         .font(.subheadline).foregroundStyle(Palette.textSecondary)
                 case .declined:
                     Label("Not sent", systemImage: "hand.raised.fill")

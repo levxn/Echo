@@ -92,7 +92,7 @@ struct CappedListTests {
         #expect(Capped.visible([1, 2, 3, 4, 5], limit: 5, showAll: false).count == 5, "exactly the limit needs no Show all")
     }
 
-    @Test func theLedgerShowsFiveEntriesByDefault() {
-        #expect(LedgerView.activityLimit == 5)
+    @Test func theYouTabShowsThreeSentRequestsByDefault() {
+        #expect(YouView.activityLimit == 3)
     }
 }
