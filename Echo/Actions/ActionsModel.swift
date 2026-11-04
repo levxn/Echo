@@ -59,6 +59,8 @@ final class ActionsModel {
     private let store: ChunkStore
     var now: () -> Date = { Date() }
     var calendar: Calendar = .current
+    /// Whose name goes at the bottom of an email draft (set by the last refresh).
+    private(set) var userName = ""
 
     init(store: ChunkStore) { self.store = store }
 
@@ -67,6 +69,7 @@ final class ActionsModel {
     /// Works out the actions from the moments (off the main thread), adds what Muse found earlier, and applies what the person has done.
     func refresh(chunks: [ChunkRecord], userName: String, myVoice: String?, voiceNames: [String: String]) async {
         let moment = now(), cal = calendar
+        self.userName = userName.isEmpty ? self.userName : userName
         let rules = await Task.detached(priority: .utility) {
             ActionExtractor.extract(from: chunks, userName: userName, myVoice: myVoice, voiceName: { voiceNames[$0] }, now: moment, calendar: cal)
         }.value

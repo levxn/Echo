@@ -155,7 +155,7 @@ nonisolated enum ActionExtractor {
     }
 
     /// When the sentence was said: its day, at the time of day it was said. Relative days ("tomorrow") count from here.
-    private static func referenceDate(for chunk: ChunkRecord, now: Date, calendar: Calendar) -> Date {
+    static func referenceDate(for chunk: ChunkRecord, now: Date, calendar: Calendar) -> Date {
         let day = DayID.date(of: chunk.dayId, calendar: calendar) ?? calendar.startOfDay(for: now)
         return day.addingTimeInterval(chunk.wallStart)
     }

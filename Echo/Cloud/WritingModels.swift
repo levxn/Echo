@@ -33,9 +33,10 @@ final class DraftModel {
 
     var isStub: Bool { caller.client.isStub }
 
-    func generate(for promise: Promise, tone: DraftTone, channel: DraftChannel, chunks: [ChunkRecord]) async {
+    /// `instruction` replaces the usual "keep this promise" request (for a follow-up to someone, or a message about an action).
+    func generate(for promise: Promise, tone: DraftTone, channel: DraftChannel, chunks: [ChunkRecord], instruction: String? = nil) async {
         guard ledger.cloudEnabled else { state = .cloudOff; return }
-        let plan = TierTwoPlanner.draftPlan(promise: promise, chunks: chunks, tone: tone, channel: channel, model: modelID, maskNames: ledger.maskNames)
+        let plan = TierTwoPlanner.draftPlan(promise: promise, chunks: chunks, tone: tone, channel: channel, model: modelID, maskNames: ledger.maskNames, instruction: instruction)
         guard plan.canCall else { state = .failed("That moment is no longer on this phone."); return }
         let query = "Draft a \(channel == .email ? "email" : "text message") for: “\(promise.sentence)”"
         if ledger.reviewBeforeSend, !isStub {

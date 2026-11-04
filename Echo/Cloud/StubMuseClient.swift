@@ -12,6 +12,7 @@ struct StubMuseClient: MuseClient {
         case EchoSchemas.digestName: content = Self.digest
         case EchoSchemas.draftName: content = Self.draft
         case EchoSchemas.journalName: content = Self.journal
+        case EchoSchemas.actionsName: content = "{\"actions\":[]}"   // the stub never invents things to do
         default: content = Self.answer(for: request.user)
         }
         return MuseResponse(content: content, model: "stub", promptTokens: 0, completionTokens: 0,

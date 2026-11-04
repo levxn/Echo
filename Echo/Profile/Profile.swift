@@ -41,6 +41,7 @@ final class ProfileStore {
     static let colorKey = "echo.profileColor"
     static let speakKey = "echo.speakVoiceAnswers"
     static let catchKey = "echo.catchPromises"
+    static let museDraftsKey = "echo.museDrafts"
     /// Whose day this is until they type their own name.
     static let defaultName = "Levin"
 
@@ -60,6 +61,14 @@ final class ProfileStore {
     var journalReminder: Bool {
         didSet { defaults.set(journalReminder, forKey: JournalReminder.key) }
     }
+    /// Muse writes a better version of a draft as soon as one is opened, from placeholders only (never a password or number). On unless turned off.
+    var museDrafts: Bool {
+        didSet { defaults.set(museDrafts, forKey: Self.museDraftsKey) }
+    }
+    /// An 8 am nudge saying how many actions are waiting. Off unless turned on.
+    var actionsMorning: Bool {
+        didSet { defaults.set(actionsMorning, forKey: ActionsMorning.key) }
+    }
     /// Read answers aloud when the question was spoken. On unless turned off.
     var speakVoiceAnswers: Bool {
         didSet { defaults.set(speakVoiceAnswers, forKey: Self.speakKey) }
@@ -77,6 +86,8 @@ final class ProfileStore {
         speakVoiceAnswers = defaults.object(forKey: Self.speakKey) as? Bool ?? true
         catchPromises = defaults.object(forKey: Self.catchKey) as? Bool ?? true
         journalReminder = defaults.bool(forKey: JournalReminder.key)
+        actionsMorning = defaults.bool(forKey: ActionsMorning.key)
+        museDrafts = defaults.object(forKey: Self.museDraftsKey) as? Bool ?? true
     }
 
     var initials: String { ProfileLogic.initials(from: name) }

@@ -2,7 +2,7 @@ import os
 import SwiftUI
 
 enum RootTab: String {
-    case today, moments, ask, ledger
+    case today, actions, moments, ask, ledger
 
     /// Launch-argument values for `-tab`. The old name `pipeline` still opens Moments, so older scripts keep working.
     static func from(argument: String) -> RootTab? { argument == "pipeline" ? .moments : RootTab(rawValue: argument) }
@@ -11,6 +11,7 @@ enum RootTab: String {
     var title: String {
         switch self {
         case .today: "Today"
+        case .actions: "Actions"
         case .moments: "Moments"
         case .ask: "Ask"
         case .ledger: "Privacy"
@@ -37,6 +38,9 @@ struct RootView: View {
     @State private var digest: DigestModel
     @State private var drafts: DraftModel
     @State private var journal: JournalModel
+    @State private var actions: ActionsModel
+    @State private var museActions: MuseActionsModel
+    @State private var performer: ActionPerformer
     @State private var player: ChunkPlayer
     @State private var today = TodayState()
     @State private var profile = ProfileStore()
@@ -66,6 +70,12 @@ struct RootView: View {
         _digest = State(initialValue: DigestModel(store: model.store, ledger: ledger, client: client))
         _drafts = State(initialValue: DraftModel(ledger: ledger, client: client))
         _journal = State(initialValue: JournalModel(store: model.store, ledger: ledger, client: client))
+        let actionsModel = ActionsModel(store: model.store)
+        _actions = State(initialValue: actionsModel)
+        _museActions = State(initialValue: MuseActionsModel(ledger: ledger, client: client))
+        let calendar = SystemCalendar()
+        _performer = State(initialValue: ActionPerformer(model: actionsModel, events: calendar, reminders: SystemReminders(), notifier: reminders, contacts: SystemContacts(),
+                                                         canSendMail: { ComposerSupport.canSendMail }, canSendText: { ComposerSupport.canSendText }))
         let player = ChunkPlayer(directory: model.store.chunksDirectory)
         _player = State(initialValue: player)
         // Dev hook: `simctl launch ... -tab ask` opens a tab directly.
@@ -88,6 +98,7 @@ struct RootView: View {
         let gone = await model.forgetLast(minutes: minutes)
         guard !gone.isEmpty else { return 0 }
         reminders.cancel(forChunkIDs: gone)
+        await refreshActions()
         ask.clear()
         digest.reset()
         player.stop()
@@ -126,6 +137,13 @@ struct RootView: View {
         }
     }
 
+    /// Finds what was said that is worth acting on, again, from what is stored now.
+    private func refreshActions() async {
+        await actions.refresh(chunks: model.chunks, userName: profile.name, myVoice: voices.me?.id,
+                              voiceNames: voices.nameMap)
+        await reminders.setMorningActions(enabled: profile.actionsMorning, count: actions.pendingCount)
+    }
+
     /// Re-plans the briefings for meetings in the next day (when the person has turned them on).
     private func refreshBriefings() async {
         guard briefings.enabled else {
@@ -146,7 +164,7 @@ struct RootView: View {
     private func forgetDay(includeLedger: Bool) {
         Task {
             await DayWiper.forget(resetDay: { await model.reset() }, ask: ask, digest: digest, player: player,
-                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices, calendar: calendarLink, journal: journal, briefings: briefings)
+                                  ledger: ledger, includeLedger: includeLedger, reminders: reminders, voices: voices, calendar: calendarLink, journal: journal, briefings: briefings, actions: actions)
         }
     }
 
@@ -160,6 +178,11 @@ struct RootView: View {
                           })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.today) }
             }
+            Tab("Actions", systemImage: "checklist", value: RootTab.actions) {
+                ActionsView(model: model, player: player)
+                    .safeAreaBar(edge: .top, spacing: 0) { topBar(.actions) }
+            }
+            .badge(actions.pendingCount)
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
                 MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
@@ -177,45 +200,64 @@ struct RootView: View {
     }
 
     var body: some View {
-        tabs
-        .overlay(alignment: .bottom) {
-            if let caption {
-                DemoCaption(text: caption)
-                    .transition(.echoRise(reduceMotion: reduceMotion))
-                    .id(caption)
+        withTasks(withSheets(withOverlay(tabs)))
+            .modifier(FirstImpression())
+            .modifier(WidgetSync(model: model, reminders: reminders, profile: profile, voices: voices, link: link))
+            .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings, places: places, actions: actions, museActions: museActions, performer: performer))
+            .preferredColorScheme(.dark)
+            .tint(Palette.teal)
+            // Large text is fully supported up to the first accessibility size; beyond it these dense cards
+            // would wrap mid-word, so the scale is capped there.
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            .task { await start() }
+    }
+
+    private func withOverlay(_ content: some View) -> some View {
+        content
+            .overlay(alignment: .bottom) {
+                // `-no-caption-overlay`: the recording draws the captions itself, under the phone and the watch.
+                if let caption, !ProcessInfo.processInfo.arguments.contains("-no-caption-overlay") {
+                    DemoCaption(text: caption)
+                        .transition(.echoRise(reduceMotion: reduceMotion))
+                        .id(caption)
+                }
             }
-        }
-        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: caption)
-        // "How Echo works" can be opened from Moments and from the Ledger, so the sheet lives here.
-        .background { Color.clear.sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) } }
-        .background {
-            Color.clear.sheet(isPresented: $showProfile) {
-                ProfileSheet(profile: profile) { tab = .ledger }
+            .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: caption)
+    }
+
+    private func withSheets(_ content: some View) -> some View {
+        content
+            // "How Echo works" can be opened from Moments and from the Ledger, so the sheet lives here.
+            .background { Color.clear.sheet(isPresented: Bindable(ledger).showArchitecture) { ArchitectureView(model: model, ledger: ledger) } }
+            .background {
+                Color.clear.sheet(isPresented: $showProfile) {
+                    ProfileSheet(profile: profile) { tab = .ledger }
+                }
             }
-        }
-        // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
-        // (A draft's review is shown inside the draft sheet, because a sheet can't open over another from here.)
-        .sheet(item: Binding(get: { ledger.gate.pending.flatMap { $0.kind == .draft ? nil : $0 } },
-                             set: { if $0 == nil, ledger.gate.pending?.kind != .draft { ledger.gate.cancel() } })) { review in
-            ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })
-        }
-        // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
-        .onChange(of: model.session) { Task { await history.reload() } }
-        .onChange(of: profile.journalReminder) { _, on in Task { await reminders.setEveningJournal(enabled: on) } }
-        .onChange(of: briefings.enabled) { Task { await refreshBriefings() } }
-        .task(id: model.storedCount) {
-            try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
-            await refreshBriefings()
-        }
-        .modifier(FirstImpression())
-        .modifier(WidgetSync(model: model, reminders: reminders, profile: profile, voices: voices, link: link))
-        .modifier(ModelEnvironment(speaker: speaker, voices: voices, privacy: privacy, reminders: reminders, calendar: calendarLink, drafts: drafts, ledger: ledger, briefings: briefings, places: places))
-        .preferredColorScheme(.dark)
-        .tint(Palette.teal)
-        // Large text is fully supported up to the first accessibility size; beyond it these dense cards
-        // would wrap mid-word, so the scale is capped there.
-        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-        .task { await start() }
+            // "Review before sending": the request waits here until the user decides. Swiping the sheet away declines.
+            // (A draft's review is shown inside the draft sheet, because a sheet can't open over another from here.)
+            .sheet(item: Binding(get: { ledger.gate.pending.flatMap { $0.kind == .draft ? nil : $0 } },
+                                 set: { if $0 == nil, ledger.gate.pending?.kind != .draft { ledger.gate.cancel() } })) { review in
+                ReviewSheet(review: review, onSend: { ledger.gate.approve() }, onCancel: { ledger.gate.cancel() })
+            }
+    }
+
+    private func withTasks(_ content: some View) -> some View {
+        content
+            // A new watch day starts from nothing, and that clears the history too, so show what is really stored.
+            .onChange(of: model.session) { Task { await history.reload() } }
+            .onChange(of: profile.journalReminder) { _, on in Task { await reminders.setEveningJournal(enabled: on) } }
+            .onChange(of: profile.actionsMorning) { Task { await reminders.setMorningActions(enabled: profile.actionsMorning, count: actions.pendingCount) } }
+            .onChange(of: briefings.enabled) { Task { await refreshBriefings() } }
+            .onChange(of: voices.voices) { Task { await refreshActions() } }
+            .task(id: model.storedCount) {
+                try? await Task.sleep(for: .seconds(2))   // let a burst of new moments settle first
+                await refreshBriefings()
+            }
+            .task(id: model.storedCount) {
+                try? await Task.sleep(for: .milliseconds(700))
+                await refreshActions()
+            }
     }
 
     /// Everything that runs once when the app opens: warming the language models, wiring what the phone and watch tell each other, and the dev hooks.
@@ -278,6 +320,12 @@ struct RootView: View {
             if profile.speakVoiceAnswers, let text = ask.spokenAnswer { speaker.speak(text) }
         }
         await model.purgeExpired()
+        // Dev hook: `-seed-transcripts FILE` stores a day of transcripts directly (screenshots and checks without the watch).
+        if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-seed-transcripts"), i + 1 < ProcessInfo.processInfo.arguments.count {
+            let n = await DevSeed.load(path: ProcessInfo.processInfo.arguments[i + 1], into: model.store)
+            Log.app.notice("seed-transcripts: \(n) moments")
+            await model.load()
+        }
         // Dev hooks: `-voice-me` says the voice heard most is the person's own, and `-name-places` names the demo day's places
         // (screenshots, the take).
         if ProcessInfo.processInfo.arguments.contains("-voice-me") { await introduceVoice() }
@@ -343,6 +391,9 @@ private struct ModelEnvironment: ViewModifier {
     let ledger: LedgerModel
     let briefings: BriefingCenter
     let places: PlacesModel
+    let actions: ActionsModel
+    let museActions: MuseActionsModel
+    let performer: ActionPerformer
 
     func body(content: Content) -> some View {
         content
@@ -355,5 +406,8 @@ private struct ModelEnvironment: ViewModifier {
             .environment(ledger)
             .environment(briefings)
             .environment(places)
+            .environment(actions)
+            .environment(museActions)
+            .environment(performer)
     }
 }

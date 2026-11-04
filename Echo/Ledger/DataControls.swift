@@ -70,7 +70,7 @@ enum DayWiper {
     static let promiseDoneKey = "echo.promiseDone"
 
     static func forget(resetDay: () async -> Void, ask: AskModel, digest: DigestModel, player: ChunkPlayer,
-                       ledger: LedgerModel, includeLedger: Bool, reminders: Reminders? = nil, voices: VoiceBookModel? = nil, calendar: CalendarLink? = nil, journal: JournalModel? = nil, briefings: BriefingCenter? = nil,
+                       ledger: LedgerModel, includeLedger: Bool, reminders: Reminders? = nil, voices: VoiceBookModel? = nil, calendar: CalendarLink? = nil, journal: JournalModel? = nil, briefings: BriefingCenter? = nil, actions: ActionsModel? = nil,
                        defaults: UserDefaults = .standard) async {
         player.stop()
         ask.clear()
@@ -82,6 +82,7 @@ enum DayWiper {
         calendar?.clear()
         journal?.reset()
         briefings?.clear()
+        actions?.reset()
         defaults.removeObject(forKey: promiseDoneKey)
         defaults.removeObject(forKey: PeopleIgnore.key)
         if includeLedger { await ledger.clear() } else { await ledger.redactResponses() }

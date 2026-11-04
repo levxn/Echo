@@ -37,30 +37,40 @@ struct DemoDriver {
     private func mark(_ name: String) { Log.app.notice("demo-script: \(name)") }
     private func pause(_ seconds: Double) async { try? await Task.sleep(for: .seconds(seconds)) }
 
+    /// Shows a caption in the app and logs it with its time, so the recording script can draw it on the final video (under the
+    /// phone and the watch) instead of inside the phone.
+    private func caption(_ text: String?) {
+        Log.app.notice("demo-script: caption: \(text ?? "-")")
+        setCaption(text)
+    }
+
     private func type(_ text: String) async {
         ask.query = ""
         for ch in text {
             ask.query.append(ch)
-            try? await Task.sleep(for: .milliseconds(45))
+            try? await Task.sleep(for: .milliseconds(32))
         }
         await pause(0.6)
     }
 
-    private func question(_ text: String, caption: String, hold: Double) async {
+    /// `live` marks a question that goes to Muse, so the recording script can speed up the wait for the reply.
+    private func question(_ text: String, caption text2: String, hold: Double, live: Bool = false) async {
         setTab(.ask)
-        setCaption(caption)
-        await pause(1.2)
+        caption(text2)
+        await pause(0.9)
         await type(text)
+        if live { mark("live-begin") }
         await ask.ask(text)
+        if live { mark("live-end") }
         await pause(hold)
     }
 
     /// Taps the mic and lets a recorded question stand in for the voice, through the real recorder and on-device understanding.
-    private func voiceQuestion(clip: Int, caption: String, hold: Double) async {
+    private func voiceQuestion(clip: Int, caption text: String, hold: Double) async {
         setTab(.ask)
         ask.clear()
-        setCaption(caption)
-        await pause(1.2)
+        caption(text)
+        await pause(0.9)
         await voice.listen(clip: clip, ask: ask)
         await pause(hold)
     }
@@ -129,156 +139,170 @@ struct DemoDriver {
         return false
     }
 
-    func run() async {
-        // The simulators can take a while to see each other after the app launches. Wait here, before the take begins, so
-        // the recording script can cut that dead time out of the video.
-        _ = await wait(timeout: 120) { model.watchReachable }
-        mark("begin")
-        setTab(.today)
-        setCaption("Echo: a private memory for your day")
-        await pause(3.5)
-
-        setTab(.moments)
-        setCaption("The watch keeps only speech and streams it to the phone: last week's day first, then today's")
-        await pause(1)
-        mark("sync-begin")
+    /// Both days from the watch. The captions change as it goes, and when the watch answers "Hey Echo" that moment is marked so the
+    /// recording can play it at normal speed.
+    private func sync() async -> Bool {
+        caption("The watch keeps only speech and sends it to the phone")
+        let history = self.history
+        let ticker = Task { @MainActor in
+            let started = Date()
+            @MainActor func heard() -> Bool { history.items.contains { $0.via == .wakeWord } }
+            while !Task.isCancelled, Date().timeIntervalSince(started) < 170, !heard() { try? await Task.sleep(for: .milliseconds(300)) }
+            guard !Task.isCancelled else { return }
+            if heard() {
+                self.mark("wake-begin")
+                self.caption("Say “Hey Echo” and the watch answers. “Off the record” keeps nothing")
+                try? await Task.sleep(for: .seconds(9))
+                self.mark("wake-end")
+            }
+            self.caption("Last week and today: checked, transcribed and indexed on the phone")
+        }
+        defer { ticker.cancel() }
         // Last week's recording first (kept as its own day), then today's.
         let startedPrev = await startWatchReliably(dayOffset: -7)
         let settledPrev = startedPrev ? await waitUntilSettled(timeout: 300) : false
         let started = settledPrev ? await startWatchReliably() : false
         let settled = started ? await waitUntilSettled(timeout: 300) : false
         mark(settled ? "sync-end" : (started ? "sync-timeout" : "watch-never-started"))
+        return settled
+    }
+
+    func run() async {
+        // The simulators can take a while to see each other after the app launches. Wait here, before the take begins, so
+        // the recording script can cut that dead time out of the video.
+        _ = await wait(timeout: 120) { model.watchReachable }
+        mark("begin")
+        setTab(.today)
+        caption("Echo: a private memory for your day")
+        await pause(3)
+
+        setTab(.moments)
+        mark("sync-begin")
+        _ = await sync()
         await afterSync()
-        setCaption("Checked, transcribed and indexed on the phone")
-        await pause(2.5)
-        setCaption("It tells voices apart, and notes where each moment happened. All on the phone")
-        await pause(4)
 
         setTab(.today)
-        setCaption("\(Int((model.savedFraction * 100).rounded()))% of the day was never stored")
+        caption("\(Int((model.savedFraction * 100).rounded()))% of the day was never stored, and it all stays on the phone")
         await pause(5)
 
-        await question("When is the plumber coming?", caption: "Lookups are answered on the phone", hold: 4.5)
-        await question("What did Mister Brennan say about the lease?", caption: "Matching words are highlighted, and the source audio is one tap away", hold: 4)
-        await question("How much was the rent increase last week?", caption: "Last week is remembered too: ask about any day", hold: 4.5)
-        await voiceQuestion(clip: 3, caption: "Or tap the mic and ask out loud: understood on the phone, then answered on the phone", hold: 5)
-        await question("What did I promise people today?", caption: "Synthesis goes to Muse Spark: text only, never audio", hold: 5)
-        setCaption("Exactly the text that left the phone, and 0 bytes of audio")
+        await question("When is the plumber coming?", caption: "Lookups are answered on the phone", hold: 3)
+        await question("How much was the rent increase last week?", caption: "Ask about any day: last week is remembered too", hold: 3)
+        await voiceQuestion(clip: 3, caption: "Ask out loud: understood on the phone", hold: 3)
+
+        await question("What did I promise people today?", caption: "Big questions go to Muse Spark: text only, never audio", hold: 1, live: true)
+        caption("Exactly what left the phone, and 0 bytes of audio")
         ask.expandSent = true
-        await pause(5.5)
+        await pause(3.5)
         ask.expandSent = false
         ask.scrollTarget = "items"
-        setCaption("Every claim links back to the audio it came from")
-        await pause(1.8)
+        caption("Every claim plays the audio it came from")
+        await pause(1.2)
         await playFirstCitation()
         ask.scrollTarget = nil
 
         setTab(.today)
         today.section = .commitments
         today.scrollTarget = "sections"
-        setCaption("Commitments are found on the phone, with no model at all")
-        await pause(2.5)
+        caption("Promises are found on the phone, with no model")
+        await pause(1.8)
         for promise in PromiseExtractor.extract(from: model.todayChunks).prefix(2) {
             var done = Set((UserDefaults.standard.string(forKey: DayWiper.promiseDoneKey) ?? "").split(separator: "\n").map(String.init))
             done.insert(promise.id)
             UserDefaults.standard.set(done.sorted().joined(separator: "\n"), forKey: DayWiper.promiseDoneKey)
-            await pause(1)
+            await pause(0.8)
         }
-        await pause(3)
-        setCaption("Draft the message you promised: only that moment goes to Muse")
+        await pause(1)
+        caption("Draft the message you promised: only that moment goes to Muse")
         DemoFlags.autoDraft = true
         today.draftOpen = true
+        mark("live-begin")
         _ = await wait(timeout: 40) { ledger.entries.contains { $0.kind == .draft && $0.status != .pending } }
-        await pause(6)
+        mark("live-end")
+        await pause(3.5)
         today.draftOpen = false
         DemoFlags.autoDraft = false
-        await pause(1)
+        await pause(0.8)
+
         today.section = .day
         today.scrollTarget = "places"
-        setCaption("Where it happened: kept on the phone, never sent")
-        await pause(5)
+        caption("Where it happened: kept on the phone, never sent")
+        await pause(4)
+        today.section = .people
+        today.scrollTarget = "sections"
+        caption("It tells voices apart, and you can name them")
+        await pause(3.5)
         today.scrollTarget = "todayTop"
         today.section = .summary
 
         setTab(.ledger)
-        setCaption("Every question is on the record")
-        await pause(4)
-        setCaption("One switch turns the cloud off")
-        await pause(1.5)
+        caption("Every question is on the record. Names can be masked too")
+        await pause(3.5)
+        caption("One switch turns the cloud off")
+        await pause(1)
         ledger.cloudEnabled = false
-        await pause(2.5)
-        await question("Summarize my day", caption: "With the cloud off, nothing is sent", hold: 5)
+        await pause(1.2)
+        await question("Summarize my day", caption: "With the cloud off, nothing is sent", hold: 3.5)
         setTab(.ledger)
-        setCaption("Switch it back on")
-        await pause(1.5)
         ledger.cloudEnabled = true
-        await pause(2.5)
-
-        setCaption("Optionally, names are masked before anything is sent")
-        ledger.maskNames = true
-        await question("What did I promise people today?", caption: "Muse sees placeholders like [PERSON_1]; you see the real names", hold: 4)
-        ask.expandSent = true
-        await pause(5)
-        ask.expandSent = false
-        ledger.maskNames = false
+        await pause(1)
 
         setTab(.today)
         today.section = .summary
         today.scrollTarget = "sections"
-        setCaption("Or approve every request first")
+        caption("Or approve every request before it is sent")
         ledger.reviewBeforeSend = true
-        await pause(1.5)
+        await pause(1)
         let summary = Task { await digest.generate(chunks: model.todayChunks) }
         _ = await wait(timeout: 20) { ledger.gate.pending != nil }
-        setCaption("You see exactly what would leave, then choose")
-        await pause(5.5)
+        await pause(4)
         ledger.gate.approve()
+        mark("live-begin")
         await summary.value
+        mark("live-end")
         ledger.reviewBeforeSend = false
-        setCaption("One tap: Muse summarizes the whole day")
-        await pause(6)
+        caption("One tap: Muse summarizes the whole day")
+        await pause(3)
 
         setTab(.ask)
         ask.clear()
-        setCaption("On the wrist, tap the mic and ask: the phone understands it, and Muse handles the broad ones")
-        await pause(1.5)
+        caption("From your wrist: ask out loud, the phone answers")
+        await pause(1)
         let before = history.items.count
         watchVoiceAsk(5)   // "Summarize my day", spoken
+        mark("live-begin")
         _ = await wait(timeout: 60) { history.items.count > before && ask.isFinishedAsking }
-        await pause(6)
+        mark("live-end")
+        await pause(3)
 
         ask.clear()
-        setCaption("Everything you ask is kept on the phone, until you clear it")
-        await pause(3.5)
+        caption("Everything you ask is kept on the phone")
         ask.historyRequest = .list
-        await pause(4)
+        await pause(2.5)
         ask.historyRequest = .first
-        setCaption("Open one to see the answer, and play the moments it came from")
-        await pause(5)
+        await pause(2.5)
         ask.historyRequest = nil
-        await pause(1)
+        await pause(0.8)
 
         setTab(.moments)
-        setCaption("Forget the last ten minutes, from the phone or the wrist")
-        await pause(2)
+        caption("Forget the last ten minutes, from the phone or the wrist")
+        await pause(1.5)
         let gone = await forget(10)
         Log.app.notice("demo-script: forgot \(gone)")
-        await pause(3)
+        await pause(2.5)
 
         setTab(.ledger)
         ledger.focus = "yourData"
-        setCaption("Your data is yours: export the ledger, or forget the day")
-        await pause(5)
+        caption("Export the ledger, or forget the day. It is all yours")
+        await pause(3)
         ledger.focus = "ledgerTop"
-        await pause(1.2)
+        await pause(0.8)
 
-        setCaption("How it all fits together")
-        await pause(1.5)
+        caption("How it all fits together")
         ledger.showArchitecture = true
-        await pause(8)
+        await pause(5)
         ledger.showArchitecture = false
-        setCaption(nil)
-        await pause(1.5)
+        caption(nil)
+        await pause(1)
         mark("finished")
     }
 }

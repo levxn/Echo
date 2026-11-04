@@ -60,6 +60,12 @@ struct ProfileSheet: View {
                     ToggleRow(title: "Remind me to write my journal", systemImage: "book.closed.fill",
                               caption: "A nudge at 9 pm. It says nothing about your day, and nothing is written or sent until you ask.",
                               isOn: $profile.journalReminder, tint: Palette.teal)
+                    ToggleRow(title: "Morning summary of actions", systemImage: "sunrise.fill",
+                              caption: "A nudge at 8 am saying how many things are waiting in Actions. It says nothing about what they are.",
+                              isOn: $profile.actionsMorning, tint: Palette.teal)
+                    ToggleRow(title: "Let Muse write my drafts", systemImage: "square.and.pencil",
+                              caption: "When you open a message in Actions, Muse writes a better version. It only sees the moment, with passwords, numbers, emails and phone numbers replaced by placeholders, and your words go back in on this phone.",
+                              isOn: $profile.museDrafts, tint: Palette.cloud)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .echoCard()

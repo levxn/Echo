@@ -115,7 +115,7 @@ extension TierTwoPlanner {
 
     /// The promise's own moment, and the line just before it (which usually says who it was said to). Nothing else leaves.
     static func draftPlan(promise: Promise, chunks: [ChunkRecord], tone: DraftTone, channel: DraftChannel, model: String,
-                          maskNames: Bool = false, now: Date = Date()) -> TierTwoPlan {
+                          maskNames: Bool = false, instruction: String? = nil, now: Date = Date()) -> TierTwoPlan {
         let day = chunks.filter { $0.status == .stored && !($0.transcript ?? "").isEmpty && $0.dayId == (chunks.first { $0.id == promise.chunkID }?.dayId ?? $0.dayId) }
             .sorted { $0.wallStart < $1.wallStart }
         var selected: [ChunkRecord] = []
@@ -123,7 +123,7 @@ extension TierTwoPlanner {
             if i > 0, day[i].wallStart - day[i - 1].wallStart <= 60 { selected.append(day[i - 1]) }
             selected.append(day[i])
         }
-        let question = "Write a \(tone.instruction) \(channel == .email ? "email" : "text message") that keeps this promise: “\(promise.sentence)”"
+        let question = instruction ?? "Write a \(tone.instruction) \(channel == .email ? "email" : "text message") that keeps this promise: “\(promise.sentence)”"
         let (sent, sentQuestion, masking) = masked(selected, query: question, day: day, enabled: maskNames)
         let snippets = sent.map { Snippet(time: $0.stamp(now: now), text: $0.transcript ?? "", chunkID: $0.id) }
         let request = MuseRequest(model: model, developer: draftRules + maskingNote(masking),

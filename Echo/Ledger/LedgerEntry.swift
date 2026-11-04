@@ -3,7 +3,7 @@ import Foundation
 /// One question and where it was answered. Local answers are logged too, with zero bytes sent, so the
 /// ledger shows the whole picture: what stayed on the phone and what did not.
 struct LedgerEntry: Identifiable, Equatable {
-    enum Kind: String { case ask, digest, draft, journal }
+    enum Kind: String { case ask, digest, draft, journal, actions }
     enum Status: String { case pending, ok, error }
 
     var id = UUID().uuidString

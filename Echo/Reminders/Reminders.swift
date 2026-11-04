@@ -152,6 +152,13 @@ final class Reminders {
         try? await scheduler.add(id: JournalReminder.notificationID, title: "Echo", body: "Your day is ready to write up whenever you are.", at: fire)
     }
 
+    /// Sets (or removes) the 8 am nudge to review actions. Nothing is scheduled when there is nothing to review, and it carries a count only.
+    func setMorningActions(enabled: Bool, count: Int) async {
+        scheduler.remove(ids: [ActionsMorning.notificationID])
+        guard enabled, count > 0, let fire = ActionsMorning.fireDate(now: now()), await scheduler.ensureAuthorized() else { return }
+        try? await scheduler.add(id: ActionsMorning.notificationID, title: "Echo", body: ActionsMorning.body(count: count), at: fire)
+    }
+
     /// Moments were forgotten, so reminders about promises made in them (ids start with the moment's id) go too.
     func cancel(forChunkIDs ids: [String]) {
         let gone = Set(ids)
