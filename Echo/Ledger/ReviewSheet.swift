@@ -55,6 +55,12 @@ struct ReviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Palette.teal)
                     }
+                    if plan.masking.hasSecrets {
+                        Label("\(plan.heldBackCount) sensitive detail\(plan.heldBackCount == 1 ? "" : "s") stay\(plan.heldBackCount == 1 ? "s" : "") on this phone (\(plan.masking.secrets.summary)). Only placeholders go to Muse.", systemImage: "lock.shield.fill")
+                            .font(.footnote)
+                            .foregroundStyle(Palette.teal)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     ForEach(plan.snippets) { snippet in
                         HStack(alignment: .top, spacing: Spacing.sm) {
                             Text(snippet.time)

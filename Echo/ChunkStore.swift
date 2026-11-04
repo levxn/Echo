@@ -12,6 +12,11 @@ actor ChunkStore {
         let base = directory ?? URL.applicationSupportDirectory.appending(path: "Echo", directoryHint: .isDirectory)
         chunksDirectory = base.appending(path: "chunks", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: chunksDirectory, withIntermediateDirectories: true)
+        // Transcripts and audio are encrypted by the OS whenever the phone has not been unlocked since it started; after the first unlock
+        // they stay readable, so the watch can still deliver while the phone is locked.
+        for folder in [base, chunksDirectory] {
+            try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: folder.path)
+        }
         if sqlite3_open(base.appending(path: "echo.sqlite").path, &db) != SQLITE_OK { Log.app.error("sqlite open failed") }
         Self.migrate(db)
     }
@@ -64,6 +69,7 @@ actor ChunkStore {
         )
         """)
         if !columnNames(db, table: "ledger").contains("masked_names") { exec(db, "ALTER TABLE ledger ADD COLUMN masked_names INTEGER DEFAULT 0") }
+        if !columnNames(db, table: "ledger").contains("held_back") { exec(db, "ALTER TABLE ledger ADD COLUMN held_back TEXT DEFAULT ''") }
         exec(db, "CREATE TABLE IF NOT EXISTS day_digest (id INTEGER PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
         if !columnNames(db, table: "day_digest").contains("day_id") {
             exec(db, "ALTER TABLE day_digest ADD COLUMN day_id TEXT")
@@ -512,8 +518,8 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         INSERT OR REPLACE INTO ledger (id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json,
-          body_bytes, response, prompt_tokens, completion_tokens, latency_ms, status, error, masked_names)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          body_bytes, response, prompt_tokens, completion_tokens, latency_ms, status, error, masked_names, held_back)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
@@ -537,6 +543,7 @@ actor ChunkStore {
         sqlite3_bind_text(stmt, 16, e.status.rawValue, -1, t)
         sqlite3_bind_text(stmt, 17, e.error, -1, t)
         sqlite3_bind_int(stmt, 18, Int32(e.maskedNames))
+        sqlite3_bind_text(stmt, 19, (try? String(data: JSONEncoder().encode(e.heldBack), encoding: .utf8)) ?? "{}", -1, t)
         if sqlite3_step(stmt) != SQLITE_DONE { Log.app.error("ledger upsert failed") }
     }
 
@@ -545,7 +552,7 @@ actor ChunkStore {
         var stmt: OpaquePointer?
         let sql = """
         SELECT id, ts, kind, query, tier, reason, left_device, model, is_stub, snippets_json, body_bytes, response,
-               prompt_tokens, completion_tokens, latency_ms, status, error, masked_names FROM ledger ORDER BY ts DESC
+               prompt_tokens, completion_tokens, latency_ms, status, error, masked_names, held_back FROM ledger ORDER BY ts DESC
         """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
@@ -569,6 +576,7 @@ actor ChunkStore {
             e.status = LedgerEntry.Status(rawValue: text(15)) ?? .ok
             e.error = text(16)
             e.maskedNames = Int(sqlite3_column_int(stmt, 17))
+            e.heldBack = (try? JSONDecoder().decode([String: Int].self, from: Data(text(18).utf8))) ?? [:]
             out.append(e)
         }
         return out

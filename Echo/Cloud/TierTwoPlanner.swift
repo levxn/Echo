@@ -41,17 +41,25 @@ enum TierTwoPlanner {
         options: [.caseInsensitive])
 
     /// Masks names in `selected` and `query` (same masked text for the request and for what the UI and ledger show).
+    /// Everything that leaves the phone passes through here. First the confidential details (passwords, codes, card numbers, contact
+    /// details and the like) are replaced by placeholders, always, whatever the settings; then, if the person asked for it, names too.
+    /// The same masked text goes in the request and in what the review sheet and the ledger show.
     static func masked(_ selected: [ChunkRecord], query: String, day: [ChunkRecord], enabled: Bool) -> (chunks: [ChunkRecord], query: String, masking: Masking) {
-        guard enabled else { return (selected, query, Masking()) }
-        let masking = Pseudonymizer.build(question: query, texts: selected.map { $0.transcript ?? "" },
-                                          corpus: day.map { $0.transcript ?? "" })
-        guard !masking.isEmpty else { return (selected, query, masking) }
-        let chunks = selected.map { chunk -> ChunkRecord in
-            var copy = chunk
-            copy.transcript = masking.mask(chunk.transcript ?? "")
-            return copy
+        let redacted = ConfidentialScanner.redact([query] + selected.map { $0.transcript ?? "" })
+        var chunks = selected
+        for i in chunks.indices { chunks[i].transcript = redacted.texts[i + 1] }
+        var sentQuery = redacted.texts[0]
+        var masking = Masking()
+        masking.secrets = redacted.mask
+        if enabled {
+            let names = Pseudonymizer.build(question: sentQuery, texts: chunks.map { $0.transcript ?? "" }, corpus: day.map { ConfidentialScanner.redact([$0.transcript ?? ""]).texts[0] })
+            masking.entries = names.entries
+            if !names.isEmpty {
+                for i in chunks.indices { chunks[i].transcript = names.mask(chunks[i].transcript ?? "") }
+                sentQuery = names.mask(sentQuery)
+            }
         }
-        return (chunks, masking.mask(query), masking)
+        return (chunks, sentQuery, masking)
     }
 
     static func plan(query: String, decision: RouteDecision, outcome: RetrievalOutcome, chunks: [ChunkRecord], model: String,
@@ -129,7 +137,14 @@ enum TierTwoPlanner {
 
     /// One line for the model when names were replaced; nothing otherwise.
     static func maskingNote(_ masking: Masking) -> String {
-        masking.isEmpty ? "" : "\n\nNames of people were replaced with placeholders like [PERSON_1]. Use the placeholders exactly as written whenever you refer to those people, and never guess who they are."
+        var note = ""
+        if !masking.isEmpty {
+            note += "\n\nNames of people were replaced with placeholders like [PERSON_1]. Use the placeholders exactly as written whenever you refer to those people, and never guess who they are."
+        }
+        if masking.hasSecrets {
+            note += "\n\nSensitive details (passwords, codes, card or account numbers, email addresses, phone numbers) were replaced with placeholders like [PASSWORD_1] or [PHONE_1]. If one is relevant, keep the placeholder exactly as written. Never guess, spell out or invent what it stands for."
+        }
+        return note
     }
 
     private static func lexicalHits(_ outcome: RetrievalOutcome) -> [ChunkRecord] {

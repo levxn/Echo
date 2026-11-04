@@ -26,6 +26,9 @@ struct LedgerEntry: Identifiable, Equatable {
     var latencyMs = 0.0
     /// People's names replaced with placeholders before sending (`snippets` shows the masked text that left).
     var maskedNames = 0
+    /// Confidential details (passwords, codes, numbers) held back on the phone, by kind name. Counts only, never the values.
+    var heldBack: [String: Int] = [:]
+    var heldBackCount: Int { heldBack.values.reduce(0, +) }
     var status: Status = .ok
     var error = ""
 }

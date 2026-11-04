@@ -53,7 +53,7 @@ final class DraftModel {
         switch await caller.perform(plan: plan, query: query, kind: .draft, reason: "You asked Muse to draft a message for a promise.") {
         case .success(let response):
             guard let parsed = MessageDraft.parse(response.content) else { state = .failed("Muse's message couldn't be read. Try again."); return }
-            state = .ready(Ready(draft: parsed.restored(plan.masking), model: response.model, isStub: response.isStub))
+            state = .ready(Ready(draft: parsed.restoredOnPhone(plan.masking), model: response.model, isStub: response.isStub))
         case .failure(let error):
             state = .failed(error.localizedDescription)
         }

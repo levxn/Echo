@@ -20,6 +20,7 @@ final class CloudCaller {
         entry.model = client.isStub ? "stub" : plan.request.model
         entry.snippets = plan.snippets
         entry.maskedNames = plan.maskedCount
+        entry.heldBack = Dictionary(plan.heldBack.map { ($0.key.rawValue, $0.value) }, uniquingKeysWith: +)
         entry.leftDevice = !client.isStub
         entry.bodyBytes = client.isStub ? 0 : plan.bodyBytes
         entry.status = .pending

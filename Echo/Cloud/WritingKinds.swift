@@ -31,6 +31,11 @@ struct MessageDraft: Codable, Equatable {
         masking.isEmpty ? self : MessageDraft(subject: masking.restore(subject), body: masking.restore(body))
     }
 
+    /// For the draft the person is editing on this phone: names AND the held-back details (a password, a number) go back in.
+    func restoredOnPhone(_ masking: Masking) -> MessageDraft {
+        MessageDraft(subject: masking.restoreAll(subject), body: masking.restoreAll(body))
+    }
+
     static func parse(_ content: String) -> MessageDraft? {
         for candidate in [content, JSONExtract.object(in: content)].compactMap({ $0 }) {
             if let data = candidate.data(using: .utf8), let d = try? JSONDecoder().decode(MessageDraft.self, from: data), !d.body.isEmpty { return d }

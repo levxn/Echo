@@ -257,6 +257,11 @@ private struct SummaryCard: View {
                 .padding(.horizontal, Spacing.md)
                 .frame(minHeight: 36)
                 .background(Palette.teal.opacity(0.14), in: Capsule())
+            Label("Passwords, codes, card and account numbers, emails and phone numbers are always swapped for placeholders on this phone before anything is sent.",
+                  systemImage: "lock.shield.fill")
+                .font(.caption)
+                .foregroundStyle(Palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .echoCard()
@@ -324,6 +329,7 @@ private struct EntryRow: View {
                     Text(entry.leftDevice && entry.bodyBytes > 0
                          ? "\(entry.snippets.count) snippets · \(ByteFormat.short(entry.bodyBytes)) sent · no audio"
                            + (entry.maskedNames > 0 ? " · \(entry.maskedNames) names masked" : "")
+                           + (entry.heldBackCount > 0 ? " · \(entry.heldBackCount) private detail\(entry.heldBackCount == 1 ? "" : "s") kept here" : "")
                          : "Nothing sent")
                         .font(.caption)
                         .foregroundStyle(Palette.textSecondary)
@@ -349,6 +355,10 @@ private struct EntryRow: View {
                     .font(.caption.weight(.semibold)).foregroundStyle(Palette.textSecondary).textCase(.uppercase)
                 if entry.maskedNames > 0 {
                     Label("\(entry.maskedNames) names were replaced with placeholders on this phone first.", systemImage: "theatermasks")
+                        .font(.caption).foregroundStyle(Palette.teal)
+                }
+                if entry.heldBackCount > 0 {
+                    Label("\(ConfidentialKind.summary(stored: entry.heldBack).prefix(1).uppercased() + ConfidentialKind.summary(stored: entry.heldBack).dropFirst()) stayed on this phone. Only placeholders were sent.", systemImage: "lock.shield.fill")
                         .font(.caption).foregroundStyle(Palette.teal)
                 }
                 ForEach(entry.snippets) { s in

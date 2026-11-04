@@ -67,6 +67,10 @@ final class LedgerModel {
 
     /// Inserts or updates an entry, keeping the list newest-first.
     func record(_ entry: LedgerEntry) {
+        // The ledger says what was asked and what was sent. A password or number someone mentioned in a question or a promise is
+        // shown as its placeholder here, so neither the screen nor an export of the ledger ever holds it.
+        var entry = entry
+        entry.query = ConfidentialScanner.redact([entry.query]).texts[0]
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i] = entry } else {
             entries.insert(entry, at: 0)
         }

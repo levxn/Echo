@@ -12,8 +12,11 @@ nonisolated struct Masking: Equatable, Sendable {
     }
 
     var entries: [Entry] = []
+    /// Passwords, codes, card numbers and the like, held back on this phone (see `ConfidentialScanner`).
+    var secrets = SecretMask()
     var count: Int { entries.count }
     var isEmpty: Bool { entries.isEmpty }
+    var hasSecrets: Bool { !secrets.isEmpty }
 
     private static let boundary = #"(?<![\p{L}\p{N}_])"#
     private static let boundaryEnd = #"(?![\p{L}\p{N}_])"#
@@ -46,6 +49,12 @@ nonisolated struct Masking: Equatable, Sendable {
         }
         return out
     }
+}
+
+extension Masking {
+    /// For a draft on this phone only: the names AND the held-back details put back. Answers, digests and history use `restore`, which
+    /// brings back names and leaves a secret as its placeholder.
+    func restoreAll(_ text: String) -> String { secrets.restore(restore(text)) }
 }
 
 nonisolated enum Pseudonymizer {
@@ -93,4 +102,7 @@ nonisolated enum Pseudonymizer {
 extension TierTwoPlan {
     /// Names replaced before sending, for the ledger and the disclosure.
     var maskedCount: Int { masking.count }
+    /// Confidential details held back on the phone, by kind (counts only).
+    var heldBack: [ConfidentialKind: Int] { masking.secrets.heldBack }
+    var heldBackCount: Int { masking.secrets.count }
 }

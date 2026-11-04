@@ -252,6 +252,7 @@ final class AskModel {
         entry.leftDevice = false
         entry.bodyBytes = 0
         entry.maskedNames = plan.maskedCount
+        entry.heldBack = Dictionary(plan.heldBack.map { ($0.key.rawValue, $0.value) }, uniquingKeysWith: +)
         entry.latencyMs = ms
         entry.status = .ok
         ledger.record(entry)

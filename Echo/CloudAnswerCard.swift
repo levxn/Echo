@@ -168,7 +168,8 @@ struct SentDisclosure: View {
                             .font(.echoLabel)
                             .foregroundStyle(Palette.textPrimary)
                         Text("\(plan.snippets.count) snippets · \(ByteFormat.short(plan.bodyBytes)) · 0 bytes of audio"
-                             + (plan.maskedCount > 0 ? " · \(plan.maskedCount) names masked" : ""))
+                             + (plan.maskedCount > 0 ? " · \(plan.maskedCount) names masked" : "")
+                             + (plan.heldBackCount > 0 ? " · \(plan.heldBackCount) private detail\(plan.heldBackCount == 1 ? "" : "s") kept here" : ""))
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -195,6 +196,12 @@ struct SentDisclosure: View {
                     if !plan.masking.isEmpty {
                         Label("\(plan.maskedCount) names replaced on this phone (\(plan.masking.entries.prefix(3).map { "\($0.original) → \($0.token)" }.joined(separator: ", "))\(plan.maskedCount > 3 ? "…" : "")). The mapping never leaves it.",
                               systemImage: "theatermasks")
+                            .font(.caption)
+                            .foregroundStyle(Palette.teal)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if plan.masking.hasSecrets {
+                        Label("\(plan.masking.secrets.summary) stayed on this phone. Only placeholders were sent.", systemImage: "lock.shield.fill")
                             .font(.caption)
                             .foregroundStyle(Palette.teal)
                             .fixedSize(horizontal: false, vertical: true)
