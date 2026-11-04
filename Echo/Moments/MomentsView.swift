@@ -40,10 +40,7 @@ struct MomentsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     PrivacyBanner(privacy: privacy, listening: model.isListening)
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        SectionHeader(DayID.longLabel(day), meta: daysWithData.contains(day) ? "" : "Nothing heard")
-                        MomentsDayStrip(days: days, withData: daysWithData, today: today, selected: Binding(get: { day }, set: { pickedDay = $0; overrides = [:] }))
-                    }
+                    MomentsDayStrip(days: days, withData: daysWithData, today: today, selected: Binding(get: { day }, set: { pickedDay = $0; overrides = [:] }))
                     if layout.groups.isEmpty && layout.working.isEmpty {
                         EmptyState(icon: "waveform", tint: Palette.blue, title: day == today ? "Nothing heard yet" : "Nothing heard this day",
                                    message: day == today ? "Moments appear here as your watch hears them." : "Pick another day, or listen on this one next time.")

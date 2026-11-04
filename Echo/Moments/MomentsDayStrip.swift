@@ -14,10 +14,12 @@ struct MomentsDayStrip: View {
                 HStack(spacing: Spacing.xs) {
                     ForEach(days, id: \.self) { day in cell(day).id(day) }
                 }
-                .padding(.horizontal, Spacing.xl)
+                .padding(.horizontal, Spacing.lg)   // the first and last day clear the fade at the ends
             }
             .scrollIndicators(.hidden)
-            .padding(.horizontal, -Spacing.xl)   // runs to the screen's edges while the page keeps its margins
+            // Stays inside the page's margins; the days fade out at both ends instead of running off the screen.
+            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.07),
+                                         .init(color: .black, location: 0.93), .init(color: .clear, location: 1)], startPoint: .leading, endPoint: .trailing))
             .onAppear { proxy.scrollTo(selected, anchor: .center) }
             .onChange(of: selected) { _, day in withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { proxy.scrollTo(day, anchor: .center) } }
         }
