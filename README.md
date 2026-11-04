@@ -29,23 +29,24 @@ Echo turns a day of conversations into something you can ask questions of, **wit
 <p align="center">
   <a href="docs/media/echo-demo-preview.mp4"><b>▶ Watch the full-quality preview (MP4)</b></a>
   &nbsp;·&nbsp;
-  <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, about 4½ min (MP4)</b></a>
+  <a href="docs/media/echo-demo-full.mp4"><b>▶ One continuous take, under 3 min (MP4)</b></a>
 </p>
 
-<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app. The continuous take covers last week's day and today's, lookups across days, a live Muse answer with its citations, commitments, a drafted message, voices and places, name masking, review before sending, a question asked out loud on the phone and on the watch, the history of what was asked, forgetting the last ten minutes, the kill switch and the architecture sheet, with the sync of both days sped up 5x.</sub></p>
+<p align="center"><sub>The watch replays a day, the phone checks, transcribes and indexes it, and then questions are answered: lookups on the phone, and the synthesis questions by <b>live Muse Spark</b> (<code>muse-spark-1.3</code>), with the exact text that was sent shown on screen. Everything in this preview was captured from the running app. The continuous take (2:53, with captions) covers last week's day and today's, the Today page, Moments across days, lookups across days, a question asked out loud, a live Muse answer with proof of what left the phone and citations that play, Actions with a message drafted from placeholders, voices and places, turning Muse off and approving each request, choosing when to listen, a question asked from the watch, forgetting the last ten minutes, and the architecture sheet, with the sync of both days sped up 7 to 8 times.</sub></p>
 
 ## A tour of the screens
 
 ### Apple Watch
 
-On a watch, capture runs in the background with no button at all; in the demo the first screen shows it working. Swipe up to **ask**: tap the big mic and say a question, and the watch shows what it heard, then the answer (which can be read aloud). Four suggestions cover the usual questions, and **Recent** lists the last eight, each reopening without asking again.
+The watch screen is one calm thing: a big round sound-bar button that starts and stops listening, one line saying what it is doing, and a small chip for **when** it listens (only when you tap, all day, or set hours, the same choice as on the phone, and the two stay in step). What was heard, waiting to send and sent now live on a **More** page, next to forgetting the last ten minutes. Swipe up to **ask**: tap the big mic and say a question, and the watch shows what it heard, then the answer (which can be read aloud). Four suggestions cover the usual questions, and **Recent** lists the last eight, each reopening without asking again.
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="200" alt="Watch, ready to start"><br><sub><b>Ready</b><br>Capture, with a live level and counters</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="200" alt="Watch, the Ask page with a mic"><br><sub><b>Ask</b><br>Tap the mic and speak</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="200" alt="Watch, recent questions"><br><sub><b>Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
-    <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="200" alt="Watch, an answer to a spoken question"><br><sub><b>An answer</b><br>To a spoken question, from Muse</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-ready.png" width="170" alt="Watch, ready to listen"><br><sub><b>Ready</b><br>One button, one line, and when to listen</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-listening.png" width="170" alt="Watch, listening"><br><sub><b>Listening</b><br>The bars move while the microphone is on</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-ask.png" width="170" alt="Watch, the Ask page with a mic"><br><sub><b>Ask</b><br>Tap the mic and speak</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-recent.png" width="170" alt="Watch, recent questions"><br><sub><b>Recent</b><br>Lock = on the phone, cloud = Muse</sub></td>
+    <td align="center"><img src="docs/media/screenshots/watch-answer.png" width="170" alt="Watch, an answer to a spoken question"><br><sub><b>An answer</b><br>To a spoken question, from Muse</sub></td>
   </tr>
 </table>
 
@@ -55,39 +56,46 @@ A slim bar sits at the top of every tab: the name ECHO in the middle, and one in
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments.jpg" width="250" alt="Moments"><br><sub><b>Moments</b><br>What the phone heard, all on this phone</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-today.jpg" width="250" alt="Today"><br><sub><b>Today</b><br>When it listened, what is coming up, and the day at a glance</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-moments.jpg" width="250" alt="Moments"><br><sub><b>Moments</b><br>Pick any day: when it listened as bars, then the conversations and the places</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-actions.jpg" width="250" alt="Actions"><br><sub><b>Actions</b><br>What you said you would do: events, messages, calls, shopping lists, to-dos</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-actions-draft.jpg" width="250" alt="A drafted message"><br><sub><b>A draft to edit</b><br>Written by Muse from placeholders, ready to open in Mail, Messages or WhatsApp</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-you.jpg" width="250" alt="You"><br><sub><b>You</b><br>Your profile, what stayed and what left, and every setting in its own section</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-you-muse.jpg" width="250" alt="Muse and privacy"><br><sub><b>Muse and privacy</b><br>Muse on or off, review before sending, name masking</sub></td>
+  </tr>
+  <tr>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-lookup.jpg" width="250" alt="Ask, answered on the phone"><br><sub><b>Ask, locally</b><br>Highlighted words, source audio, about 30 ms</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-cloud.jpg" width="250" alt="Ask, answered by Muse Spark"><br><sub><b>Ask, with Muse</b><br>Live Muse Spark, with proof of what left the phone; Read aloud and Share</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask out loud</b><br>Understood on the phone, then answered like any typed question</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-listening.jpg" width="250" alt="Ask, listening to a spoken question"><br><sub><b>Ask out loud</b><br>Understood on the phone, then answered like any typed question</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-ask-followup.jpg" width="250" alt="Ask, a follow-up question"><br><sub><b>Follow-ups</b><br>"Which of those is due first?" is sent with the earlier question, never the earlier answer</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-history-detail.jpg" width="250" alt="A past question reopened"><br><sub><b>History</b><br>Every question kept on the phone, with citations that still play</sub></td>
-  </tr>
-  <tr>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-today-commitments.jpg" width="250" alt="Commitments with a reminder"><br><sub><b>Promises</b><br>Found with plain rules; the bell sets a reminder</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-people.jpg" width="250" alt="People mentioned today"><br><sub><b>People</b><br>Who came up, and where; misheard names can be hidden</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger.jpg" width="250" alt="Privacy ledger"><br><sub><b>Privacy ledger</b><br>What stayed, what left, and the switches</sub></td>
   </tr>
 </table>
 
-And what Echo does with more than one day, more than one voice and more than one place:
+And what Echo does with more than one voice and more than one place, and the controls behind it:
 
 <table align="center">
   <tr>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-people.jpg" width="250" alt="People mentioned today"><br><sub><b>People</b><br>Who came up, and where; misheard names can be hidden</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-voices.jpg" width="250" alt="Voices and people"><br><sub><b>Voices</b><br>Told apart on the phone; name them, mark which is you</sub></td>
     <td align="center" valign="top"><img src="docs/media/screenshots/phone-places.jpg" width="250" alt="Places the day happened"><br><sub><b>Places</b><br>Coarse locations you name yourself; never looked up, never sent</sub></td>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-draft.jpg" width="250" alt="A drafted message"><br><sub><b>Draft the message</b><br>Only the promise and the line before it go to Muse, through the same review gate</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger-data.jpg" width="250" alt="Your data controls"><br><sub><b>Your data</b><br>How long to keep memories, forget the last minutes, announce recording</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-you-listening.jpg" width="250" alt="Listening"><br><sub><b>Listening</b><br>All day, set hours or only on a tap, the same on the watch</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-you-kept.jpg" width="250" alt="What Echo kept"><br><sub><b>What Echo kept</b><br>How much the watch heard, kept as speech, and saved on the phone</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screenshots/phone-ledger-data.jpg" width="250" alt="Your data controls"><br><sub><b>Your data</b><br>How long to keep memories, forget the last minutes, export, forget the day</sub></td>
   </tr>
 </table>
 
 ## What it does
 
 1. **Watch.** Listens, keeps only speech (a lenient voice detector with a 2-second pre-roll so the first word is never clipped), compresses it and streams it to the phone.
-2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity). The **Moments** tab shows what it heard in plain language (when it listened, and the moments grouped by conversation); you can play any moment or delete it.
+2. **Phone, all on-device.** A second speech check (Apple SoundAnalysis) rejects what isn't speech, Apple's on-device recognizer transcribes it, and the text is indexed in SQLite (FTS5 keyword search plus word-vector similarity). The **Moments** tab shows what it heard in plain language (when it listened as a bar chart, and the moments grouped by conversation, with the places) for any of the last 30 days, picked from a strip at the top; you can play any moment or delete it.
 3. **Ask your day.** A rules-based router decides where each question is answered:
    - **Lookups** ("When is the plumber coming?") are answered on the phone in about 30 ms, with the matching words highlighted and the original audio one tap away.
    - **Synthesis** ("What did I promise people today?", "Summarize my day") goes to **Muse Spark** through the Meta Model API. Echo plans the smallest set of snippets the question needs, sends text only, and asks for a structured answer.
@@ -212,7 +220,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 |---|---|
 | `Echo Watch App/` | Watch app: replay engine, uploader, status screen, the demo audio |
 | `Echo/` | Phone app: receiver, processing pipeline, screens |
-| `Echo/Moments/` | The Moments tab: status banner, ribbon, grouped moments, Behind the scenes |
+| `Echo/Moments/` | The Moments tab: the day strip, the bar chart of when it listened, grouped moments, Behind the scenes |
 | `Echo/Search/` | Normalizer, embeddings, hybrid retriever, router, answer extraction, commitments, citations |
 | `Echo/Components/` | The shared UI parts: section headers, chips with wrapping layout, buttons, rows, segmented control |
 | `Echo/Cloud/` | Muse client, planner and prompts, labeled stub, key handling |
