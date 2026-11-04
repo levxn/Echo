@@ -59,6 +59,8 @@ final class ActionsModel {
     private let store: ChunkStore
     var now: () -> Date = { Date() }
     var calendar: Calendar = .current
+    /// The demo driver opens this action's editor by setting it (and closes it with nil).
+    var openRequest: String?
     /// Whose name goes at the bottom of an email draft (set by the last refresh).
     private(set) var userName = ""
 

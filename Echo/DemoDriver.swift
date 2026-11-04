@@ -27,6 +27,7 @@ struct DemoDriver {
     let watchQuickAsk: (Int) -> Void
     /// Asks the watch to ask recorded question N by voice, as if its mic had been tapped.
     let watchVoiceAsk: (Int) -> Void
+    let actions: ActionsModel
     let setTab: (RootTab) -> Void
     let setCaption: (String?) -> Void
 
@@ -212,16 +213,20 @@ struct DemoDriver {
             await pause(0.8)
         }
         await pause(1)
-        caption("Draft the message you promised: only that moment goes to Muse")
-        DemoFlags.autoDraft = true
-        today.draftOpen = true
-        mark("live-begin")
-        _ = await wait(timeout: 40) { ledger.entries.contains { $0.kind == .draft && $0.status != .pending } }
-        mark("live-end")
+        setTab(.actions)
+        caption("Everything you said you would do, ready to review")
         await pause(3.5)
-        today.draftOpen = false
-        DemoFlags.autoDraft = false
-        await pause(0.8)
+        caption("A draft to edit: Muse writes it, passwords and numbers stay on the phone")
+        if let first = actions.pending.first(where: { $0.kind == .message || $0.kind == .email }) {
+            mark("live-begin")
+            actions.openRequest = first.id
+            _ = await wait(timeout: 40) { ledger.entries.contains { $0.kind == .draft && $0.status != .pending } }
+            mark("live-end")
+            await pause(3.5)
+            actions.openRequest = nil
+            await pause(0.8)
+        }
+        setTab(.today)
 
         today.section = .day
         today.scrollTarget = "places"

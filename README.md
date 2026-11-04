@@ -10,7 +10,7 @@
 ![watchOS 26](https://img.shields.io/badge/watchOS-26-111111?logo=apple&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-2DD4BF)
 ![Muse Spark](https://img.shields.io/badge/Meta-Muse%20Spark-7C5CFA)
-![Tests](https://img.shields.io/badge/unit%20tests-459%20passing-34D399)
+![Tests](https://img.shields.io/badge/unit%20tests-546%20passing-34D399)
 
 <img src="docs/media/hero.png" alt="Echo on an iPhone and an Apple Watch" width="880">
 
@@ -107,6 +107,8 @@ And what Echo does with more than one day, more than one voice and more than one
 16. **Hey Echo.** A snippet that opens with "Hey Echo" is a command: the rest is answered on the watch and the command itself is never kept in memory.
 17. **Siri, Shortcuts, widgets.** "Ask Echo ...", "What did I promise in Echo", "Forget the last few minutes in Echo" (App Intents), a Promises widget for the Home and Lock Screen, a watch complication, and a Live Activity for a promise that is coming due.
 18. **On this phone, and in your language.** When Apple's on-device model is available, synthesis questions can be answered by it instead of Muse (a switch in the Ledger; the same minimal snippets, never sent, logged as "On-device model"), and any answer or moment can be translated on the device.
+19. **Actions.** A fifth tab turns what was said into things to do, found on the phone with plain rules: calendar events (a plumber on Friday at ten, a birthday every year), emails and messages (the document you promised, the recipe you said you would send), calls, shopping lists, to-dos, and what other people owe you. Each card shows the words it came from, with the audio, and a button for what it needs. Opening one shows a **draft you can edit inside Echo**: the phone writes a first version instantly, Muse (when it is on) writes a better one, and one tap opens it in Mail, Messages or WhatsApp with the recipient, subject and text filled in. Events and reminders are added straight to Calendar and Reminders (with a clash check against your calendar), and Contacts are read on the phone only to fill in the address or number. "Find more with Muse" looks for the subtler ones, behind the same review gate and ledger. Everything dealt with is kept in a Done list you can move back from, and an optional 8 am summary says how many are waiting.
+20. **Nothing confidential leaves the phone.** Before any request to Muse (a question, a digest, a draft, the Actions search), the phone scans the text for passwords, PINs and one-time codes, card numbers (Luhn-checked), account and ID numbers, keys and tokens, email addresses and phone numbers, and swaps each for a placeholder such as `[PASSWORD_1]`. Muse never sees the value. In a draft the real value is put back **on the phone only**, so the message you edit reads naturally; answers, summaries, history, the ledger and its export keep the placeholder. Rules, not a model, so it adds almost no time; it errs towards hiding more, the review sheet shows exactly what would be sent, and the ledger records how many details were held back, never what they were.
 
 ## Verified, and next steps
 
@@ -124,6 +126,8 @@ And what Echo does with more than one day, more than one voice and more than one
 | "Hey Echo" | The wake phrase is recognised from what the phone transcribes, and that is **verified** end to end; on a real microphone it is not yet verified (and it only works while Echo is listening) |
 | Siri and Shortcuts, widgets, watch complication, Live Activity | Built and unit-tested (the intents' answers, the shared snapshot); how they look on a Home Screen, a watch face and the Dynamic Island is not yet verified |
 | Notifications and Calendar events | Scheduling and calendar writes are tested; a real notification firing and a real calendar are not yet verified |
+| Actions: finding, drafts, hand-offs | **Verified** on the demo day (unit tests, and the page run in the simulator with live Muse drafts). iOS never lets an app send an email, text or WhatsApp message by itself, so one tap opens the app with the draft filled in and you press Send there; Mail, Messages and WhatsApp composers, real Contacts, and adding to Reminders were not run on a physical phone |
+| Confidential details held back | **Verified** live: a seeded moment with a password, card number and phone number was drafted with Muse; the request and the ledger held only `[PASSWORD_1]`, `[CARD_1]`, `[PHONE_1]`, and the password came back only in the draft on screen |
 | Watch ↔ phone link | **Verified** with WatchConnectivity between the paired simulators; not yet on a paired watch |
 
 ## Architecture
@@ -157,7 +161,7 @@ flowchart LR
 | Transcription word error rate | 7.4% overall (every scene under 10%) on the demo recordings; real speech will be harder |
 | Retrieval | right moment ranked first for 12 of 12 questions; median search about 26 ms |
 | Live Muse Spark (`muse-spark-1.3`) | "What did I promise people today?" about 5-6 s (27 snippets, 4.9 KB sent); "Summarize my day" about 6-7 s; the day digest about 10 s (45 snippets, about 5.9 KB) |
-| Tests | 459 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) that checks the whole demo against live Muse |
+| Tests | 546 unit tests, including a retrieval and routing eval over a fixed transcript fixture, a mocked-network suite for the Muse client, and tests for the actions page (finding, drafts, hand-offs, what never leaves the phone), commitments, citations, masking, the review gate, the watch's requests, spoken questions, the history and reading aloud, memory across days, voices (clustered against the demo's known speakers), places, off the record, the wake word, drafts, briefings, the Siri intents and the widget snapshot; plus an end-to-end script (40 checks, including those) that checks the whole demo against live Muse |
 
 ## The privacy model
 
@@ -165,6 +169,7 @@ flowchart LR
 - **Only what a question needs is sent.** Commitments send the moments that contain promises or plans; a summary sends the day; a question that matches nothing sends nothing.
 - **Everything is on the record.** The Privacy Ledger lists each question, which tier answered, and the exact snippets and bytes sent. Local answers are logged with zero bytes.
 - **You are in control.** One switch turns the cloud off; those questions then show the closest moments on the phone. **Review before sending** holds each request behind a sheet that shows the exact text. **Mask names** swaps people's names for placeholders (`[PERSON_1]`) on the phone and restores them in the answer; it is best effort, relies on Apple's on-device name tagger, and is off by default because a misheard word that looks like a name is masked too. You can export the ledger as JSON (what was sent, never Muse's replies or your key) and **forget the day** at any time.
+- **Confidential details never leave.** Passwords, codes, card and account numbers, ID numbers, keys, emails and phone numbers are found on the phone and replaced with placeholders in **every** request, with no switch to forget. They are put back only inside a draft you are editing on the phone. It is rule-based and best effort: an unusual way of saying a secret can slip past, so the review sheet shows exactly what would be sent.
 - **No hidden fallback.** If Muse can't be reached, Echo says so (key rejected, rate limited, timed out, offline: "nothing left your phone"). The offline stub only appears when no key exists, and it labels itself.
 
 ## How Echo uses Muse Spark
@@ -216,6 +221,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | `Echo/Speakers/` | Voiceprints (MFCC and pitch, pure Swift), the voice book, voice chips |
 | `Echo/Privacy/` | Off the record, forget the last minutes, the recording announcement |
 | `Echo/Proactive/` | Promises caught as they are said, drafts, the journal, briefings |
+| `Echo/Actions/` | The Actions tab: finding things to do, the cards and editors, drafts, Calendar, Reminders, Contacts and the hand-offs |
 | `Echo/Places/` | Coarse places, the map, "where was I" |
 | `Echo/Brain/` | The on-device model behind a protocol |
 | `Echo/Intents/`, `Echo/Widgets/` | Siri and Shortcuts, and what feeds the widgets |
@@ -236,4 +242,6 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - Name masking is best effort (it only masks names the on-device tagger recognizes) and is off by default.
 - Asking from the watch (by voice or a suggestion) needs the phone reachable; a question that needs Muse waits for approval on the phone when Review before sending is on. Recent still opens from the watch's cache when the phone is away.
 - Spoken questions: the microphone path (`AVAudioEngine`, on both devices) is written and shares the endpointer and the transcription with the recorded-question path, but only the recorded path has been run. Read aloud has not been tried on a real watch speaker.
+- Actions are found with rules, so unusual phrasing is missed and a bare "it" ("I will transfer it") keeps its quote but not its subject; "Find more with Muse" covers some of that. Sending is always yours: Echo opens the draft in the right app, it never sends for you.
+- The confidential-details scanner is rules, not a model; it catches well-formed passwords, codes and numbers reliably and can miss an odd phrasing.
 - The history is kept until you clear it (it is on the phone only, never exported, and cleared by Forget my day); there is no search in it yet.

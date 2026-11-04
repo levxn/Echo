@@ -357,6 +357,7 @@ struct RootView: View {
                              afterSync: { await introduceVoice(); await introducePlaces() },
                              watchQuickAsk: { link.sendDemoQuickAsk($0) },
                              watchVoiceAsk: { link.sendDemoVoiceAsk($0) },
+                             actions: actions,
                              setTab: { tab = $0 },
                              setCaption: { caption = $0 }).run()
         } else if let i = args.firstIndex(of: "-voice-ask"), i + 1 < args.count, let clip = Int(args[i + 1]) {
