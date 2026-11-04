@@ -53,6 +53,7 @@ struct ActionsView: View {
             ActionEditorSheet(item: item, chunks: model.chunks, initialEdits: actions.edits(for: item.id), onFinish: { editing = nil })
         }
         .onChange(of: actions.openRequest) { _, id in editing = id.flatMap { id in actions.items.first { $0.id == id } } }
+        .onChange(of: editing) { _, now in if now == nil { actions.openRequest = nil } }
         .task {
             // Dev hook: `-action-open N` opens the Nth action's editor (screenshots).
             let args = ProcessInfo.processInfo.arguments

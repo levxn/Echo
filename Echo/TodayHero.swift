@@ -1,113 +1,153 @@
 import SwiftUI
 
-/// The top of Today once there is a day to show: three numbers and the next thing you said you would do.
+/// The top of the Day page once there is a day to show: what to do next, how the day went, and a few numbers that open what is behind them.
 struct TodayHero: View {
     let model: PipelineModel
-    let promises: [Promise]
     /// The same number as on the Promises tab below.
     let openPromises: Int
     let conversations: Int
     let onOpenPromises: () -> Void
     var onOpenTimeline: () -> Void = {}
+    var onOpenMoments: () -> Void = {}
+    var onOpenActions: () -> Void = {}
+    /// Opens the editor for this action in the Actions tab.
+    var onReview: (ActionItem) -> Void = { _ in }
 
-    @Environment(VoiceBookModel.self) private var voices
-    @AppStorage(DayWiper.promiseDoneKey) private var doneRaw = ""
+    @Environment(ActionsModel.self) private var actions
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    private var snapshot: WidgetSnapshot {
-        WidgetSnapshotBuilder.make(promises: promises, reminders: [:], done: Set(doneRaw.split(separator: "\n").map(String.init)),
-                                   myVoice: voices.me?.id, momentsToday: model.todayChunks.filter { $0.status == .stored }.count,
-                                   listening: false, now: model.now())
-    }
-
     var body: some View {
-        let snap = snapshot
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            // Three equal tiles. With very large text they stack, so a label like "Conversations" is never squeezed.
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
-                                                      : AnyLayout(HStackLayout(spacing: Spacing.sm))
-            layout {
-                tile(snap.momentsToday, "Moments", symbol: "waveform", tint: Palette.blue)
-                tile(conversations, conversations == 1 ? "Conversation" : "Conversations", symbol: "bubble.left.and.bubble.right.fill",
-                     tint: Palette.violet, hint: "Opens the timeline", action: onOpenTimeline)
-                tile(openPromises, "Open promises", symbol: "checkmark.circle.fill", tint: Palette.teal,
-                     hint: "Opens your promises", action: onOpenPromises)
-            }
-            .fixedSize(horizontal: false, vertical: true)   // the three tiles are always the same height
-            if let next = snap.items.first {
-                Button(action: onOpenPromises) {
-                    HStack(alignment: .top, spacing: Spacing.md) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.title3)
-                            .foregroundStyle(Palette.teal)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: Spacing.xxs) {
-                            Text("Next up")
-                                .font(Font.echoMeta.weight(.medium))
-                                .foregroundStyle(Palette.textSecondary)
-                            Text(next.text)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Palette.textPrimary)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(3)
-                            if let due = next.due {
-                                Text(due)
-                                    .font(Font.echoMeta)
-                                    .foregroundStyle(Palette.teal)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Palette.textTertiary)
-                            .accessibilityHidden(true)
-                    }
-                    .padding(Spacing.md)
-                    .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens your promises")
-            }
+        VStack(spacing: Spacing.xl) {
+            upNext
+            strip
+            stats
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .echoCard()
-        .accessibilityElement(children: .contain)
     }
 
-    /// One of the three numbers: an icon, the number, and what it counts, on a softly tinted tile.
+    // MARK: Up next
+
+    /// The most pressing thing to do: overdue first, then today, then soonest, then the newest without a date.
+    private var next: ActionItem? { actions.groups(.all).first?.items.first }
+
     @ViewBuilder
-    private func tile(_ value: Int, _ label: String, symbol: String, tint: Color, hint: String? = nil, action: (() -> Void)? = nil) -> some View {
-        let content = VStack(alignment: .leading, spacing: Spacing.xs) {
-            Image(systemName: symbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-            Text("\(value)")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Palette.textPrimary)
-                .contentTransition(.numericText())
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Palette.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)   // one line, so a word is never broken in two
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, Spacing.md)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous).strokeBorder(tint.opacity(0.28), lineWidth: 1))
-        .accessibilityElement(children: .combine)
-        if let action {
-            Button(action: action) { content.contentShape(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)) }
-                .buttonStyle(EchoPressStyle())
-                .accessibilityHint(hint ?? "")
+    private var upNext: some View {
+        if let item = next {
+            let section = actions.section(of: item)
+            let when = ActionFormat.when(item, now: actions.now())
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack {
+                    Text("Up next")
+                        .font(Font.echoMeta.weight(.bold))
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+                        .foregroundStyle(Palette.teal)
+                    Spacer()
+                    if section == .overdue { Chip(text: "Overdue", icon: "exclamationmark.circle.fill", tint: Palette.rose, size: .compact) }
+                    else if let when { Chip(text: when, icon: "clock", tint: Palette.teal, size: .compact) }
+                }
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    Image(systemName: item.kind.symbol)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.teal)
+                        .frame(width: 40, height: 40)
+                        .background(Palette.teal.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(item.title)
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Palette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text([item.kind.label, item.person].compactMap { $0 }.joined(separator: " · "))
+                            .font(.subheadline)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                HStack(spacing: Spacing.sm) {
+                    EchoButton(title: "Review", systemImage: "arrow.up.forward.app", style: .prominent) { onReview(item) }
+                    EchoButton(title: "Done", systemImage: "checkmark", style: .secondary) { Task { await actions.markDone(item.id) } }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .echoCard()
+            .accessibilityElement(children: .contain)
         } else {
-            content
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(Palette.teal).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("You're all caught up").font(.system(.headline, design: .rounded, weight: .semibold)).foregroundStyle(Palette.textPrimary)
+                    Text("Nothing is waiting in Actions.").font(.subheadline).foregroundStyle(Palette.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .echoCard()
+            .accessibilityElement(children: .combine)
         }
+    }
+
+    // MARK: How the day went
+
+    @ViewBuilder
+    private var strip: some View {
+        let chunks = model.todayChunks.filter { $0.status != .dropped }
+        if !chunks.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                SectionHeader("Today's listening", style: .overline)
+                DayActivityChart(chunks: chunks, groups: [], compact: true) { _ in }
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onOpenMoments)
+                    .accessibilityHint("Opens Moments")
+            }
+        }
+    }
+
+    // MARK: Numbers
+
+    private var dueToday: Int {
+        actions.groups(.all).filter { $0.section == .overdue || $0.section == .today }.reduce(0) { $0 + $1.items.count }
+    }
+
+    private var stats: some View {
+        let columns = typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: Spacing.sm), GridItem(.flexible())]
+        return LazyVGrid(columns: columns, spacing: Spacing.sm) {
+            stat(dueToday, dueToday == 1 ? "due today" : "due today", symbol: "clock.badge.exclamationmark", tint: Palette.amber, action: onOpenActions, hint: "Opens Actions")
+            stat(conversations, conversations == 1 ? "conversation" : "conversations", symbol: "bubble.left.and.bubble.right.fill", tint: Palette.violet,
+                 action: onOpenTimeline, hint: "Opens the timeline")
+            stat(openPromises, openPromises == 1 ? "promise" : "promises", symbol: "checkmark.circle.fill", tint: Palette.teal, action: onOpenPromises, hint: "Opens your promises")
+            stat(model.todayChunks.filter { $0.status == .stored }.count, "moments", symbol: "waveform", tint: Palette.blue, action: onOpenMoments, hint: "Opens Moments")
+        }
+    }
+
+    private func stat(_ value: Int, _ label: String, symbol: String, tint: Color, action: @escaping () -> Void, hint: String) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: symbol)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 28, height: 28)
+                    .background(tint.opacity(0.16), in: Circle())
+                    .accessibilityHidden(true)
+                Text("\(value)")
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.textPrimary)
+                    .contentTransition(.numericText())
+                Text(label)
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: 44)
+            .padding(.horizontal, Spacing.md)
+            .background(Palette.fill, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(EchoPressStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(value) \(label)")
+        .accessibilityHint(hint)
     }
 }

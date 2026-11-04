@@ -9,6 +9,8 @@ import Translation
 struct DayActivityChart: View {
     let chunks: [ChunkRecord]
     let groups: [MomentGroup]
+    /// A slimmer version with no title and no grid, for the top of the Day page.
+    var compact = false
     let onSelect: (Int) -> Void
 
     private struct Bar: Identifiable {
@@ -30,18 +32,18 @@ struct DayActivityChart: View {
                 Bar(id: $0.offset, time: date(graph.start + Double($0.offset) * graph.bin), value: max($0.element, 0.12))
             }
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                SectionHeader("When it listened", style: .overline)
+                if !compact { SectionHeader("When it listened", style: .overline) }
                 Chart(bars) { bar in
-                    BarMark(x: .value("Time", bar.time), y: .value("Heard", bar.value), width: .fixed(7))
+                    BarMark(x: .value("Time", bar.time), y: .value("Heard", bar.value), width: .fixed(compact ? 5 : 7))
                         .foregroundStyle(LinearGradient(colors: [Palette.teal, Palette.blue], startPoint: .top, endPoint: .bottom))
-                        .cornerRadius(3.5)
+                        .cornerRadius(compact ? 2.5 : 3.5)
                 }
                 .chartXScale(domain: date(graph.start)...date(graph.end), range: .plotDimension(startPadding: 16, endPadding: 16))
                 .chartYScale(domain: 0...1.05)
                 .chartYAxis(.hidden)
                 .chartXAxis {
                     AxisMarks(values: DayActivity.hourLabels(graph).map { date(graph.start + $0.offset * (graph.end - graph.start)) }) { _ in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Palette.stroke)
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(compact ? Color.clear : Palette.stroke)
                         AxisValueLabel(format: .dateTime.hour(), anchor: .top).foregroundStyle(Palette.textSecondary)
                     }
                 }
@@ -54,7 +56,7 @@ struct DayActivityChart: View {
                             }
                     }
                 }
-                .frame(height: 148)
+                .frame(height: compact ? 84 : 148)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.md)
                 .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))

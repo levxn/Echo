@@ -182,6 +182,15 @@ struct RootView: View {
                           onAsk: { question in
                               tab = .ask
                               Task { await ask.ask(question, via: .suggestion) }
+                          },
+                          onOpenMoments: { tab = .moments },
+                          onOpenActions: { tab = .actions },
+                          onReview: { item in
+                              tab = .actions
+                              Task {
+                                  try? await Task.sleep(for: .milliseconds(350))   // let the tab appear first, so it sees the request
+                                  actions.openRequest = item.id
+                              }
                           })
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.day) }
             }

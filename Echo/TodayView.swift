@@ -75,6 +75,10 @@ struct TodayView: View {
     let journal: JournalModel
     /// Asks the Ask tab a question (from a person's page).
     var onAsk: (String) -> Void = { _ in }
+    /// Switches to the Moments and Actions tabs, and opens an action's editor.
+    var onOpenMoments: () -> Void = {}
+    var onOpenActions: () -> Void = {}
+    var onReview: (ActionItem) -> Void = { _ in }
 
     @State private var episodes: [Episode] = []
     @State private var promises: [Promise] = []
@@ -114,8 +118,9 @@ struct TodayView: View {
             VStack(spacing: Spacing.xl) {
                 greeting.id("todayTop")
                 if model.todayChunks.contains(where: { $0.status == .stored }) {
-                    TodayHero(model: model, promises: promises, openPromises: openPromises, conversations: episodes.count,
-                              onOpenPromises: { open(.commitments) }, onOpenTimeline: { open(.day) })
+                    TodayHero(model: model, openPromises: openPromises, conversations: episodes.count,
+                              onOpenPromises: { open(.commitments) }, onOpenTimeline: { open(.day) },
+                              onOpenMoments: onOpenMoments, onOpenActions: onOpenActions, onReview: onReview)
                 }
                 // The bars say nothing until the watch has started (all zeros), so the hint below speaks for an empty day.
                 if model.session != .waiting || !model.todayChunks.isEmpty { FunnelCard(model: model) }

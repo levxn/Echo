@@ -14,7 +14,38 @@ struct FunnelCard: View {
     /// Never smaller than what the watch kept, so the bars stay proportional even if the session totals are missing.
     private var recorded: Double { max(model.recordedSeconds, model.watchKeptSeconds, 0.0001) }
 
+    /// Settled, and the person hasn't asked for the numbers: one sentence is enough.
+    private var isSummarised: Bool { model.isSettled && model.recordedSeconds > 0 && !showDetail }
+
     var body: some View {
+        if isSummarised { summary } else { full }
+    }
+
+    private var summary: some View {
+        Button {
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { showDetail = true }
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(Palette.teal).accessibilityHidden(true)
+                Text("Kept \(Format.clock(model.phoneConfirmedSeconds)) of \(Format.clock(recorded)). Echo skipped the silence.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Palette.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Details")
+                    .font(Font.echoMeta.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Palette.textTertiary).accessibilityHidden(true)
+            }
+            .frame(minHeight: 44)
+            .echoCard(padding: Spacing.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(EchoPressStyle())
+        .accessibilityHint("Shows how much was heard, kept and saved")
+    }
+
+    private var full: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             SectionHeader(title: "What Echo kept") {
                 if model.isSettled {
