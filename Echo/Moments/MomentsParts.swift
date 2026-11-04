@@ -1,88 +1,72 @@
+import Charts
 import SwiftUI
 import Translation
 
 // MARK: - The day's graph
 
-/// "When it listened": the whole day as one graph, with a spike wherever the microphone was on. Tapping it jumps to the nearest conversation.
+/// "When it listened": the whole day as a bar chart, a bar for every quarter of an hour the microphone was on, taller the more was heard.
+/// Tapping it jumps to the nearest conversation.
 struct DayActivityChart: View {
     let chunks: [ChunkRecord]
     let groups: [MomentGroup]
     let onSelect: (Int) -> Void
 
-    private var graph: DayActivity.Graph? { DayActivity.graph(spans: chunks.map { (start: $0.wallStart, duration: $0.duration) }) }
+    private struct Bar: Identifiable {
+        let id: Int
+        let time: Date
+        let value: Double
+    }
+
+    private static let quarterHour = 900.0
+    private var graph: DayActivity.Graph? { DayActivity.graph(spans: chunks.map { (start: $0.wallStart, duration: $0.duration) }, bin: Self.quarterHour) }
+    /// Any midnight will do: only the time of day is drawn.
+    private let midnight = Calendar.current.startOfDay(for: Date())
+
+    private func date(_ seconds: Double) -> Date { midnight.addingTimeInterval(seconds) }
 
     var body: some View {
         if let graph {
+            let bars = graph.values.enumerated().filter { $0.element > 0 }.map {
+                Bar(id: $0.offset, time: date(graph.start + Double($0.offset) * graph.bin), value: max($0.element, 0.12))
+            }
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 SectionHeader("When it listened", style: .overline)
-                VStack(spacing: Spacing.xs) {
-                    GeometryReader { geo in
-                        Canvas { context, size in draw(graph, in: &context, size: size) }
-                            .contentShape(Rectangle())
-                            .onTapGesture { point in select(at: point.x / max(geo.size.width, 1), graph: graph) }
-                    }
-                    .frame(height: 112)
-                    axis(graph)
+                Chart(bars) { bar in
+                    BarMark(x: .value("Time", bar.time), y: .value("Heard", bar.value), width: .fixed(7))
+                        .foregroundStyle(LinearGradient(colors: [Palette.teal, Palette.blue], startPoint: .top, endPoint: .bottom))
+                        .cornerRadius(3.5)
                 }
+                .chartXScale(domain: date(graph.start)...date(graph.end), range: .plotDimension(startPadding: 16, endPadding: 16))
+                .chartYScale(domain: 0...1.05)
+                .chartYAxis(.hidden)
+                .chartXAxis {
+                    AxisMarks(values: DayActivity.hourLabels(graph).map { date(graph.start + $0.offset * (graph.end - graph.start)) }) { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Palette.stroke)
+                        AxisValueLabel(format: .dateTime.hour(), anchor: .top).foregroundStyle(Palette.textSecondary)
+                    }
+                }
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Rectangle().fill(.clear).contentShape(Rectangle())
+                            .onTapGesture { location in
+                                guard let plot = proxy.plotFrame, let tapped: Date = proxy.value(atX: location.x - geo[plot].origin.x) else { return }
+                                select(seconds: tapped.timeIntervalSince(midnight))
+                            }
+                    }
+                }
+                .frame(height: 148)
                 .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.md)
-                .padding(.bottom, Spacing.sm)
+                .padding(.vertical, Spacing.md)
                 .background(Palette.fill, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("The day: spikes show when the microphone was on, between \(DayActivity.hourLabels(graph).first?.text ?? "") and \(DayActivity.hourLabels(graph).last?.text ?? "")")
+                .accessibilityLabel("The day: a bar for every quarter of an hour the microphone was on, between \(DayActivity.hourLabels(graph).first?.text ?? "") and \(DayActivity.hourLabels(graph).last?.text ?? "")")
                 .accessibilityHint("Tap to jump to a conversation")
             }
         }
     }
 
-    private func draw(_ graph: DayActivity.Graph, in context: inout GraphicsContext, size: CGSize) {
-        let count = graph.values.count
-        guard count > 0 else { return }
-        let slot = size.width / CGFloat(count)
-        let floorY = size.height - 2
-        let span = size.height - 8
-        // Each peak is spread a little over its neighbours, so a burst of speech is a hill you can see and tap, not a hairline.
-        var shown = graph.values.indices.map { i -> Double in
-            let before = i > 0 ? graph.values[i - 1] : 0, after = i < count - 1 ? graph.values[i + 1] : 0
-            return before * 0.35 + graph.values[i] + after * 0.35
-        }
-        let tallest = shown.max() ?? 1
-        if tallest > 0 { shown = shown.map { $0 / tallest } }
-        func point(_ index: Int) -> CGPoint {
-            // A gentle curve on the height keeps a short burst of speech visible next to a long one.
-            CGPoint(x: (CGFloat(index) + 0.5) * slot, y: floorY - CGFloat(pow(shown[index], 0.7)) * span)
-        }
-        // One continuous shape for the whole day: flat where nothing was heard, a peak where the microphone was on.
-        var line = Path()
-        line.move(to: CGPoint(x: 0, y: floorY))
-        for index in 0..<count { line.addLine(to: point(index)) }
-        line.addLine(to: CGPoint(x: size.width, y: floorY))
-        var area = line
-        area.addLine(to: CGPoint(x: size.width, y: size.height))
-        area.addLine(to: CGPoint(x: 0, y: size.height))
-        area.closeSubpath()
-        context.fill(area, with: .linearGradient(Gradient(colors: [Palette.teal.opacity(0.6), Palette.blue.opacity(0.05)]),
-                                                 startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
-        context.stroke(line, with: .linearGradient(Gradient(colors: [Palette.teal, Palette.blue]), startPoint: .zero, endPoint: CGPoint(x: size.width, y: 0)),
-                       style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
-    }
-
-    private func axis(_ graph: DayActivity.Graph) -> some View {
-        GeometryReader { geo in
-            ForEach(DayActivity.hourLabels(graph), id: \.text) { label in
-                Text(label.text)
-                    .font(Font.echoMicro.weight(.semibold))
-                    .foregroundStyle(Palette.textSecondary)
-                    .fixedSize()
-                    .position(x: min(max(label.offset * geo.size.width, 14), geo.size.width - 14), y: 8)
-            }
-        }
-        .frame(height: 16)
-    }
-
-    private func select(at fraction: CGFloat, graph: DayActivity.Graph) {
+    private func select(seconds: Double) {
         guard !groups.isEmpty else { return }
-        let seconds = graph.start + Double(min(max(fraction, 0), 1)) * (graph.end - graph.start)
         if let nearest = groups.min(by: { abs(Double($0.id) - seconds) < abs(Double($1.id) - seconds) }) { onSelect(nearest.id) }
     }
 }
