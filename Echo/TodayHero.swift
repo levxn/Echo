@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The top of the Day page once there is a day to show: what to do next, how the day went, and a few numbers that open what is behind them.
+/// The top of the Today page once there is a day to show: how the day went, a few numbers that open what is behind them, and what is coming up.
 struct TodayHero: View {
     let model: PipelineModel
     /// The same number as on the Promises tab below.
@@ -19,77 +19,14 @@ struct TodayHero: View {
     var body: some View {
         VStack(spacing: Spacing.xl) {
             strip
-            upNext
-            comingUp
             stats
-        }
-    }
-
-    // MARK: Up next
-
-    /// The most pressing thing to do: overdue first, then today, then soonest, then the newest without a date.
-    private var next: ActionItem? { actions.groups(.all).first?.items.first }
-
-    @ViewBuilder
-    private var upNext: some View {
-        if let item = next {
-            let section = actions.section(of: item)
-            let when = ActionFormat.when(item, now: actions.now())
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack {
-                    Text("Up next")
-                        .font(Font.echoMeta.weight(.bold))
-                        .textCase(.uppercase)
-                        .tracking(0.8)
-                        .foregroundStyle(Palette.teal)
-                    Spacer()
-                    if section == .overdue { Chip(text: "Overdue", icon: "exclamationmark.circle.fill", tint: Palette.rose, size: .compact) }
-                    else if let when { Chip(text: when, icon: "clock", tint: Palette.teal, size: .compact) }
-                }
-                HStack(alignment: .top, spacing: Spacing.md) {
-                    Image(systemName: item.kind.symbol)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.teal)
-                        .frame(width: 40, height: 40)
-                        .background(Palette.teal.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(item.title)
-                            .font(.system(.title3, design: .rounded, weight: .semibold))
-                            .foregroundStyle(Palette.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text([item.kind.label, item.person].compactMap { $0 }.joined(separator: " · "))
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                HStack(spacing: Spacing.sm) {
-                    EchoButton(title: "Review", systemImage: "arrow.up.forward.app", style: .prominent) { onReview(item) }
-                    EchoButton(title: "Done", systemImage: "checkmark", style: .secondary) { Task { await actions.markDone(item.id) } }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .echoCard()
-            .accessibilityElement(children: .contain)
-        } else {
-            HStack(spacing: Spacing.md) {
-                Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(Palette.teal).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("You're all caught up").font(.system(.headline, design: .rounded, weight: .semibold)).foregroundStyle(Palette.textPrimary)
-                    Text("Nothing is waiting in Actions.").font(.subheadline).foregroundStyle(Palette.textSecondary)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .echoCard()
-            .accessibilityElement(children: .combine)
+            comingUp
         }
     }
 
     // MARK: Coming up
 
-    /// The next few things with a date in the coming week, after the one shown above (overdue ones are already Up next's business).
+    /// The next few things with a date in the coming week. (Overdue ones are counted in "due today" and live in Actions.)
     private var upcoming: [ActionItem] {
         let now = actions.now(), cal = actions.calendar
         let today = cal.startOfDay(for: now)
@@ -97,7 +34,7 @@ struct TodayHero: View {
         return actions.pending
             .filter { item in
                 guard let due = item.due, due >= today, due < horizon else { return false }
-                return item.id != next?.id && actions.section(of: item) != .overdue
+                return actions.section(of: item) != .overdue
             }
             .sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }
             .reduce(into: [ActionItem]()) { kept, item in   // the same thing heard twice is one line

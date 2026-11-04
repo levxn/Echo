@@ -279,7 +279,7 @@ final class AskModel {
         let headline: String
         switch spot {
         case .named(let name): headline = "You were at \(name)."
-        case .unnamed: headline = "You were at a place you haven't named yet. You can name it under Places on the Day tab."
+        case .unnamed: headline = "You were at a place you haven't named yet. You can name it under Places on the Moments tab."
         }
         let answer = Answer(headline: headline, headlineChunk: hit.chunk, sources: [hit], highlightTerms: outcome.knownTerms)
         let decision = RouteDecision(tier: .local, reason: "Worked out from where the watch was when it heard that, on this phone.", signals: ["where"])

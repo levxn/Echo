@@ -18,15 +18,15 @@ enum DevSeed {
     }
 
     @discardableResult
-    static func load(path: String, into store: ChunkStore, day: String = DayID.today()) async -> Int {
+    static func load(path: String, into store: ChunkStore, day: String = DayID.today(), idSuffix: String = "") async -> Int {
         guard let data = FileManager.default.contents(atPath: path), let rows = try? JSONDecoder().decode([Row].self, from: data) else { return 0 }
         for r in rows {
-            var record = ChunkRecord(id: r.id, index: r.index, wallStart: r.wallStart, fileOffset: r.fileOffset, duration: r.duration, peakDb: r.peakDb,
+            var record = ChunkRecord(id: r.id + idSuffix, index: r.index, wallStart: r.wallStart, fileOffset: r.fileOffset, duration: r.duration, peakDb: r.peakDb,
                                      meanDb: r.meanDb, audioFile: r.audioFile, status: .stored, speechConfidence: r.speechConfidence,
                                      confirmedSeconds: r.confirmedSeconds, transcript: r.transcript)
             record.dayId = day
             await store.upsert(record)
-            await store.index(id: r.id, normalizedText: TextNormalizer.normalized(r.transcript), embedding: Embedder.vector(for: r.transcript))
+            await store.index(id: r.id + idSuffix, normalizedText: TextNormalizer.normalized(r.transcript), embedding: Embedder.vector(for: r.transcript))
         }
         return rows.count
     }

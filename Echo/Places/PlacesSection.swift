@@ -5,11 +5,13 @@ import SwiftUI
 /// "at the office", or mark it as somewhere nothing should be recorded. Kept on this phone; a name is only yours.
 struct PlacesSection: View {
     let model: PipelineModel
+    /// Only this day's places; every day's when nil.
+    var day: String?
     @Environment(PlacesModel.self) private var places
     @State private var naming: PlaceCluster?
     @State private var nameText = ""
 
-    private var clusters: [PlaceCluster] { PlaceLogic.clusters(from: model.chunks, places: places.places) }
+    private var clusters: [PlaceCluster] { PlaceLogic.clusters(from: day.map { model.chunks(on: $0) } ?? model.chunks, places: places.places) }
 
     var body: some View {
         if !clusters.isEmpty {

@@ -9,6 +9,8 @@ struct MomentsView: View {
     let onShowHowItWorks: () -> Void
 
     @State private var overrides: [Int: Bool] = [:]
+    /// The day being looked at (today's, or the one being captured, until another is picked).
+    @State private var pickedDay: String?
     @State private var showBehind = ProcessInfo.processInfo.arguments.contains("-moments-behind")
     @State private var pendingDelete: MomentItem?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,24 +21,41 @@ struct MomentsView: View {
         return args.firstIndex(of: "-moments-expand").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
     }()
 
+    /// Dev hook: `-moments-day N` opens the day N days back (checks and screenshots).
+    private static let hookDay: Int? = {
+        let args = ProcessInfo.processInfo.arguments
+        return args.firstIndex(of: "-moments-day").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil }
+    }()
+    private var day: String { pickedDay ?? Self.hookDay.map { DayID.id(offset: -$0, from: model.now()) } ?? model.activeDayId }
+    private var today: String { DayID.today(now: model.now()) }
+    /// The last month, oldest first, so today is at the right.
+    private var days: [String] { (0..<30).reversed().map { DayID.id(offset: -$0, from: model.now()) } }
+    private var daysWithData: Set<String> { Set(model.chunks.filter { $0.status != .dropped }.map { $0.dayId.isEmpty ? today : $0.dayId }) }
+
     var body: some View {
-        let layout = MomentsLayout.make(from: model.sessionChunks)
+        let dayChunks = model.chunks(on: day)
+        let layout = MomentsLayout.make(from: dayChunks)
         let defaults = MomentsLayout.openGroups(layout, settled: model.isSettled, mode: Self.expandMode)
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     PrivacyBanner(privacy: privacy, listening: model.isListening)
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        SectionHeader(DayID.longLabel(day), meta: daysWithData.contains(day) ? "" : "Nothing heard")
+                        MomentsDayStrip(days: days, withData: daysWithData, today: today, selected: Binding(get: { day }, set: { pickedDay = $0; overrides = [:] }))
+                    }
                     if layout.groups.isEmpty && layout.working.isEmpty {
-                        EmptyState(icon: "waveform", tint: Palette.blue, title: "Nothing heard yet",
-                                   message: "Moments appear here as your watch hears them.")
+                        EmptyState(icon: "waveform", tint: Palette.blue, title: day == today ? "Nothing heard yet" : "Nothing heard this day",
+                                   message: day == today ? "Moments appear here as your watch hears them." : "Pick another day, or listen on this one next time.")
                     } else {
                         if !layout.groups.isEmpty {
-                            DayActivityChart(chunks: model.sessionChunks.filter { $0.status != .dropped }, groups: layout.groups) { id in
+                            DayActivityChart(chunks: dayChunks.filter { $0.status != .dropped }, groups: layout.groups) { id in
                                 overrides[id] = true
                                 withAnimation(reduceMotion ? nil : .smooth(duration: 0.5)) { proxy.scrollTo(id, anchor: .top) }
                             }
                         }
                         feed(layout, defaults: defaults)
+                        PlacesSection(model: model, day: day)
                     }
                     BehindTheScenesView(lines: lines(layout), isOpen: $showBehind, onHowItWorks: onShowHowItWorks)
                         .id("behind")
@@ -51,7 +70,7 @@ struct MomentsView: View {
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-play-first") else { return }
                 try? await Task.sleep(for: .milliseconds(1200))
-                let stored = model.sessionChunks.filter { $0.status == .stored }
+                let stored = model.chunks(on: day).filter { $0.status == .stored }
                 // The first moment of the newest conversation, which is the one open at the top of the list.
                 if let newest = stored.last, let first = stored.filter({ $0.wallStart >= newest.wallStart - 300 }).min(by: { $0.wallStart < $1.wallStart }) { player.toggle(first) }
             }

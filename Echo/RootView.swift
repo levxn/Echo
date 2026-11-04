@@ -18,7 +18,7 @@ enum RootTab: String {
     /// The title in the top bar.
     var title: String {
         switch self {
-        case .day: "Day"
+        case .day: "Today"
         case .actions: "Actions"
         case .moments: "Moments"
         case .ask: "Ask"
@@ -180,7 +180,7 @@ struct RootView: View {
 
     private var tabs: some View {
         TabView(selection: $tab) {
-            Tab("Day", systemImage: "calendar.day.timeline.left", value: RootTab.day) {
+            Tab("Today", systemImage: "calendar.day.timeline.left", value: RootTab.day) {
                 TodayView(model: model, digest: digest, player: player, state: today, profile: profile, journal: journal,
                           onAsk: { question in
                               tab = .ask
@@ -365,7 +365,10 @@ struct RootView: View {
         await model.purgeExpired()
         // Dev hook: `-seed-transcripts FILE` stores a day of transcripts directly (screenshots and checks without the watch).
         if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-seed-transcripts"), i + 1 < ProcessInfo.processInfo.arguments.count {
-            let n = await DevSeed.load(path: ProcessInfo.processInfo.arguments[i + 1], into: model.store)
+            // `-seed-days-ago N` stores the same transcripts as the day N days back instead of today (checks of the day picker).
+            let args = ProcessInfo.processInfo.arguments
+            let ago = args.firstIndex(of: "-seed-days-ago").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil } ?? 0
+            let n = await DevSeed.load(path: args[i + 1], into: model.store, day: DayID.id(offset: -ago, from: model.now()), idSuffix: ago == 0 ? "" : "-d\(ago)")
             Log.app.notice("seed-transcripts: \(n) moments")
             await model.load()
         }

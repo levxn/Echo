@@ -99,7 +99,7 @@ And what Echo does with more than one day, more than one voice and more than one
 9. **History.** Every question and its answer is kept on the phone, newest first, with citations that still play, until you clear it. Open one to see it again, ask it again, or find it in the ledger. The watch shows the last eight. Forget my day removes the history too, and now also blanks Muse's replies in the ledger.
 10. **Privacy ledger and controls.** Every question is recorded with where it was answered, the exact text and bytes sent, tokens and latency. You can turn the cloud off, **review each request before it is sent**, **mask people's names** (placeholders on the way out, real names on the way back), export the ledger as JSON, or forget the day.
 
-11. **Memory across days.** Each day is kept as its own day (30 days by default; 7, 90 or forever in the You tab). Ask about any of them ("How much was the rent increase last week?", "What did the dentist say on Tuesday?"); with no day named, the newest fact wins, so a figure that was updated since still answers correctly. The Day tab shows "a week ago today", and "Summarize my past week" is one Muse call over the saved daily summaries.
+11. **Memory across days.** Each day is kept as its own day (30 days by default; 7, 90 or forever in the You tab). Ask about any of them ("How much was the rent increase last week?", "What did the dentist say on Tuesday?"); with no day named, the newest fact wins, so a figure that was updated since still answers correctly. The Today tab shows "a week ago today", and "Summarize my past week" is one Muse call over the saved daily summaries.
 12. **Voices.** The phone tells voices apart from the audio alone (a pure-Swift voiceprint, no model download), lets you name them and mark "This is me", and uses it where it matters: Promises has a Mine / Everyone filter, and "What did I promise?" is answered from your own voice only.
 13. **Where it happened.** Each moment is stamped with a coarse location (about 100 m). Name a place ("Home", "The office") and ask "Where was I when I promised that?"; a map shows the day. Places can be marked **never record**. There is no reverse geocoding, so nothing is looked up anywhere.
 14. **Privacy controls.** Say "this is off the record" and Echo keeps nothing until you say "back on the record" (or ten minutes pass): what is said in between is understood only long enough to hear the way back, then thrown away. **Forget the last 5, 10, 30 or 60 minutes** from the phone or the wrist; it removes the moments, their audio, their search entries, the history that cited them and the reminders for their promises. The watch can announce that it is listening (a buzz every ten minutes).
@@ -192,7 +192,7 @@ Requirements: macOS with Xcode 26.1.1 and the iOS 26.1 and watchOS 26.1 simulato
 2. (Optional) add your Meta Model API key: edit `Config/meta_api_key.txt`, replace the placeholder line, then run `Tools/set_api_key.sh`. The file is gitignored. Without a key Echo uses its labeled offline stub.
 3. On the watch, tap the big microphone button (in the simulator it replays the recorded day).
 
-The first launch asks for speech-recognition permission on the phone; tap Allow once. Then open **Day**, **Actions**, **Moments**, **Ask** and **You**.
+The first launch asks for speech-recognition permission on the phone; tap Allow once. Then open **Today**, **Actions**, **Moments**, **Ask** and **You**.
 
 | Script | What it does |
 |---|---|

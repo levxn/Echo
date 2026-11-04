@@ -9,7 +9,7 @@ import Translation
 struct DayActivityChart: View {
     let chunks: [ChunkRecord]
     let groups: [MomentGroup]
-    /// A slimmer version with no title and no grid, for the top of the Day page.
+    /// A slimmer version with no title and no grid, for the top of the Today page.
     var compact = false
     let onSelect: (Int) -> Void
 
