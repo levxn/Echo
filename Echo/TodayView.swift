@@ -126,6 +126,8 @@ struct TodayView: View {
                     EmptyDayHint()
                 } else {
                     sections.id("sections")
+                    // Where the day happened: on the page itself, after everything else, rather than inside the Timeline.
+                    PlacesSection(model: model).id("places")
                 }
             }
             .padding(.horizontal, Spacing.xl)
@@ -269,10 +271,7 @@ struct TodayView: View {
             EmptyState(icon: "text.bubble", tint: Palette.blue, title: "No conversations yet",
                        message: "Conversations appear here as a timeline once they have been transcribed.")
         } else {
-            VStack(spacing: Spacing.xl) {
-                EpisodesSection(episodes: episodes)
-                PlacesSection(model: model).id("places")
-            }
+            EpisodesSection(episodes: episodes)
         }
     }
 }

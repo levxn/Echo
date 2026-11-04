@@ -18,9 +18,9 @@ struct TodayHero: View {
 
     var body: some View {
         VStack(spacing: Spacing.xl) {
+            strip
             upNext
             comingUp
-            strip
             stats
         }
     }
