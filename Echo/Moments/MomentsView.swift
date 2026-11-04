@@ -1,16 +1,24 @@
 import SwiftUI
 
+/// Which day Moments is showing (nil: the day being captured). Shared so the demo driver can pick a day as a tap would.
+@MainActor
+@Observable
+final class MomentsUIState {
+    var day: String?
+}
+
 /// What the watch heard today, in plain language: is it listening, has the phone caught up, and the moments themselves
 /// grouped by conversation, each one playable and deletable. The technical story lives under "Behind the scenes".
 struct MomentsView: View {
     let model: PipelineModel
     let player: ChunkPlayer
     let privacy: RecordingPrivacy
+    let ui: MomentsUIState
     let onShowHowItWorks: () -> Void
 
     @State private var overrides: [Int: Bool] = [:]
     /// The day being looked at (today's, or the one being captured, until another is picked).
-    @State private var pickedDay: String?
+    private var pickedDay: String? { ui.day }
     @State private var showBehind = ProcessInfo.processInfo.arguments.contains("-moments-behind")
     @State private var pendingDelete: MomentItem?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -40,7 +48,7 @@ struct MomentsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     PrivacyBanner(privacy: privacy, listening: model.isListening)
-                    MomentsDayStrip(days: days, withData: daysWithData, today: today, selected: Binding(get: { day }, set: { pickedDay = $0; overrides = [:] }))
+                    MomentsDayStrip(days: days, withData: daysWithData, today: today, selected: Binding(get: { day }, set: { ui.day = $0; overrides = [:] }))
                     if layout.groups.isEmpty && layout.working.isEmpty {
                         EmptyState(icon: "waveform", tint: Palette.blue, title: day == today ? "Nothing heard yet" : "Nothing heard this day",
                                    message: day == today ? "Moments appear here as your watch hears them." : "Pick another day, or listen on this one next time.")

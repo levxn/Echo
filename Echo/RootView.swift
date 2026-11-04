@@ -49,6 +49,7 @@ struct RootView: View {
     @State private var actions: ActionsModel
     @State private var museActions: MuseActionsModel
     @State private var listening = ListeningStore()
+    @State private var momentsUI = MomentsUIState()
     /// The section of the You tab that is open, if any. Held here so the header can show the Back button for it.
     @State private var youPage: YouView.Page?
     @State private var performer: ActionPerformer
@@ -203,7 +204,7 @@ struct RootView: View {
             }
             .badge(actions.pendingCount)
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
-                MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
+                MomentsView(model: model, player: player, privacy: privacy, ui: momentsUI) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab(value: RootTab.ask) {
@@ -403,7 +404,7 @@ struct RootView: View {
                              afterSync: { await introduceVoice(); await introducePlaces() },
                              watchQuickAsk: { link.sendDemoQuickAsk($0) },
                              watchVoiceAsk: { link.sendDemoVoiceAsk($0) },
-                             actions: actions,
+                             actions: actions, momentsUI: momentsUI, listening: listening,
                              setTab: { tab = $0 },
                              setCaption: { caption = $0 }).run()
         } else if let i = args.firstIndex(of: "-voice-ask"), i + 1 < args.count, let clip = Int(args[i + 1]) {
