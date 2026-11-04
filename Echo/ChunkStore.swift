@@ -50,6 +50,10 @@ actor ChunkStore {
         if !columns.contains("lon") { exec(db, "ALTER TABLE chunk ADD COLUMN lon REAL") }
         exec(db, "CREATE TABLE IF NOT EXISTS place (id TEXT PRIMARY KEY, name TEXT, lat REAL, lon REAL, radius REAL, no_record INTEGER DEFAULT 0, created REAL)")
         exec(db, "CREATE TABLE IF NOT EXISTS journal (day_id TEXT PRIMARY KEY, ts REAL, json TEXT, model TEXT, is_stub INTEGER)")
+        exec(db, "CREATE TABLE IF NOT EXISTS action_state (id TEXT PRIMARY KEY, chunk_id TEXT, status TEXT, ts REAL, until REAL, via TEXT, edits TEXT)")
+        exec(db, "CREATE INDEX IF NOT EXISTS action_state_chunk ON action_state(chunk_id)")
+        exec(db, "CREATE TABLE IF NOT EXISTS muse_action (id TEXT PRIMARY KEY, chunk_id TEXT, day_id TEXT, ts REAL, json TEXT, model TEXT)")
+        exec(db, "CREATE INDEX IF NOT EXISTS muse_action_chunk ON muse_action(chunk_id)")
         exec(db, """
         CREATE TABLE IF NOT EXISTS speaker (
           id TEXT PRIMARY KEY, label TEXT, name TEXT, is_me INTEGER DEFAULT 0, centroid BLOB, count INTEGER, color INTEGER, created REAL
@@ -257,6 +261,8 @@ actor ChunkStore {
         Self.exec(db, "DELETE FROM day_digest")   // the digest summarizes the chunks; the ledger is an audit trail and stays
         Self.exec(db, "DELETE FROM ask_history")  // the questions and answers are about this day too
         Self.exec(db, "DELETE FROM speaker")      // who sounded like whom is part of what was heard
+        Self.exec(db, "DELETE FROM action_state") // what was decided about the things people said, and the drafts
+        Self.exec(db, "DELETE FROM muse_action")
         let files = (try? FileManager.default.contentsOfDirectory(at: chunksDirectory, includingPropertiesForKeys: nil)) ?? []
         files.forEach { try? FileManager.default.removeItem(at: $0) }
     }
@@ -271,7 +277,8 @@ actor ChunkStore {
             if sqlite3_step(stmt) == SQLITE_ROW, let c = sqlite3_column_text(stmt, 0) { audioFile = String(cString: c) }
         }
         sqlite3_finalize(stmt)
-        for sql in ["DELETE FROM chunk WHERE id = ?", "DELETE FROM chunk_fts WHERE id = ?"] {
+        for sql in ["DELETE FROM chunk WHERE id = ?", "DELETE FROM chunk_fts WHERE id = ?",
+                    "DELETE FROM action_state WHERE chunk_id = ?", "DELETE FROM muse_action WHERE chunk_id = ?"] {
             stmt = nil
             if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
                 sqlite3_bind_text(stmt, 1, id, -1, transient)
@@ -353,6 +360,75 @@ actor ChunkStore {
     }
 
     func clearPlaces() { Self.exec(db, "DELETE FROM place") }
+
+    // MARK: Actions
+
+    func saveActionState(_ s: ActionState) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO action_state (id, chunk_id, status, ts, until, via, edits) VALUES (?,?,?,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, s.id, -1, t)
+        sqlite3_bind_text(stmt, 2, s.chunkID, -1, t)
+        sqlite3_bind_text(stmt, 3, s.status.rawValue, -1, t)
+        sqlite3_bind_double(stmt, 4, s.changed.timeIntervalSince1970)
+        if let until = s.snoozedUntil { sqlite3_bind_double(stmt, 5, until.timeIntervalSince1970) } else { sqlite3_bind_null(stmt, 5) }
+        if let via = s.handedOffVia { sqlite3_bind_text(stmt, 6, via, -1, t) } else { sqlite3_bind_null(stmt, 6) }
+        sqlite3_bind_text(stmt, 7, (try? String(data: JSONEncoder().encode(s.edits), encoding: .utf8)) ?? "{}", -1, t)
+        sqlite3_step(stmt)
+    }
+
+    func actionStates() -> [ActionState] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id, chunk_id, status, ts, until, via, edits FROM action_state", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        func text(_ i: Int32) -> String { sqlite3_column_text(stmt, i).map { String(cString: $0) } ?? "" }
+        var out: [ActionState] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            out.append(ActionState(id: text(0), chunkID: text(1), status: ActionStatus(rawValue: text(2)) ?? .new,
+                                   changed: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3)),
+                                   snoozedUntil: sqlite3_column_type(stmt, 4) == SQLITE_NULL ? nil : Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                                   handedOffVia: sqlite3_column_type(stmt, 5) == SQLITE_NULL ? nil : text(5),
+                                   edits: (try? JSONDecoder().decode(ActionEdits.self, from: Data(text(6).utf8))) ?? ActionEdits()))
+        }
+        return out
+    }
+
+    func deleteActionState(id: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM action_state WHERE id = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_step(stmt)
+    }
+
+    /// Actions found by Muse (the phone's rules cannot rebuild these, so they are kept, with the moment they came from).
+    func saveMuseActions(_ items: [ActionItem], model: String) {
+        let t = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for item in items {
+            var stmt: OpaquePointer?
+            guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO muse_action (id, chunk_id, day_id, ts, json, model) VALUES (?,?,?,?,?,?)", -1, &stmt, nil) == SQLITE_OK else { continue }
+            sqlite3_bind_text(stmt, 1, item.id, -1, t)
+            sqlite3_bind_text(stmt, 2, item.chunkID, -1, t)
+            sqlite3_bind_text(stmt, 3, item.dayId, -1, t)
+            sqlite3_bind_double(stmt, 4, Date().timeIntervalSince1970)
+            sqlite3_bind_text(stmt, 5, (try? String(data: JSONEncoder().encode(item), encoding: .utf8)) ?? "{}", -1, t)
+            sqlite3_bind_text(stmt, 6, model, -1, t)
+            sqlite3_step(stmt)
+            sqlite3_finalize(stmt)
+        }
+    }
+
+    func museActions() -> [ActionItem] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT json FROM muse_action ORDER BY ts", -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        var out: [ActionItem] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let c = sqlite3_column_text(stmt, 0), let item = try? JSONDecoder().decode(ActionItem.self, from: Data(String(cString: c).utf8)) { out.append(item) }
+        }
+        return out
+    }
 
     // MARK: Journal
 

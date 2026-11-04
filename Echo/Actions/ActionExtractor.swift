@@ -115,6 +115,17 @@ nonisolated enum ActionExtractor {
     }
 
     private static let weakWords: Set<String> = ["send", "will", "that", "this", "with", "from", "about", "have", "them", "those", "please", "remember", "forget", "bring", "make", "sure"]
+    /// Muse found something the rules already found (the same moment, and mostly the same words or the same kind at the same time).
+    static func isSameThing(_ a: ActionItem, _ b: ActionItem) -> Bool {
+        guard a.chunkID == b.chunkID else { return false }
+        let shared = contentWords(a.title).intersection(contentWords(b.title))
+        if shared.count >= 2 { return true }
+        // the same kind of action about the same distinctive word ("specification", "birthday") in the same moment
+        if a.kind == b.kind, shared.contains(where: { $0.count >= 6 }) { return true }
+        if a.kind == b.kind, let x = a.due, let y = b.due, abs(x.timeIntervalSince(y)) < 3600 { return true }
+        return false
+    }
+
     private static func contentWords(_ s: String) -> Set<String> {
         Set(s.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init).filter { $0.count >= 4 && !weakWords.contains($0) })
     }
