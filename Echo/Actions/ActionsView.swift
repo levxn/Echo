@@ -55,12 +55,14 @@ struct ActionsView: View {
         .onChange(of: actions.openRequest) { _, id in editing = id.flatMap { id in actions.items.first { $0.id == id } } }
         .onChange(of: editing) { _, now in if now == nil { actions.openRequest = nil } }
         .task {
-            // Dev hook: `-action-open N` opens the Nth action's editor (screenshots).
+            // Dev hook: `-action-open N` (or `message`) opens an action's editor (screenshots).
             let args = ProcessInfo.processInfo.arguments
-            guard let i = args.firstIndex(of: "-action-open"), i + 1 < args.count, let n = Int(args[i + 1]) else { return }
+            guard let i = args.firstIndex(of: "-action-open"), i + 1 < args.count else { return }
             try? await Task.sleep(for: .seconds(1.5))
             let all = actions.groups(.all).flatMap(\.items)
-            if all.indices.contains(n) { editing = all[n] }
+            // `-action-open message` opens the first email or message; a number opens that position in the list.
+            if args[i + 1] == "message" { editing = all.first { $0.kind == .message || $0.kind == .email } }
+            else if let n = Int(args[i + 1]), all.indices.contains(n) { editing = all[n] }
         }
     }
 
