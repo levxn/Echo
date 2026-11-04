@@ -124,7 +124,8 @@ struct EchoSegmented<Value: Hashable>: View {
     /// "Title 15": one run of text, so the number sits on the title's own line and baseline.
     private func label(_ segment: Segment, selected: Bool) -> some View {
         let title = Text(segment.title)
-        let text = segment.badge.map { title + Text(" \($0)").foregroundStyle(Palette.teal) } ?? title
+        // Smaller than the title, but still the same run of text, so it stays on the title's baseline.
+        let text = segment.badge.map { title + Text(" \($0)").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(Palette.teal) } ?? title
         return text
             .font(.echoLabel)
             .monospacedDigit()
