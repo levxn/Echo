@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Echo adds an event to your calendar only when you tap Add, and checks the time for clashes. Your calendar stays on this phone.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Echo adds a to-do or a shopping list to Reminders only when you tap Add. It stays on this phone.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Echo looks up the person a message is for, so their address or number is filled in. Contacts are read on this phone and are never sent to Muse.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>whatsapp</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

@@ -12,7 +12,7 @@ protocol CalendarWriting: AnyObject {
 
 /// The system calendar (EventKit). Echo only adds events for things you promised.
 final class SystemCalendar: CalendarWriting {
-    private let store = EKEventStore()
+    let store = EKEventStore()
 
     func addEvent(title: String, notes: String, start: Date, minutes: Int) async -> CalendarResult {
         do {
