@@ -37,6 +37,13 @@ final class WatchLink: NSObject, WCSessionDelegate {
     /// as tapping Start day).
     var onRemoteStart: ((Int) -> Void)?
 
+    /// The phone changed the listening mode or hours (newer than ours is decided by the receiver).
+    var onListenSettings: ((ListeningSettings) -> Void)?
+    /// The phone asks the watch to start or stop listening now ("start" or "stop").
+    var onListenCommand: ((String) -> Void)?
+    /// The session is up: a good moment to tell the phone our settings.
+    var onActivated: (() -> Void)?
+
     /// Called when the phone asks the watch to run quick-ask preset N (the demo driver does this).
     var onRemoteQuickAsk: ((Int) -> Void)?
 
@@ -226,8 +233,17 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     // MARK: WCSessionDelegate
 
-    /// The phone's settings that the watch acts on (announce recording).
+    /// Tells the phone the listening mode and hours. An application context is kept until the phone next wakes, so it can't be missed.
+    func sendListening(_ settings: ListeningSettings) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        try? WCSession.default.updateApplicationContext([Wire.listenSettings: settings.dictionary])
+    }
+
+    /// The phone's settings that the watch acts on (announce recording, when to listen).
     nonisolated private func apply(context: [String: Any]) {
+        if let dictionary = context[Wire.listenSettings] as? [String: Any], let settings = ListeningSettings(dictionary: dictionary) {
+            Task { @MainActor in self.onListenSettings?(settings) }
+        }
         if let announce = context[Wire.announceKey] as? Bool { UserDefaults.standard.set(announce, forKey: "echo.announce") }
         // The complication reads its promises from the App Group; the phone sends them here because the two devices don't share one.
         if let data = context[Wire.widgetKey] as? Data, let snapshot = WidgetSnapshot.decode(data) {
@@ -246,6 +262,7 @@ final class WatchLink: NSObject, WCSessionDelegate {
         Task { @MainActor in
             self.reachable = reachable
             Log.link.info("activated state=\(state.rawValue) reachable=\(reachable)")
+            self.onActivated?()
         }
     }
 
@@ -254,6 +271,9 @@ final class WatchLink: NSObject, WCSessionDelegate {
         case Wire.demoStart:
             let offset = message[Wire.dayOffsetKey] as? Int ?? 0
             Task { @MainActor in self.onRemoteStart?(offset) }
+        case Wire.listenCommand:
+            let command = message[Wire.commandKey] as? String ?? ""
+            Task { @MainActor in self.onListenCommand?(command) }
         case Wire.demoQuickAsk:
             let index = message[Wire.presetKey] as? Int ?? 0
             Task { @MainActor in self.onRemoteQuickAsk?(index) }

@@ -29,6 +29,10 @@ final class CaptureEngine {
     private let keepAlive: any BackgroundKeepAlive = WorkoutBackgroundCapture()
     /// Why the microphone couldn't be used, to show on the watch.
     private(set) var problem: String?
+    /// Told when listening starts (true) and when it ends for any reason (false), so "was it listening?" survives a relaunch.
+    var onListeningChanged: ((Bool) -> Void)?
+    /// Why the plan stopped listening last, for a short note on the watch. Cleared when listening starts.
+    private(set) var stoppedBecause: ListeningPlan.StopReason?
 
     init(link: WatchLink) { self.link = link }
 
@@ -72,6 +76,8 @@ final class CaptureEngine {
         captured = 0; keptSeconds = 0; recordedSeconds = 0; progress = 0
         link.resetCounters()
         phase = .running
+        stoppedBecause = nil
+        onListeningChanged?(true)
         task = Task { await run() }
     }
 
@@ -91,6 +97,8 @@ final class CaptureEngine {
         captured = 0; keptSeconds = 0; recordedSeconds = 0; progress = 0; problem = nil
         link.resetCounters()
         phase = .running
+        stoppedBecause = nil
+        onListeningChanged?(true)
         task = Task { await runLive() }
     }
 
@@ -114,6 +122,7 @@ final class CaptureEngine {
             liveSegmenter = nil
             await keepAlive.end()
             phase = .idle
+            onListeningChanged?(false)
             return
         }
         await link.sendSession(state: "started", recorded: 0, total: 0, dayOffset: 0, live: true)
@@ -140,6 +149,7 @@ final class CaptureEngine {
         liveSegmenter = nil
         await keepAlive.end()
         phase = .finished
+        onListeningChanged?(false)
         await link.sendSession(state: "finished", recorded: recordedSeconds, total: recordedSeconds, count: link.enqueuedTotal)
     }
 
@@ -153,6 +163,12 @@ final class CaptureEngine {
         captured += 1
         keptSeconds += seg.duration
         link.enqueue(meta, samples: seg.samples)
+    }
+
+    /// The plan (the hours ended, or the battery is low) stops listening.
+    func stop(for reason: ListeningPlan.StopReason) {
+        stoppedBecause = reason
+        if isLive { stopLive() }
     }
 
     func stopLive() {
@@ -230,6 +246,7 @@ final class CaptureEngine {
         recordedSeconds = totalSeconds
         link.recordedSoFar = totalSeconds
         phase = .finished
+        onListeningChanged?(false)
         Log.vad.info("replay finished: \(self.captured) segments, kept \(self.keptSeconds, format: .fixed(precision: 1))s of \(self.totalSeconds, format: .fixed(precision: 1))s")
         await link.sendSession(state: "finished", recorded: totalSeconds, total: totalSeconds, count: link.enqueuedTotal)
     }

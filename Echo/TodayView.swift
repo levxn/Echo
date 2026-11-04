@@ -277,6 +277,6 @@ struct TodayView: View {
 private struct EmptyDayHint: View {
     var body: some View {
         EmptyState(icon: "applewatch.radiowaves.left.and.right", title: "Your day starts on the watch",
-                   message: "Tap Start day on the watch. Conversations are checked, transcribed and stored on this phone, then summarized here as a timeline.")
+                   message: "Tap the big button on the watch to start listening. Conversations are checked, transcribed and stored on this phone, then summarized here as a timeline.")
     }
 }

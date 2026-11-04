@@ -17,7 +17,7 @@ struct MomentsTests {
         let away = status(reachable: false)
         #expect(away.kind == .waitingForWatch && away.title == "Waiting for your watch" && away.progress == nil)
         let near = status(reachable: true)
-        #expect(near.kind == .watchReady && near.detail.contains("Start day"))
+        #expect(near.kind == .watchReady && near.detail.contains("big button"))
     }
 
     @Test func whileTheWatchListensItCountsMomentsAndShowsProgress() {

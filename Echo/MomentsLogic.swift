@@ -35,7 +35,7 @@ struct CaptureStatus: Equatable {
                      conversations: Int, keptSeconds: Double, fraction: Double, expected: Int = 0) -> CaptureStatus {
         if arrived == 0 && phase == .waiting {
             return reachable
-                ? CaptureStatus(kind: .watchReady, title: "Watch connected", detail: "Tap Start day on your watch and Echo starts listening.",
+                ? CaptureStatus(kind: .watchReady, title: "Watch connected", detail: "Tap the big button on your watch, or start listening from here.",
                                 footnote: nil, progress: nil, symbol: "applewatch.radiowaves.left.and.right")
                 : CaptureStatus(kind: .waitingForWatch, title: "Waiting for your watch", detail: "Open Echo on your watch to begin.",
                                 footnote: nil, progress: nil, symbol: "applewatch.slash")

@@ -5,6 +5,7 @@ struct EchoWatchApp: App {
     @State private var link: WatchLink
     @State private var engine: CaptureEngine
     @State private var quickAsk: WatchAsk
+    @State private var listening: ListeningController
 
     init() {
         let link = WatchLink()
@@ -13,6 +14,8 @@ struct EchoWatchApp: App {
         link.onRemoteStart = { engine.start(dayOffset: $0) }
         link.onRemoteQuickAsk = { quickAsk.run(preset: $0) }
         link.onRemoteVoiceAsk = { quickAsk.run(voice: $0) }
+        let listening = ListeningController(engine: engine, link: link)
+        _listening = State(initialValue: listening)
         _link = State(initialValue: link)
         _engine = State(initialValue: engine)
         _quickAsk = State(initialValue: quickAsk)
@@ -24,13 +27,15 @@ struct EchoWatchApp: App {
     var body: some Scene {
         WindowGroup {
             TabView(selection: Bindable(quickAsk).page) {
-                ContentView(engine: engine, link: link).tag(0)
+                ContentView(engine: engine, link: link, listening: listening).tag(0)
                 AskWatchView(ask: quickAsk, link: link).tag(1)
+                MoreView(engine: engine, link: link).tag(2)
             }
             .tabViewStyle(.verticalPage)
             .sheet(item: Bindable(link).caught) { promise in CaughtPromiseView(promise: promise, link: link) }
             .sheet(item: Bindable(link).wakeReply) { reply in WakeAnswerView(reply: reply, link: link) }
             .task {
+                listening.begin()
                 // Dev convenience: `simctl launch ... -autostart <token>` begins the replay without a
                 // tap. The token makes it one-shot: the system may relaunch the app with the same
                 // arguments, and that must not restart the replay.

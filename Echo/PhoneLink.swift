@@ -12,6 +12,9 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// Called after a chunk is stored as `.received`.
     var onChunkReceived: ((ChunkRecord) -> Void)?
 
+    /// The watch changed the listening mode or hours.
+    var onListenSettings: ((ListeningSettings) -> Void)?
+
     /// Handles the watch's requests: questions, recorded questions to understand, and the recent history.
     var requests: WatchRequests?
 
@@ -63,7 +66,21 @@ final class PhoneLink: NSObject, WCSessionDelegate {
         try? WCSession.default.updateApplicationContext(context)
     }
 
-    /// Asks the watch to start replaying the day (the same as tapping Start day on it). Used by the demo driver.
+    /// Tells the watch the listening mode and hours (kept until it next wakes, so it can't be missed).
+    func sendListening(_ settings: ListeningSettings) { sendContext([Wire.listenSettings: settings.dictionary]) }
+
+    /// Asks the watch to start or stop listening now ("start" or "stop"). False if the watch can't be reached: a listening session
+    /// can only be started by a watch app that is running.
+    @discardableResult
+    func sendListenCommand(_ command: String) -> Bool {
+        guard WCSession.isSupported(), WCSession.default.isReachable else { return false }
+        WCSession.default.sendMessage([Wire.typeKey: Wire.listenCommand, Wire.commandKey: command], replyHandler: nil) { error in
+            Log.link.error("couldn't send \(command) to the watch: \(error.localizedDescription)")
+        }
+        return true
+    }
+
+    /// Asks the watch to start replaying the day (the same as tapping its listen button). Used by the demo driver.
     func sendDemoStart(dayOffset: Int = 0) {
         guard WCSession.default.isReachable else { Log.link.error("the watch isn't reachable, so it can't be started from here"); return }
         WCSession.default.sendMessage([Wire.typeKey: Wire.demoStart, Wire.dayOffsetKey: dayOffset], replyHandler: nil) { error in
@@ -143,7 +160,20 @@ final class PhoneLink: NSObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?) {
         let reachable = session.isReachable
-        Task { @MainActor in self.model.setReachable(reachable) }
+        let context = session.receivedApplicationContext
+        Task { @MainActor in
+            self.model.setReachable(reachable)
+            self.apply(context: context)
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        nonisolated(unsafe) let context = applicationContext
+        Task { @MainActor in self.apply(context: context) }
+    }
+
+    private func apply(context: [String: Any]) {
+        if let dictionary = context[Wire.listenSettings] as? [String: Any], let settings = ListeningSettings(dictionary: dictionary) { onListenSettings?(settings) }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {

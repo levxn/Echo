@@ -3,6 +3,7 @@ import SwiftUI
 /// The You tab: who you are, what stayed on the phone and what left it, every switch in one place, and your data.
 struct YouView: View {
     @Bindable var profile: ProfileStore
+    let listening: ListeningStore
     let ledger: LedgerModel
     let model: PipelineModel
     let history: AskHistoryModel
@@ -36,7 +37,7 @@ struct YouView: View {
                 ProfileCard(profile: profile)
                 SummaryCard(totals: ledger.totals)
                 museAndPrivacy
-                listening
+                listeningGroup
                 helpers
                 activity
                 EchoButton(title: "How Echo works", systemImage: "square.stack.3d.up.fill") { ledger.showArchitecture = true }
@@ -133,8 +134,10 @@ struct YouView: View {
         }
     }
 
-    private var listening: some View {
+    private var listeningGroup: some View {
         group("Listening") {
+            ListeningCard(model: model, listening: listening)
+            divider
             ToggleRow(title: "Announce recording", systemImage: "applewatch.radiowaves.left.and.right",
                       caption: privacy.announce ? "The watch buzzes every 10 minutes while it listens, so people nearby aren't unaware."
                                                 : "Off: the watch listens silently. Say “off the record” any time to pause.",

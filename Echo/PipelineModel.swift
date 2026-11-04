@@ -15,6 +15,8 @@ final class PipelineModel {
     private(set) var recordedSeconds = 0.0
     private(set) var totalSeconds = 0.0
     private(set) var watchReachable = false
+    /// When the watch last said or sent anything (a session starting, a bundle of audio).
+    private(set) var lastWatchActivity: Date?
     /// How many snippets the watch said it sent in all (0 until it says, or if it is an older watch).
     private(set) var expectedChunks = 0
 
@@ -28,6 +30,17 @@ final class PipelineModel {
         self.store = store
         self.defaults = defaults
         activeDayId = defaults.string(forKey: Key.day) ?? DayID.today()
+    }
+
+    /// Whether the watch is listening right now. The watch says when it starts and stops, so if it never gets to say it stopped (the app was
+    /// force-quit, the battery died) the phone would stay "listening" for ever: after three quiet minutes out of reach, it isn't.
+    var isListening: Bool { isListening(at: now()) }
+
+    func isListening(at date: Date) -> Bool {
+        guard session == .running else { return false }
+        if watchReachable { return true }
+        guard let last = lastWatchActivity else { return false }
+        return date.timeIntervalSince(last) < 180
     }
 
     /// The replay's totals survive app restarts, so the funnel still reads correctly afterwards.
@@ -105,6 +118,7 @@ final class PipelineModel {
         expectedChunks = 0
         totalSeconds = total
         session = .running
+        lastWatchActivity = now()
         persistSession()
     }
 
@@ -143,6 +157,7 @@ final class PipelineModel {
     func updateRecorded(_ seconds: Double) {
         recordedSeconds = max(recordedSeconds, seconds)
         if session == .waiting { session = .running }
+        lastWatchActivity = now()
         persistSession()
     }
 

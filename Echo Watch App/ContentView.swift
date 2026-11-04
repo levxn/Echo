@@ -1,88 +1,215 @@
 import SwiftUI
 import WatchKit
 
-/// The watch is a silent sensor, so this is a "proof of life" screen: a ring that breathes with the
-/// microphone level and traces replay progress, three counters, and one control.
+/// The watch's main screen: one big button to listen, one line saying what it is doing, and when it listens. Everything technical
+/// (what was heard, queued, synced) lives on the More page.
 struct ContentView: View {
     let engine: CaptureEngine
     let link: WatchLink
+    let listening: ListeningController
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var confirmForget = false
-    @State private var forgotten: String?
+    @State private var showHours = false
 
-    private var title: String {
+    private var isOn: Bool { engine.phase == .running }
+
+    /// One plain line under the button.
+    private var status: (text: String, tint: Color) {
+        if let problem = engine.problem, engine.phase == .idle { return (problem, Palette.amber) }
+        if let note = listening.note, !isOn { return (note, Palette.amber) }
+        if listening.suggestListening && !isOn { return ("Time to listen", Palette.teal) }
         switch engine.phase {
-        case .idle: engine.problem ?? "Ready"
-        case .running: "Listening"
-        case .paused: "Paused"
-        case .finished: engine.wasLive ? "Stopped" : "Day captured"
+        case .idle: return ("Tap to listen", Palette.textSecondary)
+        case .running: return (engine.isLive ? "Listening" : "Playing the day", Palette.teal)
+        case .paused: return ("Paused", Palette.textSecondary)
+        case .finished: return (engine.wasLive ? "Tap to listen again" : "Day captured", Palette.textSecondary)
         }
     }
 
     private var ringTint: Color {
         switch engine.phase {
         case .paused: Palette.textTertiary
-        case .idle: Palette.blue
-        default: engine.speaking ? Palette.teal : Palette.blue
+        case .idle, .finished: Palette.blue
+        case .running: engine.speaking ? Palette.teal : Palette.blue
         }
     }
 
     var body: some View {
         ZStack {
             AuroraBackground(calm: true, fps: 12)
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                // Left-aligned so it never collides with the system clock at the top right.
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(title)
-                        .font(.system(.headline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Palette.textPrimary)
-                    HStack(spacing: Spacing.xs) {
-                        Circle()
-                            .fill(link.reachable ? Palette.teal : Palette.rose)
-                            .frame(width: 6, height: 6)
-                        Text(link.reachable ? "Phone linked" : "No phone nearby")
-                            .font(.caption2)
-                            .foregroundStyle(Palette.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                }
-
-                HStack(spacing: Spacing.sm) {
-                    MicRing(progress: engine.progress, level: engine.level, tint: ringTint,
-                            active: engine.phase == .running, reduceMotion: reduceMotion)
-                        .frame(width: 64, height: 64)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Counter(value: engine.captured, label: "heard")
-                        Counter(value: link.queued, label: "queue")
-                        Counter(value: link.synced, label: "synced")
-                    }
-                }
-
+            VStack(spacing: Spacing.sm) {
                 Button(action: primaryAction) {
-                    Label(buttonTitle, systemImage: buttonSymbol)
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    ListenRing(level: engine.level, tint: ringTint, active: isOn, reduceMotion: reduceMotion)
+                        .frame(width: 104, height: 104)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(EchoPressStyle())
+                .accessibilityLabel(isOn ? "Stop listening" : "Start listening")
+
+                Text(status.text)
+                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    .foregroundStyle(status.tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Button { showHours = true } label: {
+                    Label(listening.store.settings.title, systemImage: "clock")
+                        .font(.system(.caption2, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.textPrimary)
+                        .padding(.horizontal, Spacing.md)
+                        .frame(minHeight: 32)
                 }
                 .buttonStyle(EchoPressStyle())
                 .glassEffect(.regular.interactive(), in: .capsule)
-                .accessibilityLabel(buttonLabel)
-
-                Button { confirmForget = true } label: {
-                    Label(forgotten ?? "Forget 10 min", systemImage: forgotten == nil ? "clock.arrow.circlepath" : "checkmark.circle.fill")
-                        .font(.system(.footnote, design: .rounded, weight: .semibold))
-                        .foregroundStyle(forgotten == nil ? Palette.textSecondary : Palette.teal)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(EchoPressStyle())
-                .disabled(!link.reachable)
-                .accessibilityLabel("Forget the last 10 minutes")
-                .accessibilityHint("Deletes what was heard in the last 10 minutes, on your phone")
+                .accessibilityLabel("When to listen: \(listening.store.settings.title)")
             }
-            .padding(.horizontal, Spacing.sm)
+            .overlay(alignment: .topLeading) { linkDot }
+        }
+        .sheet(isPresented: $showHours) { ListeningSheet(listening: listening) }
+    }
+
+    /// Whether the phone is near: a dot, and a line only when it isn't.
+    private var linkDot: some View {
+        Circle()
+            .fill(link.reachable ? Palette.teal : Palette.amber)
+            .frame(width: 7, height: 7)
+            .padding(.leading, Spacing.xs)
+            .accessibilityLabel(link.reachable ? "Phone connected" : "Phone not nearby. Echo keeps what it hears until it is.")
+    }
+
+    private func primaryAction() {
+        WKInterfaceDevice.current().play(isOn ? .stop : .start)
+        switch engine.phase {
+        case .idle, .finished: engine.begin()
+        case .running, .paused: engine.togglePause()
+        }
+    }
+}
+
+/// The big round button: it breathes with the microphone while listening.
+private struct ListenRing: View {
+    let level: Double
+    let tint: Color
+    let active: Bool
+    let reduceMotion: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [tint.opacity(0.6), tint.opacity(0)], center: .center, startRadius: 6, endRadius: 60))
+                .scaleEffect(active && !reduceMotion ? 0.85 + level * 0.4 : 0.9)
+                .animation(reduceMotion ? nil : .spring(duration: 0.18, bounce: 0.3), value: level)
+            Circle().stroke(active ? tint.opacity(0.9) : Palette.stroke, lineWidth: 5)
+                .padding(8)
+            Image(systemName: active ? "waveform" : "mic.fill")
+                .font(.system(size: 34, weight: .medium))
+                .foregroundStyle(Palette.textPrimary)
+                .symbolEffect(.variableColor.iterative, isActive: active && !reduceMotion)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Choose when Echo listens: only when you tap, all day, or between two times.
+struct ListeningSheet: View {
+    let listening: ListeningController
+    @Environment(\.dismiss) private var dismiss
+
+    private var settings: ListeningSettings { listening.store.settings }
+    private enum Choice { case tap, allDay, hours }
+    private var choice: Choice { settings.mode == .manual ? .tap : (settings.isAllDay ? .allDay : .hours) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                row("Only when I tap", selected: choice == .tap) { listening.set(ListeningSettings()) }
+                row("All day", selected: choice == .allDay) { listening.set(.allDay()) }
+                row("Set hours", selected: choice == .hours) {
+                    if choice != .hours { listening.set(ListeningSettings(mode: .hours, startMinute: 9 * 60, endMinute: 18 * 60)) }
+                }
+                if choice == .hours {
+                    Picker("From", selection: hour(\.startMinute)) { ForEach(0..<24, id: \.self) { Text(ListeningSettings.clock($0 * 60)).tag($0) } }
+                    Picker("Until", selection: hour(\.endMinute)) { ForEach(0..<24, id: \.self) { Text(ListeningSettings.clock($0 * 60)).tag($0) } }
+                }
+                if choice != .tap {
+                    Text("At the start time Echo asks if you want to listen. One tap starts it, and it stops by itself at the end.")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.textSecondary)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .navigationTitle("Listen")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private func row(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title).font(.system(.footnote, design: .rounded, weight: .semibold))
+                Spacer()
+                if selected { Image(systemName: "checkmark").foregroundStyle(Palette.teal) }
+            }
+        }
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private func hour(_ keyPath: WritableKeyPath<ListeningSettings, Int>) -> Binding<Int> {
+        Binding(get: { settings[keyPath: keyPath] / 60 },
+                set: { var s = settings; s[keyPath: keyPath] = $0 * 60; listening.set(s) })
+    }
+}
+
+/// The page past Ask: forgetting what was just heard, and the numbers behind the scenes (kept out of the way on purpose).
+struct MoreView: View {
+    let engine: CaptureEngine
+    let link: WatchLink
+
+    @State private var confirmForget = false
+    @State private var forgotten: String?
+    @State private var showDetails = false
+
+    var body: some View {
+        ZStack {
+            AuroraBackground(calm: true, fps: 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("More")
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Palette.textPrimary)
+                    Button { confirmForget = true } label: {
+                        Label(forgotten ?? "Forget the last 10 min", systemImage: forgotten == nil ? "clock.arrow.circlepath" : "checkmark.circle.fill")
+                            .font(.system(.footnote, design: .rounded, weight: .semibold))
+                            .foregroundStyle(forgotten == nil ? Palette.textPrimary : Palette.teal)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(EchoPressStyle())
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                    .disabled(!link.reachable)
+                    .accessibilityHint("Deletes what was heard in the last 10 minutes, on your phone")
+
+                    Button { withAnimation { showDetails.toggle() } } label: {
+                        HStack {
+                            Text("Behind the scenes").font(.system(.footnote, design: .rounded, weight: .semibold))
+                            Spacer()
+                            Image(systemName: showDetails ? "chevron.up" : "chevron.down").font(.caption2)
+                        }
+                        .foregroundStyle(Palette.textSecondary)
+                        .frame(minHeight: 36)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if showDetails {
+                        Counter(value: engine.captured, label: "heard")
+                        Counter(value: link.queued, label: "waiting to send")
+                        Counter(value: link.synced, label: "sent to phone")
+                        Text(link.reachable ? "Phone connected" : "Phone not nearby. Echo keeps what it hears until it is.")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                }
+                .padding(.horizontal, Spacing.sm)
+            }
         }
         .confirmationDialog("Forget the last 10 minutes?", isPresented: $confirmForget, titleVisibility: .visible) {
             Button("Forget", role: .destructive) {
@@ -97,72 +224,6 @@ struct ContentView: View {
         } message: {
             Text("Deletes it from your phone.")
         }
-    }
-
-    private var buttonTitle: String {
-        switch engine.phase {
-        case .running: engine.isLive ? "Stop" : "Pause"
-        case .paused: "Resume"
-        case .idle: CaptureEngine.listensLive() ? "Start listening" : "Start day"
-        case .finished: CaptureEngine.listensLive() ? "Listen again" : "Replay"
-        }
-    }
-
-    private var buttonSymbol: String {
-        switch engine.phase {
-        case .running: engine.isLive ? "stop.fill" : "pause.fill"
-        case .paused: "play.fill"
-        case .idle: "play.fill"
-        case .finished: "arrow.counterclockwise"
-        }
-    }
-
-    private var buttonLabel: String {
-        switch engine.phase {
-        case .running: engine.isLive ? "Stop listening" : "Pause listening"
-        case .paused: "Resume listening"
-        case .idle: CaptureEngine.listensLive() ? "Start listening" : "Start the day"
-        case .finished: CaptureEngine.listensLive() ? "Listen again" : "Replay the day"
-        }
-    }
-
-    private func primaryAction() {
-        switch engine.phase {
-        case .idle, .finished: engine.begin()
-        case .running, .paused: engine.togglePause()
-        }
-    }
-}
-
-private struct MicRing: View {
-    let progress: Double
-    let level: Double
-    let tint: Color
-    let active: Bool
-    let reduceMotion: Bool
-
-    var body: some View {
-        ZStack {
-            // Breathing glow driven by the live level.
-            Circle()
-                .fill(RadialGradient(colors: [tint.opacity(0.55), tint.opacity(0)], center: .center,
-                                     startRadius: 4, endRadius: 52))
-                .scaleEffect(active && !reduceMotion ? 0.8 + level * 0.45 : 0.85)
-                .animation(reduceMotion ? nil : .spring(duration: 0.18, bounce: 0.3), value: level)
-            Circle().stroke(Palette.stroke, lineWidth: 5)
-            Circle()
-                .trim(from: 0, to: max(0.002, progress))
-                .stroke(Palette.accentGradient, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .animation(reduceMotion ? nil : .linear(duration: 0.1), value: progress)
-            Image(systemName: "waveform")
-                .font(.title2.weight(.medium))
-                .foregroundStyle(Palette.textPrimary)
-                .symbolEffect(.variableColor.iterative, isActive: active && !reduceMotion)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Microphone")
-        .accessibilityValue("\(Int(progress * 100)) percent of the day captured")
     }
 }
 
@@ -179,7 +240,7 @@ private struct Counter: View {
                 .foregroundStyle(Palette.textPrimary)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .snappy, value: value)
-                .frame(minWidth: 26, alignment: .trailing)
+                .frame(minWidth: 30, alignment: .trailing)
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(Palette.textSecondary)

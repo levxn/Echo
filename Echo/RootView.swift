@@ -48,6 +48,7 @@ struct RootView: View {
     @State private var journal: JournalModel
     @State private var actions: ActionsModel
     @State private var museActions: MuseActionsModel
+    @State private var listening = ListeningStore()
     @State private var performer: ActionPerformer
     @State private var player: ChunkPlayer
     @State private var today = TodayState()
@@ -94,9 +95,9 @@ struct RootView: View {
     /// One slim bar on every tab: profile, where you are, and the watch / cloud / on-this-phone indicators.
     private func topBar(_ tab: RootTab) -> some View {
         EchoTopBar(title: tab.title,
-                   watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.session == .running),
+                   watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.isListening),
                    cloud: HeaderStatus.cloud(enabled: ledger.cloudEnabled, reviewing: ledger.reviewBeforeSend),
-                   listening: model.session == .running,
+                   listening: model.isListening,
                    onWatch: { self.tab = .moments }, onCloud: { self.tab = .you }, onLock: { self.tab = .you })
     }
 
@@ -191,7 +192,7 @@ struct RootView: View {
             }
             .badge(actions.pendingCount)
             Tab("Moments", systemImage: "waveform", value: RootTab.moments) {
-                MomentsView(model: model, player: player, privacy: privacy) { ledger.showArchitecture = true }
+                MomentsView(model: model, player: player, privacy: privacy, listening: listening) { ledger.showArchitecture = true }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.moments) }
             }
             Tab(value: RootTab.ask) {
@@ -203,7 +204,7 @@ struct RootView: View {
                 if MuseMark.isAvailable { Label("Ask", image: MuseMark.assetName) } else { Label("Ask", systemImage: "text.bubble.fill") }
             }
             Tab("You", systemImage: "person.crop.circle.fill", value: RootTab.you) {
-                YouView(profile: profile, ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                YouView(profile: profile, listening: listening, ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.you) }
             }
         }
@@ -294,6 +295,17 @@ struct RootView: View {
             speakVoiceAnswers: { profile.speakVoiceAnswers },
             forgetRecent: { await forgetRecent(minutes: $0) },
             keepPromise: { await keepPromise(id: $0) })
+        // When to listen: the same settings on the watch and here, the newest change winning, and a nudge at the start of the hours.
+        listening.onChange = { settings in
+            link.sendListening(settings)
+            Task { await reminders.setListeningNudge(settings) }
+        }
+        link.onListenSettings = { remote in
+            if listening.merge(remote) { Task { await reminders.setListeningNudge(listening.settings) } }
+        }
+        listening.sendCommand = { link.sendListenCommand($0) }
+        if listening.settings.stamp > 0 { link.sendListening(listening.settings) }
+        await reminders.setListeningNudge(listening.settings)
         // A promise just heard: the watch shows "Got it"; with no watch nearby it is a notification with a Remind me button.
         watcher.isEnabled = { profile.catchPromises }
         watcher.myVoice = { voices.me?.id }

@@ -6,6 +6,7 @@ struct MomentsView: View {
     let model: PipelineModel
     let player: ChunkPlayer
     let privacy: RecordingPrivacy
+    let listening: ListeningStore
     let onShowHowItWorks: () -> Void
 
     @State private var overrides: [Int: Bool] = [:]
@@ -25,7 +26,8 @@ struct MomentsView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
-                    PrivacyBanner(privacy: privacy, listening: model.session == .running)
+                    PrivacyBanner(privacy: privacy, listening: model.isListening)
+                    ListeningCard(model: model, listening: listening, showsChoices: false)
                     MomentsStatusCard(status: model.captureStatus(conversations: layout.groups.count))
                     if layout.groups.isEmpty && layout.working.isEmpty {
                         EmptyState(icon: "waveform", tint: Palette.blue, title: "Nothing heard yet",

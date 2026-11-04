@@ -152,6 +152,13 @@ final class Reminders {
         try? await scheduler.add(id: JournalReminder.notificationID, title: "Echo", body: "Your day is ready to write up whenever you are.", at: fire)
     }
 
+    /// The phone's own nudge at the start of the listening hours (the watch has its own). It only asks; starting is a tap on the watch or in Echo.
+    func setListeningNudge(_ settings: ListeningSettings) async {
+        scheduler.remove(ids: [ListeningNudge.notificationID])
+        guard let fire = settings.nextStart(after: now()), await scheduler.ensureAuthorized() else { return }
+        try? await scheduler.add(id: ListeningNudge.notificationID, title: "Echo", body: ListeningNudge.body, at: fire)
+    }
+
     /// Sets (or removes) the 8 am nudge to review actions. Nothing is scheduled when there is nothing to review, and it carries a count only.
     func setMorningActions(enabled: Bool, count: Int) async {
         scheduler.remove(ids: [ActionsMorning.notificationID])
