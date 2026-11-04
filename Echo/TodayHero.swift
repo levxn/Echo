@@ -19,6 +19,7 @@ struct TodayHero: View {
     var body: some View {
         VStack(spacing: Spacing.xl) {
             upNext
+            comingUp
             strip
             stats
         }
@@ -84,6 +85,83 @@ struct TodayHero: View {
             .echoCard()
             .accessibilityElement(children: .combine)
         }
+    }
+
+    // MARK: Coming up
+
+    /// The next few things with a date in the coming week, after the one shown above (overdue ones are already Up next's business).
+    private var upcoming: [ActionItem] {
+        let now = actions.now(), cal = actions.calendar
+        let today = cal.startOfDay(for: now)
+        guard let horizon = cal.date(byAdding: .day, value: 7, to: today) else { return [] }
+        return actions.pending
+            .filter { item in
+                guard let due = item.due, due >= today, due < horizon else { return false }
+                return item.id != next?.id && actions.section(of: item) != .overdue
+            }
+            .sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }
+            .reduce(into: [ActionItem]()) { kept, item in   // the same thing heard twice is one line
+                if !kept.contains(where: { $0.title.lowercased() == item.title.lowercased() && $0.due == item.due }) { kept.append(item) }
+            }
+            .prefix(3).map { $0 }
+    }
+
+    @ViewBuilder
+    private var comingUp: some View {
+        let items = upcoming
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    SectionHeader("Coming up", style: .overline)
+                    Button(action: onOpenActions) {
+                        Text("All actions").font(Font.echoMeta.weight(.semibold)).foregroundStyle(Palette.teal).frame(minHeight: 32)
+                    }
+                    .buttonStyle(.plain)
+                }
+                VStack(spacing: Spacing.sm) {
+                    ForEach(items) { item in
+                        Button { onReview(item) } label: { upcomingRow(item) }
+                            .buttonStyle(EchoPressStyle())
+                    }
+                }
+            }
+        }
+    }
+
+    private func upcomingRow(_ item: ActionItem) -> some View {
+        let due = item.due ?? actions.now()
+        return HStack(spacing: Spacing.md) {
+            // A little calendar leaf: the weekday over the day number.
+            VStack(spacing: 0) {
+                Text(due.formatted(.dateTime.weekday(.abbreviated)).uppercased())
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(Palette.rose)
+                Text(due.formatted(.dateTime.day()))
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .monospacedDigit()
+            }
+            .frame(width: 46, height: 46)
+            .background(Palette.fillStrong, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text([ActionFormat.when(item, now: actions.now()), item.person].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(Palette.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: item.kind.symbol).font(.caption.weight(.semibold)).foregroundStyle(Palette.textTertiary).accessibilityHidden(true)
+        }
+        .frame(minHeight: 44)
+        .echoRow(horizontal: Spacing.md, vertical: Spacing.sm)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens it to review")
     }
 
     // MARK: How the day went

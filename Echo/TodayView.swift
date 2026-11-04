@@ -122,8 +122,6 @@ struct TodayView: View {
                               onOpenPromises: { open(.commitments) }, onOpenTimeline: { open(.day) },
                               onOpenMoments: onOpenMoments, onOpenActions: onOpenActions, onReview: onReview)
                 }
-                // The bars say nothing until the watch has started (all zeros), so the hint below speaks for an empty day.
-                if model.session != .waiting || !model.todayChunks.isEmpty { FunnelCard(model: model) }
                 if model.todayChunks.isEmpty {
                     EmptyDayHint()
                 } else {

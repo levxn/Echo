@@ -5,17 +5,19 @@ import SwiftUI
 /// recorded -> kept by the watch -> confirmed on the phone, with the share that never gets stored.
 struct FunnelCard: View {
     let model: PipelineModel
+    /// On the You page the numbers are the point, so they are always shown in full.
+    var alwaysFull = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Once the day has settled the three bars are tucked away behind "Details"; while it syncs they show the progress.
     @State private var showDetail = false
 
-    private var showsRows: Bool { !model.isSettled || showDetail }
+    private var showsRows: Bool { !model.isSettled || showDetail || alwaysFull }
 
     /// Never smaller than what the watch kept, so the bars stay proportional even if the session totals are missing.
     private var recorded: Double { max(model.recordedSeconds, model.watchKeptSeconds, 0.0001) }
 
     /// Settled, and the person hasn't asked for the numbers: one sentence is enough.
-    private var isSummarised: Bool { model.isSettled && model.recordedSeconds > 0 && !showDetail }
+    private var isSummarised: Bool { model.isSettled && model.recordedSeconds > 0 && !showDetail && !alwaysFull }
 
     var body: some View {
         if isSummarised { summary } else { full }
@@ -47,16 +49,19 @@ struct FunnelCard: View {
 
     private var full: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            SectionHeader(title: "What Echo kept") {
-                if model.isSettled {
-                    Label("Settled", systemImage: "checkmark.circle.fill")
-                        .font(Font.echoMeta.weight(.medium))
-                        .foregroundStyle(Palette.teal)
-                } else if model.isListening || model.pendingCount > 0 {
-                    Label("Processing", systemImage: "waveform")
-                        .font(Font.echoMeta.weight(.medium))
-                        .foregroundStyle(Palette.blue)
-                        .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
+            // On its own page the title is already above the card.
+            if !alwaysFull {
+                SectionHeader(title: "What Echo kept") {
+                    if model.isSettled {
+                        Label("Settled", systemImage: "checkmark.circle.fill")
+                            .font(Font.echoMeta.weight(.medium))
+                            .foregroundStyle(Palette.teal)
+                    } else if model.isListening || model.pendingCount > 0 {
+                        Label("Processing", systemImage: "waveform")
+                            .font(Font.echoMeta.weight(.medium))
+                            .foregroundStyle(Palette.blue)
+                            .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
+                    }
                 }
             }
 
@@ -84,7 +89,7 @@ struct FunnelCard: View {
                 }
                 .transition(.opacity)
             }
-            if model.isSettled && model.recordedSeconds > 0 {
+            if model.isSettled && model.recordedSeconds > 0 && !alwaysFull {
                 Button {
                     withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { showDetail.toggle() }
                 } label: {

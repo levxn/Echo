@@ -44,6 +44,8 @@ struct EchoTopBar: View {
     let watch: HeaderStatus.Indicator
     let listening: Bool
     let onWatch: () -> Void
+    /// When a page inside a tab is open (a section of You), the standard back button takes the empty place on the left.
+    var onBack: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Wide-set capitals in Avenir Next, plain white. (A system font that ships with iOS, so nothing is bundled.)
@@ -53,7 +55,23 @@ struct EchoTopBar: View {
     var body: some View {
         HStack(spacing: 0) {
             // Same width as the indicator on the other side, so the name sits exactly in the middle.
-            Color.clear.frame(width: Self.slot, height: 44)
+            Group {
+                if let onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(Palette.textPrimary)
+                            .frame(width: Self.slot, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(EchoPressStyle())
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                    .accessibilityLabel("Back")
+                } else {
+                    Color.clear.frame(width: Self.slot, height: 44)
+                }
+            }
+            .frame(width: Self.slot, height: 44)
             Spacer(minLength: 0)
             Text("ECHO")
                 .font(.custom("AvenirNext-DemiBold", size: 22, relativeTo: .title3))

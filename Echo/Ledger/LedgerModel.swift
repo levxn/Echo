@@ -11,8 +11,8 @@ final class LedgerModel {
     /// Scrolls the Ledger to an anchor ("yourData", "ledgerTop"). Set by the demo driver, or by `-ledger-focus data`.
     var focus: String? = {
         let args = ProcessInfo.processInfo.arguments
-        guard let i = args.firstIndex(of: "-ledger-focus"), i + 1 < args.count, args[i + 1] == "data" else { return nil }
-        return "yourData"
+        guard let i = args.firstIndex(of: "-ledger-focus"), i + 1 < args.count else { return nil }
+        return args[i + 1] == "data" ? "yourData" : args[i + 1]   // or the name of a section: muse, listening, helpers, kept, sent
     }()
     private let store: ChunkStore
     private let defaults: UserDefaults

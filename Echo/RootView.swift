@@ -49,6 +49,8 @@ struct RootView: View {
     @State private var actions: ActionsModel
     @State private var museActions: MuseActionsModel
     @State private var listening = ListeningStore()
+    /// The section of the You tab that is open, if any. Held here so the header can show the Back button for it.
+    @State private var youPage: YouView.Page?
     @State private var performer: ActionPerformer
     @State private var player: ChunkPlayer
     @State private var today = TodayState()
@@ -97,7 +99,8 @@ struct RootView: View {
         EchoTopBar(title: tab.title,
                    watch: HeaderStatus.watch(reachable: model.watchReachable, listening: model.isListening),
                    listening: model.isListening,
-                   onWatch: { self.tab = .moments })
+                   onWatch: { self.tab = .moments },
+                   onBack: tab == .you && youPage != nil ? { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { youPage = nil } } : nil)
     }
 
     /// Forgets the last `minutes` of what was heard, and everything that depended on it. Returns how many moments went.
@@ -212,7 +215,7 @@ struct RootView: View {
                 if MuseMark.isAvailable { Label("Ask", image: MuseMark.assetName) } else { Label("Ask", systemImage: "sparkles") }
             }
             Tab("You", systemImage: "person.crop.circle.fill", value: RootTab.you) {
-                YouView(profile: profile, listening: listening, ledger: ledger, model: model, history: history, privacy: privacy, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
+                YouView(profile: profile, listening: listening, ledger: ledger, model: model, history: history, privacy: privacy, page: $youPage, onForgetRecent: { await forgetRecent(minutes: $0) }) { includeLedger in forgetDay(includeLedger: includeLedger) }
                     .safeAreaBar(edge: .top, spacing: 0) { topBar(.you) }
             }
         }

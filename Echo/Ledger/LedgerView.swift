@@ -8,6 +8,7 @@ struct YouView: View {
     let model: PipelineModel
     let history: AskHistoryModel
     let privacy: RecordingPrivacy
+    @Binding var page: Page?
     /// Forgets the last N minutes of what was heard; says how many moments went.
     let onForgetRecent: (Int) async -> Int
     /// Wipes the day (and optionally the ledger); owned by RootView because it touches every model.
@@ -22,7 +23,6 @@ struct YouView: View {
     @AppStorage(Retention.key) private var retentionDays = Retention.defaultDays
     @AppStorage(OnDevicePreference.key) private var preferOnDevice = false
     @State private var showAllActivity = false
-    @State private var page: Page?
     @State private var showProfile = false
     @State private var exportURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -30,13 +30,14 @@ struct YouView: View {
 
     /// The sections of settings, each on a page of its own so none of them is a long scroll.
     enum Page: String, CaseIterable, Identifiable {
-        case muse, listening, helpers, sent, data
+        case muse, listening, helpers, kept, sent, data
         var id: String { rawValue }
         var title: String {
             switch self {
             case .muse: "Muse and privacy"
             case .listening: "Listening"
             case .helpers: "Helpers"
+            case .kept: "What Echo kept"
             case .sent: "What was sent"
             case .data: "Your data"
             }
@@ -46,6 +47,7 @@ struct YouView: View {
             case .muse: "lock.shield.fill"
             case .listening: "waveform"
             case .helpers: "wand.and.stars"
+            case .kept: "chart.bar.fill"
             case .sent: "paperplane.fill"
             case .data: "internaldrive.fill"
             }
@@ -74,7 +76,7 @@ struct YouView: View {
             // The demo and the dev hooks ask for a place by name: "yourData" is its own page now.
             guard let target = ledger.focus else { return }
             try? await Task.sleep(for: .milliseconds(500))
-            withAnimation(reduceMotion ? nil : .smooth(duration: 0.4)) { page = target == "yourData" ? .data : nil }
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.4)) { page = target == "yourData" ? .data : Page(rawValue: target) }
         }
         .onChange(of: ledger.entries, initial: true) { refreshExport() }
         .confirmationDialog("Forget the day?", isPresented: $confirmForget, titleVisibility: .visible) {
@@ -165,6 +167,7 @@ struct YouView: View {
         case .listening: listening.settings.title
         case .helpers:
             "\([profile.catchPromises, briefings.enabled, profile.actionsMorning, profile.journalReminder, profile.speakVoiceAnswers].filter { $0 }.count) of 5 on"
+        case .kept: model.recordedSeconds > 0 ? "\(Format.clock(model.phoneConfirmedSeconds)) of \(Format.clock(max(model.recordedSeconds, model.watchKeptSeconds))) saved" : "Nothing yet"
         case .sent: ledger.entries.isEmpty ? "Nothing yet" : "\(ledger.entries.count) request\(ledger.entries.count == 1 ? "" : "s")"
         case .data: "Keeps \(Retention.title(days: retentionDays).lowercased())"
         }
@@ -172,14 +175,6 @@ struct YouView: View {
 
     private func detail(_ p: Page) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xl) {
-            Button { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { page = nil } } label: {
-                Label("You", systemImage: "chevron.left")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.teal)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(EchoPressStyle())
             Text(p.title)
                 .font(.echoSheetTitle)
                 .foregroundStyle(Palette.textPrimary)
@@ -188,6 +183,7 @@ struct YouView: View {
             case .muse: museAndPrivacy
             case .listening: listeningGroup
             case .helpers: helpers
+            case .kept: FunnelCard(model: model, alwaysFull: true)
             case .sent: activity
             case .data: yourData.id("yourData")
             }
