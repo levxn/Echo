@@ -19,6 +19,9 @@ final class PipelineModel {
     private(set) var lastWatchActivity: Date?
     /// The watch paused listening without ending the session.
     private(set) var watchPaused = false
+    /// What the watch last said about its microphone (nil until it says). It tells the phone on every change, when it reconnects and
+    /// every half minute, because "reachable" doesn't mean "listening" and a session can be left open.
+    private(set) var watchListening: Bool?
     /// How many snippets the watch said it sent in all (0 until it says, or if it is an older watch).
     private(set) var expectedChunks = 0
 
@@ -36,21 +39,36 @@ final class PipelineModel {
 
     /// Whether the watch is listening right now. The watch says when it starts and stops, so if it never gets to say it stopped (the app was
     /// force-quit, the battery died) the phone would stay "listening" for ever: after three quiet minutes out of reach, it isn't.
-    var isListening: Bool { isListening(at: now()) }
+    var isListening: Bool { _ = clock; return isListening(at: now()) }
+
+    /// Bumped every few seconds by the app so that "the watch went quiet" shows up on screen even when nothing else changes.
+    private(set) var clock = 0
+    func tickClock() { clock &+= 1 }
 
     /// Listening was paused on the watch (the microphone is off) but the session isn't over.
     var isPaused: Bool { session == .running && watchPaused }
 
     func setPaused(_ paused: Bool) {
         watchPaused = paused
+        watchListening = !paused
+        lastWatchActivity = now()
+    }
+
+    /// The watch says whether its microphone is on.
+    func setWatchListening(_ on: Bool) {
+        watchListening = on
+        if on { watchPaused = false }
         lastWatchActivity = now()
     }
 
     func isListening(at date: Date) -> Bool {
-        guard session == .running, !watchPaused else { return false }
-        if watchReachable { return true }
+        guard session == .running, !watchPaused, watchListening != false else { return false }
         guard let last = lastWatchActivity else { return false }
-        return date.timeIntervalSince(last) < 180
+        let quiet = date.timeIntervalSince(last)
+        // The watch said it is listening: believe it while it is near, and for three minutes after it goes out of reach.
+        if watchListening == true { return watchReachable || quiet < 180 }
+        // It hasn't said (a session from an earlier run may never have been closed): only fresh signs of life count.
+        return quiet < (watchReachable ? 60 : 180)
     }
 
     /// The replay's totals survive app restarts, so the funnel still reads correctly afterwards.
@@ -112,7 +130,11 @@ final class PipelineModel {
         d.set(activeDayId, forKey: Key.day)
     }
 
-    func setReachable(_ value: Bool) { watchReachable = value }
+    func setReachable(_ value: Bool) {
+        // Out of reach, what it last said is out of date; it says again as soon as it is back.
+        if !value { watchListening = nil }
+        watchReachable = value
+    }
 
     /// A new capture session for `dayId` (today unless the watch says otherwise). That day starts clean; other days stay.
     /// A watch that listens live starts a session every time it resumes, and what it already heard today must stay (`keepExisting`).
@@ -129,6 +151,7 @@ final class PipelineModel {
         totalSeconds = total
         session = .running
         watchPaused = false
+        watchListening = true
         lastWatchActivity = now()
         persistSession()
     }
@@ -162,6 +185,7 @@ final class PipelineModel {
         recordedSeconds = recorded
         self.expectedChunks = expectedChunks
         watchPaused = false
+        watchListening = false
         session = .finished
         persistSession()
     }

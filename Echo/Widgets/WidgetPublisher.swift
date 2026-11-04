@@ -79,7 +79,7 @@ struct WidgetSync: ViewModifier {
 
     private var key: Key {
         Key(chunks: model.todayChunks.count, stored: model.todayChunks.filter { $0.status == .stored }.count, reminders: reminders.scheduled.count,
-            done: doneRaw, listening: model.session == .running, me: voices.me?.id ?? "")
+            done: doneRaw, listening: model.isListening, me: voices.me?.id ?? "")
     }
 
     func body(content: Content) -> some View {
@@ -94,7 +94,7 @@ struct WidgetSync: ViewModifier {
         let found = await Task.detached(priority: .utility) { PromiseExtractor.extract(from: today, userName: name) }.value
         let done = Set(doneRaw.split(separator: "\n").map(String.init))
         let snapshot = WidgetSnapshotBuilder.make(promises: found, reminders: reminders.scheduled, done: done, myVoice: voices.me?.id,
-                                                  momentsToday: today.count, listening: model.session == .running, now: Date())
+                                                  momentsToday: today.count, listening: model.isListening, now: Date())
         WidgetPublisher.publish(snapshot) { link.sendWidget($0) }
     }
 }

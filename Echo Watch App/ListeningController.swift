@@ -45,7 +45,9 @@ final class ListeningController {
             // Only the real microphone is picked up again after an interruption; replaying a recorded day (the simulator) never is.
             store.wasListening = on && CaptureEngine.listensLive()
             if on { suggestListening = false }
+            link.sendListeningState(on)
         }
+        link.onReachable = { [weak self] in self?.reportState() }
         store.onChange = { [weak self] settings in
             self?.link.sendListening(settings)
             self?.nudges.schedule(for: settings)
@@ -57,8 +59,9 @@ final class ListeningController {
         link.onListenCommand = { [weak self] command in self?.handle(command: command) }
         // Once the session is up, our settings go to the phone (it keeps the newer of the two).
         link.onActivated = { [weak self] in
-            guard let self, store.settings.stamp > 0 else { return }
-            link.sendListening(store.settings)
+            guard let self else { return }
+            reportState()
+            if store.settings.stamp > 0 { link.sendListening(store.settings) }
         }
         nudges.onStart = { [weak self] in self?.handle(command: "start") }
     }
@@ -99,7 +102,11 @@ final class ListeningController {
         return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
     }
 
+    /// Tells the phone whether the microphone is on.
+    func reportState() { link.sendListeningState(engine.phase == .running) }
+
     func tick(now: Date = Date()) {
+        reportState()
         let nudged = defaults.string(forKey: Self.nudgeDayKey) == todayKey(now)
         switch ListeningPlan.decide(settings: store.settings, now: now, isListening: engine.phase == .running, wasListening: store.wasListening,
                                     battery: battery, nudgeSent: nudged) {

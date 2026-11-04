@@ -102,7 +102,8 @@ struct TodayView: View {
     private var statusText: String {
         switch model.session {
         case .waiting: model.watchReachable ? "Watch connected" : "Waiting for your watch"
-        case .running: "Listening · \(Int(model.sessionFraction * 100))% of the day"
+        case .running: model.isListening ? "Listening · \(Int(model.sessionFraction * 100))% of the day"
+                                         : (model.isPaused ? "Listening is paused" : "Not listening right now")
         case .finished: model.isSettled ? "Day synced and processed" : "Processing \(model.pendingCount + model.missingCount) left"
         }
     }

@@ -8,9 +8,9 @@ struct MomentsTests {
 
     private func status(_ phase: CaptureStatus.Phase = .waiting, reachable: Bool = false, arrived: Int = 0, pending: Int = 0,
                         stored: Int = 0, ignored: Int = 0, conversations: Int = 0, kept: Double = 0, fraction: Double = 0,
-                        expected: Int = 0) -> CaptureStatus {
+                        expected: Int = 0, listening: Bool = true) -> CaptureStatus {
         CaptureStatus.make(phase: phase, reachable: reachable, arrived: arrived, pending: pending, stored: stored, ignored: ignored,
-                           conversations: conversations, keptSeconds: kept, fraction: fraction, expected: expected)
+                           conversations: conversations, keptSeconds: kept, fraction: fraction, expected: expected, listening: listening)
     }
 
     @Test func beforeAnythingHappensItSaysWhetherTheWatchIsThere() {
@@ -18,6 +18,14 @@ struct MomentsTests {
         #expect(away.kind == .waitingForWatch && away.title == "Waiting for your watch" && away.progress == nil)
         let near = status(reachable: true)
         #expect(near.kind == .watchReady && near.detail.contains("big button"))
+    }
+
+    @Test func whenTheMicrophoneIsOffTheBannerStopsSayingListening() {
+        let on = status(.running, reachable: true, arrived: 21, ignored: 3, fraction: 0.4)
+        #expect(on.kind == .listening && on.title == "Listening")
+        let off = status(.running, reachable: true, arrived: 21, ignored: 3, fraction: 0.4, listening: false)
+        #expect(off.kind == .paused && off.title == "Not listening right now" && off.detail == "18 moments so far" && off.progress == nil)
+        #expect(status(.finished, reachable: true, arrived: 5, stored: 5, conversations: 1, listening: false).kind == .caughtUp, "a finished day is not 'paused'")
     }
 
     @Test func whileTheWatchListensItCountsMomentsAndShowsProgress() {

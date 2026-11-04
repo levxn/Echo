@@ -41,6 +41,8 @@ final class WatchLink: NSObject, WCSessionDelegate {
     var onListenSettings: ((ListeningSettings) -> Void)?
     /// The phone asks the watch to start or stop listening now ("start" or "stop").
     var onListenCommand: ((String) -> Void)?
+    /// The phone just became reachable.
+    var onReachable: (() -> Void)?
     /// The session is up: a good moment to tell the phone our settings.
     var onActivated: (() -> Void)?
 
@@ -233,6 +235,13 @@ final class WatchLink: NSObject, WCSessionDelegate {
 
     // MARK: WCSessionDelegate
 
+    /// Tells the phone whether the microphone is on right now. Without this the phone can only guess from a session that may never have
+    /// been closed, and keeps saying "listening" while the watch is idle.
+    func sendListeningState(_ on: Bool) {
+        guard WCSession.isSupported(), WCSession.default.isReachable else { return }
+        WCSession.default.sendMessage([Wire.typeKey: Wire.listenState, Wire.listeningKey: on], replyHandler: { _ in }, errorHandler: { _ in })
+    }
+
     /// Tells the phone the listening mode and hours. An application context is kept until the phone next wakes, so it can't be missed.
     func sendListening(_ settings: ListeningSettings) {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
@@ -322,7 +331,10 @@ final class WatchLink: NSObject, WCSessionDelegate {
         Task { @MainActor in
             self.reachable = reachable
             Log.link.info("reachability -> \(reachable)")
-            if reachable { await self.drain() }
+            if reachable {
+                self.onReachable?()
+                await self.drain()
+            }
         }
     }
 }

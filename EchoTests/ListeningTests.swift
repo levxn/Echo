@@ -156,6 +156,20 @@ struct PhoneListeningStateTests {
         #expect(!m.isPaused && !m.isListening)
     }
 
+    @Test func aSessionLeftOpenDoesNotMakeAnIdleWatchLookLikeItIsListening() async throws {
+        let (m, h) = try await model(); defer { h.cleanup() }
+        await m.sessionStarted(total: 0, keepExisting: true)   // the watch app was then force-quit: no "finished" ever came
+        m.setReachable(false)
+        m.setReachable(true)                                    // it is back, near, and idle
+        #expect(m.isListening, "until it says otherwise the phone has to assume the session is live")
+        m.setWatchListening(false)
+        #expect(!m.isListening, "it says its microphone is off, so the phone says so too")
+        m.setWatchListening(true)
+        #expect(m.isListening)
+        m.setReachable(false)
+        #expect(m.watchListening == nil, "out of reach, what it said is out of date")
+    }
+
     @Test func aWatchThatWentQuietWithoutSayingSoStopsCountingAfterThreeMinutes() async throws {
         let (m, h) = try await model(); defer { h.cleanup() }
         var clock = Date(timeIntervalSince1970: 1_800_000_000)

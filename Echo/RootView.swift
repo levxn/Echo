@@ -264,6 +264,13 @@ struct RootView: View {
                 try? await Task.sleep(for: .milliseconds(700))
                 await refreshActions()
             }
+            .task {
+                // Re-check whether the watch is still listening (it may go quiet without saying so).
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(15))
+                    model.tickClock()
+                }
+            }
     }
 
     /// Everything that runs once when the app opens: warming the language models, wiring what the phone and watch tell each other, and the dev hooks.

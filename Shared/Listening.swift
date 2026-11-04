@@ -90,6 +90,8 @@ extension Wire {
     static let listenSettings = "listen"          // both ways (application context): the listening mode and hours
     static let listenCommand = "listen.command"   // phone -> watch: start or stop listening now
     static let commandKey = "command"             // "start" | "stop"
+    static let listenState = "listen.state"       // watch -> phone: is the microphone on right now? (sent on every change, on reconnecting, and every half minute)
+    static let listeningKey = "listening"
 }
 
 /// What the device should do right now about listening. Pure, so every case can be tested.

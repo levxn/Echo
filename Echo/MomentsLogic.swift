@@ -20,7 +20,7 @@ private func plural(_ n: Int, _ one: String, _ many: String? = nil) -> String {
 
 /// What the banner at the top of Moments says: is the watch listening, has the phone caught up?
 struct CaptureStatus: Equatable {
-    enum Kind { case waitingForWatch, watchReady, listening, catchingUp, caughtUp }
+    enum Kind { case waitingForWatch, watchReady, listening, paused, catchingUp, caughtUp }
     enum Phase { case waiting, running, finished }
 
     var kind: Kind
@@ -32,7 +32,7 @@ struct CaptureStatus: Equatable {
     var symbol: String
 
     static func make(phase: Phase, reachable: Bool, arrived: Int, pending: Int, stored: Int, ignored: Int,
-                     conversations: Int, keptSeconds: Double, fraction: Double, expected: Int = 0) -> CaptureStatus {
+                     conversations: Int, keptSeconds: Double, fraction: Double, expected: Int = 0, listening: Bool = true) -> CaptureStatus {
         if arrived == 0 && phase == .waiting {
             return reachable
                 ? CaptureStatus(kind: .watchReady, title: "Watch connected", detail: "Tap the big button on your watch, or start listening from here.",
@@ -43,6 +43,11 @@ struct CaptureStatus: Equatable {
         switch phase {
         case .waiting, .running:
             let heard = max(0, arrived - ignored)
+            // The session isn't over, but the microphone is off (paused on the watch, or the watch has gone quiet).
+            if phase == .running && !listening {
+                return CaptureStatus(kind: .paused, title: "Not listening right now", detail: "\(plural(heard, "moment")) so far",
+                                     footnote: "Start listening again on your watch, or from the card above.", progress: nil, symbol: "pause.circle.fill")
+            }
             return CaptureStatus(kind: .listening, title: "Listening",
                                  detail: "\(plural(heard, "moment")) so far",
                                  footnote: "Only speech is kept. It stays on this phone.", progress: fraction, symbol: "waveform")
@@ -70,7 +75,7 @@ extension PipelineModel {
             phase: { switch session { case .waiting: .waiting; case .running: .running; case .finished: .finished } }(),
             reachable: watchReachable, arrived: arrivedCount, pending: chunks.filter { [.received, .vad, .asr].contains($0.status) }.count,
             stored: storedCount, ignored: droppedCount, conversations: conversations,
-            keptSeconds: phoneConfirmedSeconds, fraction: sessionFraction, expected: expectedChunks)
+            keptSeconds: phoneConfirmedSeconds, fraction: sessionFraction, expected: expectedChunks, listening: isListening)
     }
 }
 

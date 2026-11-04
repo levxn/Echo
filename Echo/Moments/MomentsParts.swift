@@ -11,6 +11,7 @@ struct MomentsStatusCard: View {
     private var tint: Color {
         switch status.kind {
         case .waitingForWatch: Palette.amber
+        case .paused: Palette.amber
         case .watchReady, .caughtUp: Palette.teal
         case .listening, .catchingUp: Palette.blue
         }

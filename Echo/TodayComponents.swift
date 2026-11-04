@@ -21,7 +21,7 @@ struct FunnelCard: View {
                     Label("Settled", systemImage: "checkmark.circle.fill")
                         .font(Font.echoMeta.weight(.medium))
                         .foregroundStyle(Palette.teal)
-                } else if model.session == .running || model.pendingCount > 0 {
+                } else if model.isListening || model.pendingCount > 0 {
                     Label("Processing", systemImage: "waveform")
                         .font(Font.echoMeta.weight(.medium))
                         .foregroundStyle(Palette.blue)

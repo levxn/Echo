@@ -110,6 +110,9 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     private func handle(message: [String: Any]) async -> [String: Any] {
         switch message[Wire.typeKey] as? String {
         case Wire.session: return await handle(session: message)
+        case Wire.listenState:
+            model.setWatchListening(message[Wire.listeningKey] as? Bool ?? false)
+            return [Wire.okKey: true]
         default: return await requests?.handle(message) ?? [Wire.okKey: false]
         }
     }
